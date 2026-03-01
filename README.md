@@ -1,76 +1,36 @@
-<p align="center">
-  <h1 align="center">⚡ Aura-State</h1>
-</p>
+# Aura-State
 
-<p align="center">
-  <strong>A Formally Verified LLM State Machine Compiler with Calibrated Uncertainty Guarantees.</strong>
-</p>
-
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
-  <a href="#"><img src="https://img.shields.io/badge/python-3.10+-3776AB.svg?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.10+"></a>
-  <a href="#benchmark-results"><img src="https://img.shields.io/badge/tests-65%20passing-brightgreen?style=for-the-badge" alt="65 Tests Passing"></a>
-  <a href="#benchmark-results"><img src="https://img.shields.io/badge/Z3%20proofs-20%2F20-blueviolet?style=for-the-badge" alt="Z3 Proofs 20/20"></a>
-</p>
-
-<p align="center">
-  <a href="docs/GUIDE.md">Usage Guide</a> · <a href="examples/benchmark/">Benchmarks</a> · <a href="CONTRIBUTING.md">Contributing</a>
-</p>
-
----
-
-LLMs are chaotic. When you pass 50 messages to a standard chat wrapper, it hallucinates state transitions, fails math, and forgets context. LangChain wraps the chaos. CrewAI lets agents derail. **Aura-State compiles the chaos into mathematically rigid execution.**
+A Python framework for building LLM workflows as state machines — with formal verification built in.
 
 ```bash
 pip install git+https://github.com/munshi007/Aura-State.git
 ```
 
----
+## What this is
 
-## 💡 The Idea
+Most LLM frameworks let you chain API calls and hope for the best. Aura-State takes a different approach: you define your workflow as a graph of nodes, each with a specific job, and the framework handles extraction, verification, and routing.
 
-**Aura-State starts from a different premise:** LLMs are powerful *extraction and reasoning engines*, but they should never be trusted with state management, mathematical computation, or workflow control. Those are formal problems with formal solutions.
+The key difference is what happens between nodes:
 
-> *If you can model your LLM workflow as a directed graph, you can prove properties about it before it ever runs — and you can verify every extraction after it completes. The gap between "it usually works" and "it provably works" is smaller than people think.*
+- **Routing** is scored mathematically (MCTS), not decided by the LLM
+- **Math** runs in a sandboxed interpreter, never hallucinated
+- **Extractions** can be formally proven correct using Z3
+- **Workflows** can be verified for safety properties before they run
 
-### 🔬 Research Foundations
+## Quick example
 
-The framework draws from three research areas that, until now, have not been applied to LLM agent systems:
-
-| Research Area | How We Use It | Origin |
-|:---|:---|:---|
-| 🏗️ **Model Checking** | Compile node graphs into Kripke structures and verify CTL properties before execution | Clarke, Emerson & Sistla (1986) — hardware & flight control verification |
-| 📊 **Conformal Prediction** | Wrap LLM extractions in distribution-free confidence intervals with guaranteed coverage | Vovk, Gammerman & Shafer (2005) — calibrated uncertainty |
-| 🧮 **SMT Solving** | Z3 theorem prover to formally verify extracted data satisfies business constraints | de Moura & Bjørner (2008) — Microsoft Research, Windows driver verification |
-
----
-
-## ⚔️ Why Not Just Use LangChain?
-
-| | LangChain | CrewAI | **Aura-State** |
-|:---|:---|:---|:---|
-| Architecture | Chain-of-calls | Free-form agents | **Compiled state machine** |
-| Routing | Sequential | Agent decides | **MCTS + UCB1 scoring** |
-| Math | LLM hallucinates | LLM hallucinates | **Sandboxed AST execution** |
-| Verification | None | None | **Z3 theorem prover** |
-| Confidence | None | None | **Conformal prediction intervals** |
-| Workflow safety | Hope | Hope | **CTL model checking (proven)** |
-
----
-
-## 🚀 Quick Start
-
-**1. Define your nodes:**
 ```python
 from aura_state import AuraEngine, Node, CompiledTransition
 from pydantic import BaseModel, Field
 from openai import OpenAI
 
+# Define what you want to extract
 class LeadData(BaseModel):
     name: str = Field(description="Full name")
     budget: int = Field(description="Budget in USD")
     timeline: str = Field(description="Buying timeline")
 
+# Define a node that extracts it
 class ExtractLead(Node):
     system_prompt = "Extract lead info from a sales call transcript."
     extracts = LeadData
@@ -78,38 +38,64 @@ class ExtractLead(Node):
     def handle(self, user_text, extracted_data=None, memory=None):
         return "QualifyBudget", extracted_data.model_dump()
 
+# Define a node that does deterministic math (no LLM)
 class QualifyBudget(Node):
     system_prompt = "Score the lead."
-    sandbox_rule = "result = budget > 100000"
+    sandbox_rule = "result = budget > 100000"  # runs in sandboxed AST, not LLM
 
     def handle(self, user_text, extracted_data=None, memory=None):
         return "END", memory
-```
 
-**2. Wire and run:**
-```python
+# Wire it up
 engine = AuraEngine(llm_client=OpenAI())
 engine.register(ExtractLead, QualifyBudget)
 engine.connect([
     CompiledTransition(from_node=ExtractLead, to_node=QualifyBudget),
 ])
 
+# Run
 next_state, data = engine.process("ExtractLead", user_text="Hi, I'm Sarah. Budget is $450k.")
 ```
 
-**3. Verify before you run:**
+## What happens under the hood
+
+When you call `engine.process()`, it runs through these steps in order:
+
+```
+1. Adaptive DAG health check     →  Should this node be skipped or retried?
+2. GraphRAG cache lookup          →  Have we seen this exact input before? Skip the LLM.
+3. Few-shot injection             →  Find similar past successes, inject as examples.
+4. LLM extraction + verification  →  Extract data, verify with Z3, retry if wrong.
+5. Your node's handle() method    →  Your business logic runs here.
+6. MCTS routing                   →  If multiple next-nodes, score them mathematically.
+7. State serialization            →  Save state for time-travel debugging.
+8. Speculative execution          →  Pre-compute likely next nodes in parallel.
+```
+
+## Formal verification (the interesting part)
+
+This is what actually makes Aura-State different from other frameworks.
+
+### Verify your workflow graph before it runs
+
+Your node graph gets compiled into a [Kripke structure](https://en.wikipedia.org/wiki/Kripke_structure) and checked against temporal logic properties:
+
 ```python
-from aura_state import verify_engine, reachability, eventual_completion
+from aura_state import verify_engine, reachability, mutual_exclusion, eventual_completion
 
 results = verify_engine(engine, [
     {"description": "QualifyBudget is reachable", "formula": reachability("QualifyBudget")},
     {"description": "All paths terminate", "formula": eventual_completion("QualifyBudget")},
 ])
-# → PROVEN: QualifyBudget is reachable
-# → PROVEN: All paths terminate
+# Result: PROVEN or VIOLATED, with the exact states that satisfy/violate
 ```
 
-**4. Prove extractions are correct:**
+This is the same technique used to verify hardware circuits and flight control systems (CTL model checking, Clarke et al. 1986).
+
+### Prove that extracted data is correct
+
+After the LLM extracts values, Z3 (a theorem prover from Microsoft Research) can formally prove they satisfy your constraints:
+
 ```python
 from aura_state import prove_extraction
 
@@ -117,180 +103,101 @@ result = prove_extraction(
     {"budget": 450000, "cost_per_sqft": 3, "total": 1350000},
     obligations=["budget > 0", "total == budget * cost_per_sqft"],
 )
-# result.verified = True — Z3 proves it, counterexample on failure
+# result.verified = True
+# If False, Z3 gives you a counterexample showing exactly what broke
 ```
 
-> 📖 **[Full Usage Guide →](docs/GUIDE.md)** — Detailed docs with code examples for every feature.
+### Confidence intervals on extractions
 
----
+Run the extraction multiple times and get distribution-free confidence intervals:
 
-## 🧠 The 8 Innovations
+```python
+from aura_state import conformal_interval
 
-### Core Engine
-
-| # | Innovation | Algorithm | What It Does |
-|:---|:---|:---|:---|
-| 1 | 🔮 **Speculative Execution** | Thread pool pre-computation | Pre-computes likely next nodes in parallel |
-| 2 | 📈 **Adaptive DAG** | Runtime health tracking | Monitors failure rates + auto-injects reflexion |
-| 3 | 🔄 **Verification Loop** | Extract → verify → reflect → retry | Catches extraction errors before propagation |
-| 4 | 🏗️ **Schema Compiler** | JSON Schema → Node classes | Compiles schemas into typed Nodes at runtime |
-| 5 | 🔀 **Multi-Provider** | Per-node model routing | Routes each node to optimal model with failover |
-
-### Formal Verification
-
-| # | Innovation | Algorithm | What It Does |
-|:---|:---|:---|:---|
-| 6 | 🔒 **Temporal Logic** | Kripke + CTL model checking | Proves workflow safety *before* execution |
-| 7 | 📊 **Conformal Prediction** | Split conformal prediction | Calibrated 95% CIs on every extracted field |
-| 8 | 🧮 **Z3 Proof Engine** | SMT theorem proving | Proves data satisfies business constraints |
-
----
-
-## 🏆 Benchmark Results
-
-Live benchmark: **10 real-estate sales transcripts**, GPT-4o-mini, 30 API calls.
-
-### 📋 Extraction Accuracy
-
-```
-Field             Correct   Total    Accuracy
-───────────────  ────────  ──────  ──────────
-name                   10      10       100%  ██████████
-budget                 10      10       100%  ██████████
-bedrooms               10      10       100%  ██████████
-pre_approved            9      10        90%  █████████░
-timeline                8      10        80%  ████████░░
-city                    7      10        70%  ███████░░░
+budgets = [450000, 452000, 448000, 450000, 451000]
+ci = conformal_interval(budgets, confidence=0.95)
+# ci.lower = 447800, ci.upper = 452200
 ```
 
-### ✅ Formal Verification
+This uses conformal prediction (Vovk et al., 2005) — no distributional assumptions required.
 
-| Metric | Result |
-|:---|:---|
-| Temporal properties | **3/3 PROVEN** (reachability, mutual exclusion, termination) |
-| Z3 proof obligations | **20/20 passed** on real LLM-extracted data |
-| Conformal coverage | **100%** (all values within 95% CI) |
-| Budget accuracy | **100% exact match** ($0 mean error) |
+## Benchmark results
 
-### ⚡ Performance
+We ran 10 real-estate sales transcripts through a 4-node pipeline using GPT-4o-mini (30 API calls total):
 
-| Metric | Value |
-|:---|:---|
-| Avg latency | **1,277ms** |
-| P50 latency | 1,193ms |
-| P95 latency | 2,004ms |
-| Total (30 calls) | 38.3s |
+```
+Field             Accuracy
+──────────────   ──────────
+name                  100%
+budget                100%
+bedrooms              100%
+pre_approved           90%
+timeline               80%
+city                   70%
 
-### 🔧 Run it yourself
+Temporal properties:       3/3 proven
+Z3 proof obligations:     20/20 passed
+Conformal coverage:       100% within 95% CI
+Avg latency:              1.3s per extraction
+```
 
 ```bash
-# Synthetic benchmark (no API key needed)
+# Try it yourself — no API key needed
 python examples/benchmark/run_benchmark.py
 
-# Live benchmark (requires OPENAI_API_KEY in .env)
+# With real LLM calls (needs OPENAI_API_KEY in .env)
 python examples/benchmark/run_live.py --model gpt-4o-mini --runs 3
 ```
 
----
-
-## 🏛️ How it works
-
-```
-User Input
-    │
-    ▼
-┌──────────────────────────────────────────────────────────┐
-│                     AuraEngine                           │
-│                                                          │
-│  ┌─────────────┐    ┌──────────────┐    ┌────────────┐  │
-│  │ Adaptive DAG │───▶│ GraphRAG     │───▶│ Telepromp- │  │
-│  │ Health Check │    │ Cache Lookup │    │ ter (KNN)  │  │
-│  └─────────────┘    └──────────────┘    └────────────┘  │
-│         │                                      │         │
-│         ▼                                      ▼         │
-│  ┌─────────────┐    ┌──────────────┐    ┌────────────┐  │
-│  │ Verification │───▶│   Node       │───▶│   MCTS     │  │
-│  │ Loop (Z3)   │    │   handle()   │    │  Routing   │  │
-│  └─────────────┘    └──────────────┘    └────────────┘  │
-│         │                                      │         │
-│         ▼                                      ▼         │
-│  ┌─────────────┐    ┌──────────────┐    ┌────────────┐  │
-│  │  AuraTrace  │───▶│ Speculative  │───▶│   Output   │  │
-│  │  (debug)    │    │  Execution   │    │            │  │
-│  └─────────────┘    └──────────────┘    └────────────┘  │
-└──────────────────────────────────────────────────────────┘
-    │
-    ▼
-Next State + Extracted Data
-```
-
----
-
-## 📁 Architecture
+## Project structure
 
 ```
 aura_state/
 ├── core/
-│   ├── engine.py              # AuraEngine — unified execution pipeline
-│   ├── router.py              # MCTS routing with UCB1 scoring
-│   ├── adaptive_graph.py      # Runtime DAG health monitoring
-│   ├── verification_loop.py   # Extract → verify → reflect → retry
-│   ├── providers.py           # Multi-provider LLM + cost tracking
-│   └── exceptions.py
+│   ├── engine.py              # Main engine — the process() pipeline
+│   ├── router.py              # MCTS routing
+│   ├── adaptive_graph.py      # Node health monitoring
+│   ├── verification_loop.py   # Extract → verify → retry loop
+│   └── providers.py           # Multi-model routing + cost tracking
 ├── compiler/
-│   ├── schema_compiler.py     # JSON Schema → Node class compilation
-│   ├── json_generator.py      # Node → flow.json export
-│   └── dspy_tuner.py          # KNN few-shot teleprompting
+│   ├── schema_compiler.py     # JSON Schema → Node classes
+│   └── dspy_tuner.py          # KNN few-shot selection
 ├── verification/
 │   ├── temporal_verifier.py   # Kripke + CTL model checking
-│   ├── conformal.py           # Split conformal prediction
-│   └── proof_engine.py        # Z3 SMT constraint proofs
+│   ├── conformal.py           # Conformal prediction intervals
+│   └── proof_engine.py        # Z3 proofs
 ├── execution/
-│   ├── tracer.py              # AuraTrace — time-travel debugging
-│   └── sandbox.py             # AST-validated code execution
+│   ├── tracer.py              # State serialization (time-travel debug)
+│   └── sandbox.py             # Safe math execution (AST validated)
 ├── memory/
-│   ├── trajectory_cache.py    # GraphRAG subgraph isomorphism
+│   ├── trajectory_cache.py    # Subgraph isomorphism cache
 │   └── pruner.py              # Context window optimization
-├── consensus/
-│   └── auto_vote.py           # Multi-run extraction with voting
-└── loaders/
-    └── json_graph.py          # JSON/YAML → engine hydration
+└── consensus/
+    └── auto_vote.py           # Multi-run extraction with voting
 ```
 
----
-
-## 📦 Installation
+## Installation
 
 ```bash
 pip install git+https://github.com/munshi007/Aura-State.git
 ```
 
-**Requirements:** Python 3.10+
+Python 3.10+ required. Dependencies: `pydantic`, `instructor`, `openai`, `networkx`, `pyModelChecking`, `z3-solver`, `pyyaml`.
 
-**Dependencies:** `pydantic` · `instructor` · `openai` · `networkx` · `pyModelChecking` · `z3-solver` · `pyyaml`
-
----
-
-## 🧪 Testing
+## Tests
 
 ```bash
 python -m pytest tests/ -v
-# 65 tests passing ✅
+# 65 tests passing
 ```
 
----
+## Docs
 
-## 📚 Docs
+- [Usage Guide](docs/GUIDE.md) — code examples for every feature
+- [Algorithm Reference](docs/ALGORITHMS.md) — deep-dive into CTL, Z3, MCTS, UCB1, conformal prediction
+- [Contributing](CONTRIBUTING.md) — architecture overview and how to contribute
+- [Benchmark](examples/benchmark/) — synthetic and live benchmarks
 
-| Resource | Description |
-|:---|:---|
-| 📖 [Usage Guide](docs/GUIDE.md) | Detailed how-to with code examples for every feature |
-| 🔬 [Algorithms](docs/ALGORITHMS.md) | Deep-dive into every algorithm: CTL, Z3, MCTS, UCB1, conformal prediction |
-| 🤝 [Contributing](CONTRIBUTING.md) | Architecture overview and how to contribute |
-| 🏆 [Benchmark](examples/benchmark/) | Synthetic and live benchmarks with observability |
-
----
-
-## 📄 License
+## License
 
 MIT
