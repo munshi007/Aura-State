@@ -1,6 +1,6 @@
 # Aura-State
 
-A Python framework for building LLM workflows as state machines — with formal verification built in.
+A Python framework for building LLM workflows as state machines, with formal verification built in.
 
 ```bash
 pip install git+https://github.com/munshi007/Aura-State.git
