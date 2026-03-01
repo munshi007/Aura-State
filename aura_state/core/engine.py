@@ -2,7 +2,7 @@
 AuraEngine: The Unified Deep-Tech LLM State Machine Compiler.
 
 This is the single entrypoint. Deep-tech internals are NOT optional.
-Phase 8 original innovations integrated:
+Core innovations integrated:
   1. Speculative Node Execution (parallel branch pre-computation)
   2. Adaptive Compute Graph (self-mutating DAG)
   3. Compound Verification Loop (extract→verify→reflect→retry)
@@ -40,7 +40,7 @@ class Node:
     """
     The ONLY abstraction for defining AI agent states.
     
-    Phase 8: Now supports per-node model selection.
+    Now supports per-node model selection.
     
     ```python
     class GreetingState(Node):
@@ -107,7 +107,7 @@ class AuraEngine:
         self.compiler = BootstrapTeleprompter()
         self.sandbox = SandboxedInterpreter(llm_client=llm_client)
         
-        # ── Phase 8 Innovations (always active) ──
+        # ── Core Innovations (always active) ──
         self.adaptive_graph = AdaptiveDAG()           # Innovation #2
         self.verification_loop = VerificationLoop()    # Innovation #3
         self.provider = LLMProvider()                  # Innovation #5

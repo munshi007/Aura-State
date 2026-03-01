@@ -14,7 +14,7 @@ from .consensus.auto_vote import ConsensusStrategy
 from .core.exceptions import AuraStateError, StateTransitionError, MaxRetriesExceededError
 from .loaders.json_graph import JSONGraphLoader
 
-# ── Phase 8 Innovations ──
+# ── Core Innovations ──
 from .core.adaptive_graph import AdaptiveDAG, NodeHealthMetrics, RuntimeEdge
 from .core.verification_loop import VerificationLoop, ReflectionMemory, Reflection
 from .core.providers import LLMProvider, CostTracker
@@ -57,7 +57,7 @@ __all__ = [
     "AuraStateError",
     "StateTransitionError",
     "MaxRetriesExceededError",
-    # Phase 9
+    # Formal Verification
     "compile_kripke",
     "verify_engine",
     "verify_property",

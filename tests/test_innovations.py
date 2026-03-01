@@ -1,5 +1,5 @@
 """
-Tests for Phase 8: Original Deep-Tech Innovations.
+Tests for Core Deep-Tech Innovations.
 Tests all 5 innovations without requiring live LLM API keys.
 """
 import pytest

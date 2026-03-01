@@ -5,9 +5,9 @@ build-backend = "hatchling.build"
 [project]
 name = "aura-state"
 version = "0.1.0"
-description = "A Neurosymbolic, Self-Healing State Router for Production LLMs."
+description = "A Formally Verified LLM State Machine Compiler with Calibrated Uncertainty Guarantees."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "pydantic>=2.0",
     "instructor>=1.3",

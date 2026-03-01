@@ -1,4 +1,4 @@
-"""Tests for Phase 9 innovations: temporal verification, conformal prediction, proof engine."""
+"""Tests for formal verification innovations: temporal verification, conformal prediction, proof engine."""
 import pytest
 from pydantic import BaseModel
 from aura_state import (
