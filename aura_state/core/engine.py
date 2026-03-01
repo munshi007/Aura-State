@@ -221,10 +221,11 @@ class AuraEngine:
     # MCTS ROUTING
     # ─────────────────────────────────────────────────────────
     
-    def _mcts_select(self, current_node: str, state_history: Dict[str, Any], depth: int = 3, simulations: int = 5) -> str:
+    def _mcts_select(self, current_node: str, state_history: Dict[str, Any]) -> str:
         """
-        Monte Carlo Tree Search: When multiple outgoing edges exist,
-        spawns parallel simulations to score branches via UCB1.
+        Selects the optimal next state using an Upper Confidence Bound (UCB1) approach.
+        Balances exploitation of high-success paths with exploration of new transitions
+        based on real-world health metrics from the AdaptiveDAG.
         """
         possible_targets = self._transitions.get(current_node, [])
         if not possible_targets:
@@ -232,47 +233,54 @@ class AuraEngine:
         if len(possible_targets) == 1:
             return possible_targets[0]
             
-        logger.info(f"[MCTS] Ambiguous transition at '{current_node}'. Spawning {simulations} lookaheads...")
+        logger.info(f"[MCTS] Resolving ambiguous transition at '{current_node}'...")
         
-        metrics = {t: {"wins": 0.0, "visits": 0} for t in possible_targets}
-        total_visits = 0
+        # Hyperparameters for the UCB1 algorithm
+        C = 1.414  # Exploration constant (sqrt(2))
+        best_node = possible_targets[0]
+        max_score = -float('inf')
         
-        for _ in range(simulations):
-            for target in possible_targets:
-                node_obj = self._nodes.get(target)
-                reward = 0.5
-                if node_obj and node_obj.extracts:
-                    reward += 0.3
-                if node_obj and node_obj.sandbox_rule:
-                    reward += 0.2
-                    
-                if state_history.get("last_failed_node") == target:
-                    reward -= 0.8
-                
-                # Factor in adaptive graph health
-                health = self.adaptive_graph.get_health(target)
-                if health.fail_rate > 0.5:
-                    reward -= 0.4
-                if health.cache_hit_rate > 0.8:
-                    reward += 0.2
-                    
-                metrics[target]["wins"] += max(reward, 0)
-                metrics[target]["visits"] += 1
-                total_visits += 1
+        # Calculate total parent visits (sum across all possible child edges)
+        total_visits = sum(
+            self.adaptive_graph.get_health(t).total_executions 
+            for t in possible_targets
+        )
         
-        c = math.sqrt(2)
-        best, best_ucb1 = None, -float('inf')
-        for name, m in metrics.items():
-            if m["visits"] == 0:
-                ucb1 = float('inf')
+        for target in possible_targets:
+            health = self.adaptive_graph.get_health(target)
+            visits = health.total_executions
+            
+            # 1. Exploitation term: Estimated success rate
+            # Add a small prior based on node's safeguard features
+            success_rate = 1.0 - health.fail_rate
+            node_obj = self._nodes.get(target)
+            
+            prior_boost = 0.0
+            if node_obj:
+                if node_obj.extracts: prior_boost += 0.1
+                if node_obj.sandbox_rule: prior_boost += 0.1
+            
+            exploitation = success_rate + prior_boost
+            
+            # 2. Exploration term: UCB confidence interval
+            if visits == 0 or total_visits == 0:
+                # Force exploration of unvisited nodes
+                exploration = float('inf')
             else:
-                ucb1 = (m["wins"] / m["visits"]) + c * math.sqrt(math.log(total_visits) / m["visits"])
-            if ucb1 > best_ucb1:
-                best_ucb1 = ucb1
-                best = name
+                exploration = C * math.sqrt(math.log(total_visits) / visits)
+            
+            score = exploitation + exploration
+            
+            # Penalty for known failures in the current execution trace
+            if state_history.get("last_failed_node") == target:
+                score -= 2.0
                 
-        logger.info(f"[MCTS] Optimal path: '{best}' (UCB1={best_ucb1:.3f})")
-        return best
+            if score > max_score:
+                max_score = score
+                best_node = target
+                
+        logger.info(f"[MCTS] Selected '{best_node}' (UCB1 score: {max_score:.3f})")
+        return best_node
 
     # ─────────────────────────────────────────────────────────
     # CORE EXECUTION PIPELINE
