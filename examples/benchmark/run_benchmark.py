@@ -67,7 +67,7 @@ def run():
             print(f"    {src} --> {tgt}")
 
     # ================================================================
-    # STEP 2: Temporal Logic Verification (Innovation #6)
+    # STEP 2: Temporal Logic Verification
     # Prove workflow properties BEFORE anything runs
     # ================================================================
     separator("STEP 2: Temporal Logic Verification")
@@ -126,7 +126,7 @@ def run():
         print(f"    Extracted: budget=${gt['budget']:,}  bedrooms={gt['bedrooms']}  "
               f"timeline={gt['timeline']}  pre_approved={gt['pre_approved']}")
 
-        # --- Innovation #8: Z3 Proof Engine ---
+        # --- Z3 Proof Engine ---
         proof = prove_extraction(extracted, [
             "budget > 0",
             "bedrooms >= 0",
@@ -171,7 +171,7 @@ def run():
         })
 
     # ================================================================
-    # STEP 4: Conformal Prediction (Innovation #7)
+    # STEP 4: Conformal Prediction
     # ================================================================
     separator("STEP 4: Conformal Prediction on Budget Extractions")
 
@@ -191,7 +191,7 @@ def run():
           f"fall within the interval ({in_range/len(budget_extractions)*100:.0f}%)")
 
     # ================================================================
-    # STEP 5: Adaptive DAG Health (Innovation #2)
+    # STEP 5: Adaptive DAG Health
     # ================================================================
     separator("STEP 5: Adaptive DAG Health Report")
 
@@ -209,7 +209,7 @@ def run():
               f"{metrics['fail_rate']:9.1%}  {metrics['avg_latency_ms']:10.1f}ms")
 
     # ================================================================
-    # STEP 6: Cost Tracking (Innovation #5)
+    # STEP 6: Cost Tracking
     # ================================================================
     separator("STEP 6: Cost Tracking Report")
 

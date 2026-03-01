@@ -1,13 +1,12 @@
 """
-AuraEngine: The Unified Deep-Tech LLM State Machine Compiler.
+AuraEngine: the main execution pipeline.
 
-This is the single entrypoint. Deep-tech internals are NOT optional.
-Core innovations integrated:
-  1. Speculative Node Execution (parallel branch pre-computation)
-  2. Adaptive Compute Graph (self-mutating DAG)
-  3. Compound Verification Loop (extract→verify→reflect→retry)
-  4. Schema-Driven Node Compilation (JSON Schema → Node codegen)
-  5. Multi-Provider LLM Orchestration (per-node model + failover)
+Every process() call runs through:
+  1. Speculative execution (parallel branch pre-computation)
+  2. Adaptive DAG (runtime health monitoring)
+  3. Verification loop (extract → verify → reflect → retry)
+  4. Schema compilation (JSON Schema → Node classes)
+  5. Multi-provider routing (per-node model + failover)
 """
 import math
 import time
@@ -32,25 +31,14 @@ from .providers import LLMProvider, CostTracker
 logger = logging.getLogger("aura_state")
 
 
-# ═══════════════════════════════════════════════════════════════
-# NODE: The single, unified state abstraction
-# ═══════════════════════════════════════════════════════════════
+# --- Node ---
 
 class Node:
     """
-    The ONLY abstraction for defining AI agent states.
+    Base class for defining workflow states.
     
-    Now supports per-node model selection.
-    
-    ```python
-    class GreetingState(Node):
-        system_prompt = "Extract the user's name and budget."
-        extracts = UserData
-        model = "gpt-4o"  # Use GPT-4o for this node
-        
-        def handle(self, user_text, extracted_data, memory):
-            return "QualifyState", {"name": extracted_data.name}
-    ```
+    Each node has a system prompt and an optional Pydantic schema for extraction.
+    Set `model` to route to a specific LLM.
     """
     system_prompt: str = ""
     extracts: Optional[Type[BaseModel]] = None
@@ -58,7 +46,7 @@ class Node:
     consensus: int = 1
     consensus_strategy: ConsensusStrategy = ConsensusStrategy.MAJORITY_VOTE
     memory_context: Optional[List[str]] = None
-    model: str = "gpt-4o"  # Per-node model selection (Innovation #5)
+    model: str = "gpt-4o"
 
     def handle(self, user_text: str, extracted_data: Optional[BaseModel] = None, memory: Optional[Dict[str, Any]] = None) -> tuple:
         """Override this method to define your Node's routing and business logic."""
@@ -73,13 +61,11 @@ class CompiledTransition(BaseModel):
     condition: str = "true"
 
 
-# ═══════════════════════════════════════════════════════════════
-# AURA ENGINE: The single unified execution core
-# ═══════════════════════════════════════════════════════════════
+# --- Engine ---
 
 class AuraEngine:
     """
-    The unified Deep-Tech LLM State Machine Compiler.
+    The main execution engine.
     
     Pipeline for every process() call:
     1. Adaptive DAG Health Check → bypass LLM if cache-saturated
@@ -101,18 +87,18 @@ class AuraEngine:
         # Single instructor-patched client (avoid creating duplicates)
         self.client = instructor.from_openai(llm_client) if llm_client else None
         
-        # ── Deep-Tech Internals (always active, never optional) ──
+        # ── Core internals ──
         self.tracer = AuraTrace()
         self.cache = GraphRAGCache(openai_client=llm_client)
         self.compiler = BootstrapTeleprompter()
         self.sandbox = SandboxedInterpreter(llm_client=llm_client)
         
         # ── Core Innovations (always active) ──
-        self.adaptive_graph = AdaptiveDAG()           # Innovation #2
-        self.verification_loop = VerificationLoop()    # Innovation #3
-        self.provider = LLMProvider()                  # Innovation #5
+        self.adaptive_graph = AdaptiveDAG()
+        self.verification_loop = VerificationLoop()
+        self.provider = LLMProvider()
         
-        # Speculative Execution (Innovation #1)
+        # Speculative execution
         self._speculation_depth = speculation_depth
         self._executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="aura_speculative")
         self._pending_speculations: Dict[str, Future] = {}
@@ -160,14 +146,14 @@ class AuraEngine:
         from ..compiler.json_generator import generate_flow_json
         node_classes = {name: type(node) for name, node in self._nodes.items()}
         generate_flow_json(node_classes, self._compiled_transitions, output_path)
-        print(f"✨ AuraEngine compiled {len(self._nodes)} Nodes → {output_path}")
+        print(f"AuraEngine compiled {len(self._nodes)} nodes → {output_path}")
     
     def load_dataset(self, dataset: List[Dict[str, Any]]):
         """Feeds historical data into the BootstrapTeleprompter for KNN Few-Shot optimization."""
         self.compiler.compile(dataset)
     
     # ─────────────────────────────────────────────────────────
-    # INNOVATION #1: SPECULATIVE NODE EXECUTION
+    # SPECULATIVE NODE EXECUTION
     # ─────────────────────────────────────────────────────────
     
     def _speculative_execute(self, current_state: str, user_text: str, memory: Dict[str, Any]):
@@ -264,7 +250,7 @@ class AuraEngine:
                 if state_history.get("last_failed_node") == target:
                     reward -= 0.8
                 
-                # Innovation #2: factor in adaptive graph health
+                # Factor in adaptive graph health
                 health = self.adaptive_graph.get_health(target)
                 if health.fail_rate > 0.5:
                     reward -= 0.4
@@ -295,7 +281,7 @@ class AuraEngine:
 
     def process(self, current_state: str, user_text: str, memory: Optional[Dict[str, Any]] = None, history: Optional[List[Dict[str, str]]] = None) -> tuple[str, Any]:
         """
-        The unified execution pipeline. Every call activates ALL deep-tech internals:
+        The main execution pipeline. Every call runs:
         
         1. Adaptive DAG Health → bypass/reflexion check
         2. GraphRAG Cache → subgraph isomorphism check
@@ -315,7 +301,7 @@ class AuraEngine:
         self._step_counter += 1
         start_ms = time.time() * 1000
         
-        # ── STAGE 0: Adaptive DAG Health Check (Innovation #2) ──
+        # ── STAGE 0: Adaptive DAG Health Check ──
         if self.adaptive_graph.should_inject_reflexion(current_state):
             logger.warning(f"[{current_state}] AdaptiveDAG recommends reflexion injection.")
             self.adaptive_graph.mark_reflexion_injected(current_state)
@@ -349,7 +335,7 @@ class AuraEngine:
                 {"role": "user", "content": user_text}
             ]
         
-        # ── STAGE 3: Compound Verification Loop (Innovation #3) ──
+        # ── STAGE 3: Verification Loop ──
         extracted_data = None
         if node.extracts and self.client:
             def _extract_fn(prompt, text):
@@ -423,11 +409,11 @@ class AuraEngine:
             cache_payload["payload"] = payload
         self.cache.save_trajectory(current_state, user_text, cache_payload)
         
-        # ── STAGE 7: Record Health (Innovation #2) ──
+        # ── STAGE 7: Record Health ──
         latency = (time.time() * 1000) - start_ms
         self.adaptive_graph.record_execution(current_state, True, latency)
         
-        # ── STAGE 8: Speculative Execution (Innovation #1) ──
+        # ── STAGE 8: Speculative Execution ──
         if self._speculation_depth > 0:
             self._speculative_execute(next_state, user_text, memory)
         

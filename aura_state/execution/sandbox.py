@@ -19,8 +19,8 @@ class CodeGeneration(BaseModel):
 
 class SandboxedInterpreter:
     """
-    A secure code interpreter that dynamically translates English math/logic prompts
-    into deterministic Python code, preventing LLM calculation hallucinations.
+    Translates English math/logic rules into Python, validates the AST,
+    and executes in a restricted namespace. Prevents LLM calculation hallucinations.
     """
     def __init__(self, llm_client: Optional[OpenAI] = None):
         self.client = instructor.from_openai(llm_client) if llm_client else None
@@ -39,7 +39,7 @@ class SandboxedInterpreter:
             raise SandboxExecutionError(f"Invalid Python syntax: {e}")
 
     def safe_exec(self, code_str: str, local_vars: Dict[str, Any]) -> Any:
-        """Executes the Python code in a highly restricted namespace."""
+        """Executes Python code in a restricted namespace (no imports, no I/O)."""
         self._validate_ast(code_str)
 
         restricted_globals = {
@@ -62,15 +62,14 @@ class SandboxedInterpreter:
 
     def compile_and_run(self, english_prompt: str, input_variables: Dict[str, Any]) -> Any:
         """
-        Translates an English rule into Python and executes it deterministically.
-        Includes a self-healing retry loop if the execution fails.
+        Translates an English rule into Python and executes it.
+        Retries up to 3 times if execution fails, feeding errors back to the LLM.
         """
         if not self.client:
             raise ValueError("OpenAI client must be provided for the Sandbox Interpreter.")
             
         system_prompt = (
-            "You are a strict neurosymbolic compiler. "
-            "Convert the user's plain English math/logic rules into pure, deterministic Python code. "
+            "Convert the user's plain English math/logic rules into pure Python code. "
             "The code will be executed in a restricted sandbox without any imports. "
             f"You have access to the following variables: {list(input_variables.keys())}. "
             "You MUST assign the final computed value to a variable exactly named 'result'."
@@ -78,7 +77,7 @@ class SandboxedInterpreter:
         
         logger.info(f"Compiling math prompt to Python AST...")
         
-        # Deterministic Self-Healing: We try execution up to 3 times, feeding errors back if needed
+        # Retry loop: feed errors back to the LLM if execution fails
         last_error = None
         for attempt in range(3):
             messages = [
@@ -100,7 +99,7 @@ class SandboxedInterpreter:
             try:
                 return self.safe_exec(generation.python_code, sandbox_vars)
             except SandboxExecutionError as e:
-                logger.warning(f"Self-Healing trigger {attempt+1}/3: {e}")
+                logger.warning(f"Retry {attempt+1}/3: {e}")
                 last_error = str(e)
                 
-        raise SandboxExecutionError(f"Failed to compile and execute prompt after self-healing. Final error: {last_error}")
+        raise SandboxExecutionError(f"Failed to compile and execute after 3 attempts. Last error: {last_error}")

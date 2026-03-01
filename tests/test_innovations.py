@@ -1,5 +1,5 @@
 """
-Tests for Core Deep-Tech Innovations.
+Tests for core innovations.
 Tests all 5 innovations without requiring live LLM API keys.
 """
 import pytest
@@ -17,7 +17,7 @@ from aura_state.compiler.schema_compiler import (
 
 
 # ═══════════════════════════════════════════════════════════════
-# Innovation #1: Speculative Node Execution
+# Speculative Node Execution
 # ═══════════════════════════════════════════════════════════════
 
 class GreetNode(Node):
@@ -54,7 +54,7 @@ class TestSpeculativeExecution:
 
 
 # ═══════════════════════════════════════════════════════════════
-# Innovation #2: Adaptive Compute Graph
+# Adaptive Compute Graph
 # ═══════════════════════════════════════════════════════════════
 
 class TestAdaptiveDAG:
@@ -121,7 +121,7 @@ class TestAdaptiveDAG:
 
 
 # ═══════════════════════════════════════════════════════════════
-# Innovation #3: Compound Verification Loop
+# Verification Loop
 # ═══════════════════════════════════════════════════════════════
 
 class TestVerificationLoop:
@@ -179,7 +179,7 @@ class TestVerificationLoop:
 
 
 # ═══════════════════════════════════════════════════════════════
-# Innovation #4: Schema-Driven Node Compilation
+# Schema-Driven Node Compilation
 # ═══════════════════════════════════════════════════════════════
 
 class TestSchemaCompiler:
@@ -248,7 +248,7 @@ class TestSchemaCompiler:
 
 
 # ═══════════════════════════════════════════════════════════════
-# Innovation #5: Multi-Provider LLM Orchestration
+# Multi-Provider LLM Orchestration
 # ═══════════════════════════════════════════════════════════════
 
 class TestCostTracker:

@@ -1,9 +1,8 @@
 """
-Multi-Provider LLM Orchestration: Per-node model routing with failover and cost tracking.
+Multi-provider LLM routing with failover and cost tracking.
 
-Inspired by openclaw's plugin architecture for model providers.
-No state machine framework lets you assign different LLMs to different nodes.
-We do — and we add automatic failover when a provider is down.
+Supports per-node model selection and automatic failover
+when a provider is down.
 """
 import logging
 import time

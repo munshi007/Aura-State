@@ -1,10 +1,8 @@
 """
-Schema-Driven Node Compilation: JSON Schema → Validated LLM Extraction Nodes.
+Schema Compiler: JSON Schema → Node classes with Pydantic extraction models.
 
-Inspired by clihub's MCP→CLI codegen (JSON Schema → Go flags with type mapping),
-but applied to LLM state machines. Given a JSON Schema or OpenAPI spec, we
-auto-generate Node subclasses with Pydantic extraction models, system prompts
-from field descriptions, and Levenshtein fuzzy matching for field correction.
+Given a JSON Schema or OpenAPI spec, generates Node subclasses with
+auto-generated system prompts and Levenshtein fuzzy matching for field correction.
 """
 import logging
 from typing import Any, Dict, List, Optional, Type
@@ -13,15 +11,10 @@ from pydantic import BaseModel, Field, create_model
 logger = logging.getLogger("aura_state")
 
 
-# ═══════════════════════════════════════════════════════════════
-# LEVENSHTEIN DISTANCE (from clihub's toolfilter/levenshtein.go)
-# ═══════════════════════════════════════════════════════════════
+# --- Levenshtein Distance ---
 
 def levenshtein_distance(a: str, b: str) -> int:
-    """
-    Compute Levenshtein edit distance between two strings.
-    Two-row DP implementation (space-optimized), matching clihub's Go version.
-    """
+    """Compute Levenshtein edit distance between two strings."""
     la, lb = len(a), len(b)
     if la == 0:
         return lb
@@ -66,12 +59,9 @@ def suggest_field(name: str, available: List[str], max_distance: int = 3) -> Opt
     return None
 
 
-# ═══════════════════════════════════════════════════════════════
-# JSON SCHEMA → PYDANTIC MODEL COMPILER
-# ═══════════════════════════════════════════════════════════════
+# --- JSON Schema → Pydantic Model ---
 
-# Type mapping: JSON Schema types → Python types
-# Extended from clihub's schema/typemap.go
+# JSON Schema types → Python types
 SCHEMA_TYPE_MAP = {
     "string": str,
     "integer": int,
@@ -138,9 +128,7 @@ def compile_pydantic_model(
     return create_model(model_name, **fields)
 
 
-# ═══════════════════════════════════════════════════════════════
-# SCHEMA → NODE COMPILER
-# ═══════════════════════════════════════════════════════════════
+# --- Schema → Node ---
 
 def _generate_system_prompt(model_name: str, schema: Dict[str, Any]) -> str:
     """Auto-generate a system prompt from JSON Schema field descriptions."""
@@ -173,21 +161,6 @@ def compile_schema(
     - Auto-generated Pydantic extraction model
     - Auto-generated system prompt from field descriptions
     - Levenshtein fuzzy matching for field correction
-    
-    This is clihub's JSON Schema → Go flag mapping,
-    but for LLM extraction Nodes instead of CLI flags.
-    
-    ```python
-    schema = {
-        "title": "RoomDimensions",
-        "properties": {
-            "wall_area_sqft": {"type": "number", "description": "Total wall area"},
-        },
-        "required": ["wall_area_sqft"]
-    }
-    RoomNode = compile_schema(schema)
-    engine.register(RoomNode)
-    ```
     """
     # Import here to avoid circular dependency
     from ..core.engine import Node

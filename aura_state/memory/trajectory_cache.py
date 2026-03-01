@@ -7,11 +7,11 @@ from pydantic import BaseModel
 
 class GraphRAGCache:
     """
-    The "Aura-Cache" using GraphRAG and Subgraph Isomorphism.
-    Replaces fuzzy vector cosine similarity with 100% rigid mathematical topology matching.
+    Graph-based cache using subgraph isomorphism.
     
-    Extracts Entity-Relationship triples from the user prompt to build a NetworkX graph,
-    then mathematically checks if this directed graph is isomorphic to a known successful trajectory.
+    Extracts entity-relationship triples from the input, builds a NetworkX graph,
+    and checks if it's isomorphic to a previously cached successful trajectory.
+    If yes, skips the LLM call and returns the cached result.
     """
     def __init__(self, cache_dir: str = ".aura_cache", openai_client: Optional[Any] = None):
         self.cache_dir = cache_dir
@@ -66,7 +66,7 @@ class GraphRAGCache:
             return []
             
     def _build_networkx_graph(self, triples: List[tuple]) -> nx.DiGraph:
-        """Constructs a formalized directed graph from the extracted relationships."""
+        """Builds a directed graph from extracted triples."""
         G = nx.DiGraph()
         for subj, pred, obj in triples:
             G.add_edge(subj, obj, relation=pred)
@@ -74,8 +74,8 @@ class GraphRAGCache:
         
     def check_cache(self, node_id: str, user_prompt: str) -> Optional[Dict[str, Any]]:
         """
-        Identifies if the semantic topology of the prompt matches a known path.
-        Uses NetworkX Subgraph Isomorphism to mathematically guarantee the bypass logic.
+        Checks if the input matches a cached trajectory via subgraph isomorphism.
+        Returns cached result if found, None otherwise.
         """
         if not self.cache_data:
             return None
@@ -93,16 +93,15 @@ class GraphRAGCache:
             cached_triples = [tuple(t) for t in entry["triples"]]
             cached_graph = self._build_networkx_graph(cached_triples)
             
-            # The Deep-Tech Moat: Mathematical Isomorphism Check (not fuzzy embedding)
             GM = isomorphism.DiGraphMatcher(query_graph, cached_graph)
-            if GM.is_isomorphic(): # Exact structural relationship match
-                print(f"⚡ [Aura-Cache] GraphRAG Isomorphism Triggered! Exact structural match. LLM Call Skipped. Saved API Credits.")
+            if GM.is_isomorphic():
+                logger.info(f"Cache hit for node '{node_id}': isomorphic match found, skipping LLM call")
                 return entry["outcome"]
                 
         return None
         
     def save_trajectory(self, node_id: str, user_prompt: str, outcome: Dict[str, Any]):
-        """Caches a successful topological routing graph."""
+        """Saves a successful execution's graph for future cache lookups."""
         triples = self._extract_triples(user_prompt)
         if not triples:
             return
@@ -114,4 +113,4 @@ class GraphRAGCache:
             "outcome": outcome
         })
         self._save_cache()
-        print(f"💾 [Aura-Cache] Subgraph topology saved for Node '{node_id}'.")
+        logger.info(f"Cached trajectory for node '{node_id}'")

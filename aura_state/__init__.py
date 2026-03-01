@@ -1,5 +1,5 @@
 """
-Aura-State: The Deep-Tech LLM State Machine Compiler.
+Aura-State: LLM State Machine Compiler.
 
 Usage:
     from aura_state import AuraEngine, Node, CompiledTransition

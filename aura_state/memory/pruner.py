@@ -2,9 +2,8 @@ from typing import List, Dict, Any, Optional
 
 class ContextPruner:
     """
-    Manages the conversational memory and dynamically prunes context 
-    based on the state's specific requirements, effectively solving 
-    LLM amnesia and reducing token bloat.
+    Prunes conversation history to stay within context window limits.
+    Keeps the system prompt and most recent messages.
     """
     
     @staticmethod

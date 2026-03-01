@@ -13,7 +13,7 @@ A deep-dive into every algorithm powering Aura-State, why we chose it, and how i
 - [UCB1](#ucb1-upper-confidence-bound)
 - [Subgraph Isomorphism](#subgraph-isomorphism-graphrag-cache)
 - [KNN Few-Shot Teleprompting](#knn-few-shot-teleprompting)
-- [AST Sandboxing](#ast-sandboxing-neurosymbolic-math)
+- [AST Sandboxing](#ast-sandboxing-safe-math-execution)
 
 ---
 
@@ -210,7 +210,7 @@ VF2 check: Is pattern ⊆ knowledge graph?
 
 ---
 
-## AST Sandboxing (Neurosymbolic Math)
+## AST Sandboxing (Safe Math Execution)
 
 **What it is:** Python's `ast` module parses code into an Abstract Syntax Tree without executing it. We validate the tree against a whitelist of safe operations before execution.
 

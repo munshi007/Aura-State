@@ -1,16 +1,16 @@
 import json
+import logging
 import math
 from typing import List, Dict, Any, Optional
 
+logger = logging.getLogger("aura_state")
+
 class BootstrapTeleprompter:
     """
-    The True DSPy-Inspired Few-Shot Optimizer (Aura-Compiler).
-    "Prompt Engineering is frail. Mathematical demonstration is robust."
+    KNN-based few-shot optimizer.
     
-    Instead of naively asking an LLM to rewrite English rules, we use K-Nearest Neighbors (KNN)
-    to extract perfectly successful (Input -> Reasoning -> Pydantic Output) pairs from 
-    a dataset, dynamically injecting them as Few-Shot demonstrations mathematically
-    into the failing Nodes.
+    Finds the K most similar successful past executions and injects them
+    as few-shot demonstrations into the system prompt.
     """
     def __init__(self, k_neighbors: int = 3):
         self.k = k_neighbors
@@ -26,9 +26,8 @@ class BootstrapTeleprompter:
         
     def _mock_embedding(self, text: str) -> List[float]:
         """
-        Lightweight deterministic dimension mock embedding to keep the repository 
-        framework deeply self-contained without demanding heavy local PyTorch dependencies.
-        (In production, swap for openai.Embedding).
+        Simple character-based embedding for testing.
+        In production, swap for openai.Embedding or a local model.
         """
         vec = [0.0] * 256
         for i, char in enumerate(text[:256]):
@@ -40,7 +39,7 @@ class BootstrapTeleprompter:
         return vec
         
     def _bootstrap_dataset(self, dataset: List[Dict[str, Any]]):
-        """Filters the dataset to formally isolate mathematically perfect executions."""
+        """Filters the dataset to keep only successful executions."""
         for trace in dataset:
             if trace.get("success"):
                 node_name = trace["node"]
@@ -52,9 +51,8 @@ class BootstrapTeleprompter:
 
     def optimize_node(self, node_name: str, current_prompt: str, new_user_input: str) -> str:
         """
-        The Teleprompter Core:
-        Executes a KNN search for the Top-K most mathematically similar successful traces
-        and appends them to the system prompt as structural demonstrations.
+        Finds the K most similar past successes and appends them
+        as few-shot examples to the system prompt.
         """
         if node_name not in self.successful_traces or not self.successful_traces[node_name]:
             return current_prompt
@@ -71,19 +69,19 @@ class BootstrapTeleprompter:
         top_k = [x[1] for x in scored_traces[:self.k]]
         
         # Abstract the Few-Shot injection prompt
-        few_shot_block = "\n\n--- 🧠 AURA-COMPILER: OPTIMIZED FEW-SHOT DEMONSTRATIONS ---\n"
-        few_shot_block += "Strictly adhere to the mathematical structure of the following examples:\n\n"
+        few_shot_block = "\n\n--- FEW-SHOT DEMONSTRATIONS ---\n"
+        few_shot_block += "Follow the structure of these examples:\n\n"
         for i, trace in enumerate(top_k):
             few_shot_block += f"EXAMPLE {i+1}:\n"
             few_shot_block += f"User Context: {trace['input']}\n"
             few_shot_block += f"Extracted Schema Validation Response:\n{json.dumps(trace['output'], indent=2)}\n\n"
             
         optimized_prompt = current_prompt + few_shot_block
-        print(f"🧠 [Aura-Compiler] Injected {len(top_k)} high-dimensional KNN Few-Shot demonstrations into Node '{node_name}'.")
+        logger.info(f"Injected {len(top_k)} few-shot examples into node '{node_name}'")
         return optimized_prompt
         
     def compile(self, dataset: List[Dict[str, Any]]):
-        """Loads and prepares the semantic KNN index from the historical dataset."""
-        print("🧠 [Aura-Compiler] Bootstrapping true DSPy-inspired teleprompter...")
+        """Loads and indexes the dataset for KNN lookup."""
         self._bootstrap_dataset(dataset)
-        print(f"✨ [Aura-Compiler] Bootstrapped {sum(len(v) for v in self.successful_traces.values())} theoretically perfect executions across {len(self.successful_traces)} Nodes.")
+        total = sum(len(v) for v in self.successful_traces.values())
+        logger.info(f"Indexed {total} successful traces across {len(self.successful_traces)} nodes")

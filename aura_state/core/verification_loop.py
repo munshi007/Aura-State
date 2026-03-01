@@ -1,11 +1,9 @@
 """
-Compound Verification Loop: Extract → Verify → Reflect → Retry.
+Verification Loop: Extract → Verify → Reflect → Retry.
 
-Inspired by secloop's Ralph Loop pattern, applied to LLM extraction accuracy.
-Nobody else does this — every framework blindly trusts the LLM's first extraction.
-
-We don't. We verify the extraction against deterministic rules, and if it fails,
-we generate a structured self-critique and inject it as a negative example on retry.
+After each LLM extraction, verifies the output against deterministic rules.
+If verification fails, generates a structured critique and retries with
+the failure context injected as a negative example.
 """
 import logging
 from typing import Any, Dict, List, Optional, Tuple, Type
@@ -28,10 +26,9 @@ class Reflection:
 
 class ReflectionMemory:
     """
-    Episodic memory buffer that stores (node, input, error, critique) tuples.
-    
-    Unlike Reflexion (2023) which just stores text blobs, we store structured
-    failure data that can be injected as typed negative examples.
+    Stores structured failure data from previous extraction attempts.
+    Failed (node, input, error, critique) tuples are injected as negative
+    examples on retry.
     """
     
     def __init__(self, max_reflections_per_node: int = 10):
@@ -70,17 +67,14 @@ class ReflectionMemory:
 
 class VerificationLoop:
     """
-    The Compound Verification Loop.
+    Runs the extract → verify → reflect → retry loop.
     
-    After LLM extraction, runs a deterministic verification step.
+    After LLM extraction, runs deterministic verification.
     If verification fails:
-      1. Generate a structured self-critique
-      2. Inject the critique as a negative Few-Shot example
-      3. Re-extract with the reflection context
-      4. Repeat until verification passes or max_iterations hit
-    
-    This is the Ralph Loop pattern from secloop, but for LLM accuracy
-    instead of security vulnerabilities.
+      1. Generate a structured critique
+      2. Inject as a negative few-shot example
+      3. Re-extract with reflection context
+      4. Repeat until verified or max_iterations
     """
     
     COMPLETION_TOKEN = "<VERIFIED>"

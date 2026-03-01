@@ -1,5 +1,5 @@
 """
-Tests for AuraEngine — the unified Deep-Tech State Machine Compiler.
+Tests for AuraEngine.
 """
 import pytest
 from typing import Dict, Any, Optional
@@ -70,7 +70,7 @@ def test_dead_end_raises():
 
 
 # ═══════════════════════════════════════════════
-# Test: Deep-Tech Internals Are Always Active
+# Test: Core internals are always active
 # ═══════════════════════════════════════════════
 
 def test_tracer_is_always_active():
