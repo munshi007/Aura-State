@@ -71,8 +71,8 @@ class AuraEngine:
     1. Adaptive DAG Health Check → bypass LLM if cache-saturated
     2. GraphRAG Subgraph Isomorphism Cache → bypass if topology matches
     3. Bootstrap Teleprompter → KNN Few-Shot injection
-    4. Compound Verification Loop → extract→verify→reflect→retry
-    5. MCTS Lookahead → mathematically score ambiguous transitions
+    4. Verification Loop → extract→verify→reflect→retry
+    5. MCTS Lookahead → score ambiguous transitions
     6. AuraTrace Serialization → dump state for time-travel debugging
     7. Speculative Execution → pre-compute likely next nodes in parallel
     """
@@ -93,7 +93,6 @@ class AuraEngine:
         self.compiler = BootstrapTeleprompter()
         self.sandbox = SandboxedInterpreter(llm_client=llm_client)
         
-        # ── Core Innovations (always active) ──
         self.adaptive_graph = AdaptiveDAG()
         self.verification_loop = VerificationLoop()
         self.provider = LLMProvider()
@@ -146,10 +145,10 @@ class AuraEngine:
         from ..compiler.json_generator import generate_flow_json
         node_classes = {name: type(node) for name, node in self._nodes.items()}
         generate_flow_json(node_classes, self._compiled_transitions, output_path)
-        print(f"AuraEngine compiled {len(self._nodes)} nodes → {output_path}")
+        logger.info(f"Compiled {len(self._nodes)} nodes → {output_path}")
     
     def load_dataset(self, dataset: List[Dict[str, Any]]):
-        """Feeds historical data into the BootstrapTeleprompter for KNN Few-Shot optimization."""
+        """Feeds historical data into the teleprompter for few-shot optimization."""
         self.compiler.compile(dataset)
     
     # ─────────────────────────────────────────────────────────
@@ -207,7 +206,7 @@ class AuraEngine:
             if future.done():
                 result = future.result()
                 if "error" not in result:
-                    logger.info(f"[Speculative] ✅ HIT: '{resolved_next_state}' was pre-computed!")
+                    logger.info(f"[Speculative] HIT: '{resolved_next_state}' was pre-computed")
                     return result
         
         # Discard all other speculative branches
@@ -219,7 +218,7 @@ class AuraEngine:
         return None
 
     # ─────────────────────────────────────────────────────────
-    # MCTS ROUTING (System-2 Reasoning)
+    # MCTS ROUTING
     # ─────────────────────────────────────────────────────────
     
     def _mcts_select(self, current_node: str, state_history: Dict[str, Any], depth: int = 3, simulations: int = 5) -> str:

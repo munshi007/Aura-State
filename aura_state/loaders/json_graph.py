@@ -16,9 +16,6 @@ from ..core.engine import AuraEngine, Node, CompiledTransition
 class JSONGraphLoader:
     """
     Loads a declarative state graph from JSON or YAML and hydrates an AuraEngine.
-    
-    This is the bridge between the auditable flow.json artifact and the 
-    deeply integrated AuraEngine runtime.
     """
 
     @staticmethod
