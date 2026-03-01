@@ -67,7 +67,7 @@ When you call `engine.process()`, it runs through these steps in order:
 3. Few-shot injection             →  Find similar past successes, inject as examples.
 4. LLM extraction + verification  →  Extract data, verify with Z3, retry if wrong.
 5. Your node's handle() method    →  Your business logic runs here.
-6. MCTS routing                   →  If multiple next-nodes, score them mathematically.
+6. MCTS Routing (UCB1)        →  Score branches using UCB1 + AdaptiveDAG metrics.
 7. State serialization            →  Save state for time-travel debugging.
 8. Speculative execution          →  Pre-compute likely next nodes in parallel.
 ```
@@ -132,13 +132,13 @@ name                  100%
 budget                100%
 bedrooms              100%
 pre_approved           90%
-timeline               80%
-city                   70%
+timeline               90%
+city                   80%
 
 Temporal properties:       3/3 proven
 Z3 proof obligations:     20/20 passed
-Conformal coverage:       100% within 95% CI
-Avg latency:              1.3s per extraction
+Routing accuracy:          90%
+Avg latency:              1.4s
 ```
 
 ```bash

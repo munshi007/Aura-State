@@ -102,56 +102,37 @@ Coverage guarantee: ≥ 95% of true values fall within this interval
 
 ## Monte Carlo Tree Search (MCTS Routing)
 
-**What it is:** A search algorithm that uses random simulations to evaluate decision trees. Instead of exhaustively searching all paths (infeasible for large graphs), MCTS samples paths stochastically and builds an asymmetric tree focused on the most promising branches.
+**What it is:** A search algorithm that stochastically samples execution paths to estimate high-reward branches. Traditionally, this involves running thousands of random simulations (rollouts).
 
-**Origin:** Coulom, 2006 — *"Efficient Selectivity and Backup Operators in Monte-Carlo Tree Search."* Famously used in AlphaGo (Silver et al., 2016) to beat the world Go champion.
+**How we use it:** To maintain low latency and minimize token usage, Aura-State implements **Real-Time MCTS**. Instead of spawning fresh LLM simulations for every decision, we use the **AdaptiveDAG** as the "simulation memory." Every execution in production act as a simulation that updates the edge health.
 
-**How we use it:** When a node has multiple valid transitions and the node's `handle()` returns an ambiguous target, MCTS simulates forward paths:
+When a node has multiple valid transitions, the engine queries the AdaptiveDAG for:
+1. **Node Success Rate**: The historical reliability of the target node.
+2. **Node Priors**: Does the node have Z3 proofs or sandboxing? (higher initial bias).
+3. **Execution Count**: How many times have we explored this path?
 
-```
-Current: ReviewNode
-Possible transitions: [ApproveNode, RejectNode, EscalateNode]
+This data is fed into the UCB1 formula to select the next state.
 
-MCTS iterations:
-  Simulate: ReviewNode → ApproveNode → FinalizeNode → END    → reward: 0.82
-  Simulate: ReviewNode → RejectNode → NotifyNode → END       → reward: 0.45
-  Simulate: ReviewNode → EscalateNode → ManagerNode → END    → reward: 0.63
-  Simulate: ReviewNode → ApproveNode → FinalizeNode → END    → reward: 0.79
-  ...
-
-After N simulations: ApproveNode has highest average reward → selected
-```
-
-**Why not just let the LLM decide?** LLMs are stateless text generators. They have no memory of which paths worked before, no concept of long-term reward, and no mathematical framework for exploration vs. exploitation. MCTS provides all three.
-
-**Implementation:** `aura_state/core/router.py`, invoked by `_mcts_select()` in `engine.py`.
+**Why not just let the LLM decide?** LLMs are stateless and have no concept of long-term reward or statistical confidence. MCTS provides a mathematical framework for making decisions that improve over time as more data is collected.
 
 ---
 
 ## UCB1 (Upper Confidence Bound)
 
-**What it is:** A bandit algorithm that balances exploitation (choosing the best-known option) with exploration (trying less-tested options). UCB1 is the selection policy used within MCTS to decide which branch to explore next.
+**What it is:** The selection policy used within MCTS to balance exploitation (staying with a high-success path) and exploration (trying a less-visited path).
 
-**Origin:** Auer, Cesa-Bianchi & Fischer, 2002 — *"Finite-time Analysis of the Multiarmed Bandit Problem."*
+**Algorithm:**
+Aura-State uses the standard UCB1 formula:
+`Score = [SuccessRate + Priors] + [C * sqrt(ln(TotalVisits) / NodeVisits)]`
 
-**Formula:**
+- **Exploitation term**: `SuccessRate` (from AdaptiveDAG) + `Priors` (node features).
+- **Exploration term**: The standard UCB1 confidence interval.
+- **C**: Exploration constant (default is √2).
 
-```
-UCB1(i) = X̄ᵢ + C × √(ln(N) / nᵢ)
-
-Where:
-  X̄ᵢ  = average reward of branch i (exploitation)
-  N   = total number of simulations
-  nᵢ  = number of times branch i was visited
-  C   = exploration constant (typically √2)
-```
-
-**Intuition:**
-- A branch with high `X̄ᵢ` (good track record) gets a high score → exploitation
-- A branch with low `nᵢ` (rarely visited) gets a bonus from the √ term → exploration
-- As `N` grows, the exploration bonus shrinks → converges to optimal
-
-**Why UCB1 over random?** Random selection has no memory. Epsilon-greedy is simplistic. UCB1 is **provably optimal** — it achieves logarithmic regret, meaning it converges to the best action with minimal wasted exploration.
+**Behavior:**
+- **Unvisited Paths**: Paths with 0 visits receive infinite exploration scores, forcing the system to test every edge at least once.
+- **Convergence**: As total executions grow, the exploration bonus decays, and the system converges on the most reliable state transition paths.
+- **Failure Shunning**: If the current execution trace already encountered a failure on a specific path, a local penalty is applied during that specific process call.
 
 ---
 

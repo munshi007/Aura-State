@@ -1,8 +1,7 @@
 # Aura-State Benchmark: Real Estate Lead Qualifier
 
-This benchmark demonstrates **all 8 innovations** in a single end-to-end pipeline.
-No API keys required — uses mocked LLM responses to show exactly what happens
-at each stage.
+This benchmark demonstrates the full end-to-end pipeline with formal verification, MCTS routing, and sandboxed math.
+No API keys required — uses mocked LLM responses by default to show exactly what happens at each stage.
 
 ## What It Does
 
@@ -12,21 +11,20 @@ Processes a raw sales call transcript through a 4-node pipeline:
 Transcript → ExtractLead → QualifyBudget → VerifyData → RouteDecision
 ```
 
-At each step, different innovations fire:
+At each step, different verification and routing features fire:
 
-| Stage | Innovation Used | What It Proves |
-|-------|----------------|----------------|
-| Before execution | Temporal Verifier | Workflow is mathematically safe |
-| ExtractLead | Verification Loop, Conformal Prediction | Data is verified + confidence intervals |
+| Stage | Mechanism | What It Proves |
+|-------|-----------|----------------|
+| Before execution | Temporal Verifier | Workflow is mathematically safe (CTL) |
+| ExtractLead | Verification Loop | Data is verified + conformal confidence intervals |
 | QualifyBudget | Sandbox Interpreter | Math is deterministic, not LLM-hallucinated |
 | VerifyData | Z3 Proof Engine | Extracted data formally satisfies business rules |
-| RouteDecision | MCTS Routing | Transition is scored, not guessed |
-| Every step | Adaptive DAG, Speculative Execution, Cost Tracking | Graph health, parallel pre-compute, budget |
+| RouteDecision | MCTS Routing (UCB1) | Transition is scored via AdaptiveDAG health metrics |
+| Every step | Adaptive DAG | Runtime health monitoring and LLM bypass check |
 
 ## Run It
 
 ```bash
-cd examples/benchmark
 python run_benchmark.py
 ```
 
