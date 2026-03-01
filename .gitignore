@@ -10,3 +10,6 @@ dist/
 build/
 .venv/
 venv/
+
+# Local agent instructions
+agent.md
