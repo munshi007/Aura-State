@@ -262,7 +262,7 @@ aura_state/
 ## 📦 Installation
 
 ```bash
-pip install git+https://github.com/YOUR_USERNAME/aura-state.git
+pip install git+https://github.com/munshi007/Aura-State.git
 ```
 
 **Requirements:** Python 3.10+
