@@ -154,8 +154,7 @@ python examples/benchmark/run_live.py --model gpt-4o-mini --runs 3
 ```
 aura_state/
 ├── core/
-│   ├── engine.py              # Main engine — the process() pipeline
-│   ├── router.py              # MCTS routing
+│   ├── engine.py              # Main engine — process() + MCTS/UCB1 routing
 │   ├── adaptive_graph.py      # Node health monitoring
 │   ├── verification_loop.py   # Extract → verify → retry loop
 │   └── providers.py           # Multi-model routing + cost tracking
