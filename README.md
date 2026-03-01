@@ -285,6 +285,7 @@ python -m pytest tests/ -v
 | Resource | Description |
 |:---|:---|
 | 📖 [Usage Guide](docs/GUIDE.md) | Detailed how-to with code examples for every feature |
+| 🔬 [Algorithms](docs/ALGORITHMS.md) | Deep-dive into every algorithm: CTL, Z3, MCTS, UCB1, conformal prediction |
 | 🤝 [Contributing](CONTRIBUTING.md) | Architecture overview and how to contribute |
 | 🏆 [Benchmark](examples/benchmark/) | Synthetic and live benchmarks with observability |
 
