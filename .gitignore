@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+.aura_cache/
+.aura_trace/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
