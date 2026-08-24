@@ -189,6 +189,23 @@ Uses Conformal Risk Control (arXiv:2208.02814); Learn-Then-Test
 (arXiv:2110.01052) for tuning several thresholds. Abstention is a first-class
 engine outcome. See `python examples/risk_abstention_demo.py`.
 
+### Let the verifier repair the plan (counterexample-guided replanning)
+
+Verification is usually a gate that says VIOLATED and stops. Here the
+counterexample — a tainted path, a CTL violating state, a Z3 assignment — is fed
+back to a replanner, which edits the plan and re-verifies, until it's proven or a
+budget is hit. The plan is provably correct *because* the verifier drove it there.
+
+```python
+result = engine.repair()          # verify → counterexample → repair → re-verify
+result.verified                   # True: driven to PROVEN (e.g. a sanitizer inserted)
+result.unresolved                 # if it aborts: the explicit remaining violations
+```
+
+Never a silent pass — an unrepairable design aborts with the violation named.
+Refs: PAT-Agent (arXiv:2509.23675), VERIMAP (arXiv:2510.17109). See
+`python examples/replan_demo.py`.
+
 ## Benchmark results
 
 We ran 10 real-estate sales transcripts through a 4-node pipeline using GPT-4o-mini (30 API calls total):

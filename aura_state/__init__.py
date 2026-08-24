@@ -35,6 +35,11 @@ from .compiler.spec_compiler import (
 )
 from .verification.taint import analyze_taint, TaintResult, TaintViolation
 from .verification.risk_control import RiskController, learn_then_test
+from .core.replan import (
+    counterexample_guided_repair, default_repair,
+    ctl_to_repair, z3_to_repair, taint_to_repair,
+    RepairSignal, ReplanResult, RepairIteration,
+)
 
 __all__ = [
     "AuraEngine",
@@ -95,4 +100,13 @@ __all__ = [
     # Risk-controlled abstention
     "RiskController",
     "learn_then_test",
+    # Counterexample-guided replanning
+    "counterexample_guided_repair",
+    "default_repair",
+    "ctl_to_repair",
+    "z3_to_repair",
+    "taint_to_repair",
+    "RepairSignal",
+    "ReplanResult",
+    "RepairIteration",
 ]

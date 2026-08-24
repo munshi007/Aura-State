@@ -192,6 +192,20 @@ class AuraEngine:
         from ..verification.temporal_verifier import verify_engine
         return verify_engine(self, properties, init_node=init_node)
 
+    def repair(self, repair_fn=None, *, properties: Optional[List[Dict[str, Any]]] = None, check_taint: bool = True, max_iterations: int = 5):
+        """Counterexample-guided replanning: drive the graph to PROVEN.
+
+        Runs verify → counterexample → repair → re-verify until the properties
+        hold and no taint violation remains, or a budget is hit (then returns an
+        explicit unresolved result). `repair_fn` defaults to the built-in
+        deterministic strategies. See `aura_state.core.replan`.
+        """
+        from .replan import counterexample_guided_repair, default_repair
+        return counterexample_guided_repair(
+            self, repair_fn or default_repair,
+            properties=properties, check_taint=check_taint, max_iterations=max_iterations,
+        )
+
     def analyze_taint(self):
         """Prove no untrusted-source node can reach a dangerous sink (design time).
 
