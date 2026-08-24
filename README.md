@@ -168,6 +168,27 @@ analyze_taint(engine)   # -> VIOLATED (Ingest -> SendEmail) unless Review is in 
 Everyone else sells injection *detection* (probabilistic). This is
 *impossibility* over the design. See `python examples/taint_proof_demo.py`.
 
+### Act only if calibrated risk ≤ ε, otherwise escalate
+
+The "knows when it doesn't know" story made into an actual gate. Calibrate a
+controller on a labeled set and the agent auto-acts only when its false-action
+rate is provably within budget — everything below the threshold escalates to a
+human, never a silent guess.
+
+```python
+ctrl = RiskController(epsilon=0.05).calibrate(scores, correct)   # false-action rate ≤ 5%
+
+class Decide(Node):
+    risk_controller = ctrl
+    escalation_node = "HumanReview"
+    def risk_score(self, extracted_data=None, conformal=None, memory=None):
+        return confidence   # in [0,1]
+```
+
+Uses Conformal Risk Control (arXiv:2208.02814); Learn-Then-Test
+(arXiv:2110.01052) for tuning several thresholds. Abstention is a first-class
+engine outcome. See `python examples/risk_abstention_demo.py`.
+
 ## Benchmark results
 
 We ran 10 real-estate sales transcripts through a 4-node pipeline using GPT-4o-mini (30 API calls total):

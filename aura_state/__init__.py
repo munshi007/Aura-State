@@ -34,6 +34,7 @@ from .compiler.spec_compiler import (
     AuraContract, NodeContract, PropertyVerdict, TaintContract, TaintPath, ContractError,
 )
 from .verification.taint import analyze_taint, TaintResult, TaintViolation
+from .verification.risk_control import RiskController, learn_then_test
 
 __all__ = [
     "AuraEngine",
@@ -91,4 +92,7 @@ __all__ = [
     "analyze_taint",
     "TaintResult",
     "TaintViolation",
+    # Risk-controlled abstention
+    "RiskController",
+    "learn_then_test",
 ]

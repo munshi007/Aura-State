@@ -67,12 +67,26 @@ class Node:
     untrusted_source: bool = False
     dangerous_sink: bool = False
     sanitizer: bool = False
+    # Risk-controlled abstention (see verification/risk_control.py). If a
+    # calibrated controller and an escalation node are set, the engine acts only
+    # when risk_score() clears the controller's threshold; otherwise it abstains
+    # and routes to escalation_node instead of guessing.
+    risk_controller: Optional[Any] = None
+    escalation_node: Optional[str] = None
     memory_context: Optional[List[str]] = None
     model: str = "gpt-4o"
 
     def handle(self, user_text: str, extracted_data: Optional[BaseModel] = None, memory: Optional[Dict[str, Any]] = None) -> tuple:
         """Override this method to define your Node's routing and business logic."""
         raise NotImplementedError(f"Node '{self.__class__.__name__}' must implement handle().")
+
+    def risk_score(self, extracted_data: Optional[BaseModel] = None, conformal=None, memory: Optional[Dict[str, Any]] = None) -> Optional[float]:
+        """Confidence in [0,1] for this decision; higher = safer to act.
+
+        Override to feed the risk controller (e.g. from the conformal interval
+        width or consensus agreement). Return None to disable abstention here.
+        """
+        return None
 
 
 class CompiledTransition(BaseModel):
@@ -351,6 +365,27 @@ class AuraEngine:
             extracted_data=extracted_data,
             memory=memory,
         )
+
+        # ── STAGE 4b: Risk-controlled abstention (act iff calibrated risk <= eps) ──
+        # A first-class outcome: if the controller says the decision is too risky
+        # to act on, route to the escalation node instead of guessing. Conformal
+        # Risk Control (arXiv:2208.02814).
+        if node.risk_controller is not None and node.escalation_node is not None:
+            score = node.risk_score(extracted_data, report.get("conformal"), memory)
+            if score is not None and node.risk_controller.should_abstain(score):
+                esc = node.escalation_node
+                report["abstained"] = True
+                report["risk_score"] = score
+                report["next_state"] = esc
+                logger.warning(f"[{current_state}] risk score {score:.3f} below budget → abstain → escalate to '{esc}'")
+                self.tracer.dump_node_state(
+                    step=self._step_counter, node_name=current_state,
+                    memory_context=memory, extracted=extracted_data,
+                )
+                latency = (time.time() * 1000) - start_ms
+                self.adaptive_graph.record_execution(current_state, True, latency)
+                self._verification_reports.append(report)
+                return esc, {"abstained": True, "risk_score": score, "escalated_to": esc}
 
         # ── STAGE 5: Bandit-router resolution (if handle returned an invalid edge) ──
         allowed = self._transitions.get(current_state, [])
