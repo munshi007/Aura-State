@@ -29,6 +29,7 @@ from .verification.conformal import (
     PredictionInterval, ConformalResult,
 )
 from .verification.proof_engine import prove_extraction, prove_consistency, ProofResult
+from .verification.pipeline_conformal import PipelineConformal
 from .compiler.spec_compiler import (
     compile_contract, diff_contracts, check_faithfulness,
     AuraContract, NodeContract, PropertyVerdict, TaintContract, TaintPath, ContractError,
@@ -83,6 +84,7 @@ __all__ = [
     "prove_extraction",
     "prove_consistency",
     "ProofResult",
+    "PipelineConformal",
     # Design→spec compiler
     "compile_contract",
     "diff_contracts",

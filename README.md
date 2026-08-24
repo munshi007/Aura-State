@@ -10,7 +10,7 @@
   <img alt="CI" src="https://github.com/munshi007/Aura-State/actions/workflows/ci.yml/badge.svg">
   <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-3d3aa8.svg">
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
-  <img alt="tests" src="https://img.shields.io/badge/tests-117%20passing-1c8a5b.svg">
+  <img alt="tests" src="https://img.shields.io/badge/tests-120%20passing-1c8a5b.svg">
 </p>
 
 ```bash
@@ -28,6 +28,7 @@ Every guarantee ships as a runnable proof against the real solvers:
 | `python examples/risk_abstention_demo.py` | acts only within a calibrated risk budget, else escalates to a human |
 | `python examples/emit_contract_demo.py` | a portable contract compiled faithfully from the design |
 | `python examples/replan_demo.py` | the verifier *repairs* the plan until it's proven-safe |
+| `python examples/pasc_demo.py` | pipeline-aware conformal calibrates the end-to-end answer, not just each step |
 
 ## What this is
 
@@ -150,6 +151,12 @@ ci = conformal_interval(budgets, confidence=0.95)
 ```
 
 This uses conformal prediction (Vovk et al., 2005) — no distributional assumptions required.
+
+**Pipeline-aware (PASC):** a 95% guarantee at each node is *not* 95% end-to-end —
+errors compound. `PipelineConformal` calibrates on the composed output so the
+guarantee holds for the final answer. In the demo, per-step conformal covers the
+end-to-end result only ~48%; PASC hits the nominal 90%. See
+`python examples/pasc_demo.py`.
 
 ### Compile a runtime contract from the design
 
