@@ -255,3 +255,104 @@ def prove_consistency(
         ["total_cost == unit_cost * quantity", "margin >= 0"]
     """
     return prove_extraction(extracted_data, relationships)
+
+
+# ---------------------------------------------------------------------------
+# Symbolic consistency proof (task 0002-C)
+#
+# prove_extraction above is a *point check*: it pins each variable to its
+# extracted value and asks whether the obligations hold at that one point --
+# the right question for validating a concrete extraction. The check below is a
+# genuine *symbolic* proof: the variables range freely over their declared
+# bounds (not pinned), and Z3 decides whether the obligation SET can be
+# satisfied at all. UNSAT means the spec is self-contradictory (e.g.
+# ["x > 5", "x < 3"]) -- an obligation that can never hold for any extraction,
+# which is a design bug you want to catch before deploy, not a runtime reject.
+# ---------------------------------------------------------------------------
+
+@dataclass
+class SatResult:
+    satisfiable: bool
+    witness: Optional[Dict[str, float]] = None    # an assignment satisfying all obligations
+    reason: Optional[str] = None
+
+
+def _collect_vars(obligation: str) -> set:
+    """Variable names referenced in an obligation string."""
+    tree = ast.parse(obligation, mode="eval")
+    return {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)}
+
+
+def field_bounds_from_model(model) -> Dict[str, Dict[str, float]]:
+    """Extract numeric bounds ({'ge','gt','le','lt'}) from a Pydantic model's
+    field constraints, via its JSON schema. Feeds the hypotheses below so the
+    consistency proof respects the schema (e.g. `area >= 0`)."""
+    bounds: Dict[str, Dict[str, float]] = {}
+    schema = model.model_json_schema()
+    for name, prop in schema.get("properties", {}).items():
+        b: Dict[str, float] = {}
+        if "minimum" in prop:
+            b["ge"] = prop["minimum"]
+        if "maximum" in prop:
+            b["le"] = prop["maximum"]
+        if "exclusiveMinimum" in prop:
+            b["gt"] = prop["exclusiveMinimum"]
+        if "exclusiveMaximum" in prop:
+            b["lt"] = prop["exclusiveMaximum"]
+        if b:
+            bounds[name] = b
+    return bounds
+
+
+def prove_obligations_satisfiable(
+    obligations: List[str],
+    bounds: Optional[Dict[str, Dict[str, float]]] = None,
+) -> SatResult:
+    """Symbolically prove the obligation set is satisfiable within declared bounds.
+
+    Variables range freely over ``bounds`` (a genuine SMT query, not a point
+    check). Returns ``satisfiable=True`` with a witness assignment when some
+    valid extraction can satisfy every obligation, or ``satisfiable=False`` when
+    the obligations are mutually contradictory / impossible under the bounds.
+    """
+    if not obligations:
+        return SatResult(satisfiable=True)
+
+    bounds = bounds or {}
+    names: set = set(bounds.keys())
+    for o in obligations:
+        try:
+            names |= _collect_vars(o)
+        except SyntaxError as e:
+            return SatResult(satisfiable=False, reason=f"syntax error in '{o}': {e}")
+    if not names:
+        return SatResult(satisfiable=True)
+
+    z3_vars = {n: Real(n) for n in names}
+    solver = Solver()
+    for name, b in bounds.items():
+        v = z3_vars[name]
+        if "ge" in b:
+            solver.add(v >= b["ge"])
+        if "gt" in b:
+            solver.add(v > b["gt"])
+        if "le" in b:
+            solver.add(v <= b["le"])
+        if "lt" in b:
+            solver.add(v < b["lt"])
+    for o in obligations:
+        try:
+            solver.add(_compile_obligation(o, z3_vars))
+        except ObligationError as e:
+            return SatResult(satisfiable=False, reason=f"uncompilable obligation '{o}': {e}")
+
+    if solver.check() != sat:
+        return SatResult(
+            satisfiable=False,
+            reason="obligations are unsatisfiable within the declared bounds",
+        )
+    model = solver.model()
+    witness: Dict[str, float] = {}
+    for name, v in z3_vars.items():
+        witness[name] = float(model.eval(v, model_completion=True).as_fraction())
+    return SatResult(satisfiable=True, witness=witness)

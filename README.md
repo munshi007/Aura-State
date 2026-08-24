@@ -10,7 +10,7 @@
   <img alt="CI" src="https://github.com/munshi007/Aura-State/actions/workflows/ci.yml/badge.svg">
   <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-3d3aa8.svg">
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
-  <img alt="tests" src="https://img.shields.io/badge/tests-120%20passing-1c8a5b.svg">
+  <img alt="tests" src="https://img.shields.io/badge/tests-125%20passing-1c8a5b.svg">
 </p>
 
 ```bash
@@ -137,6 +137,11 @@ result = prove_extraction(
 # result.verified = True
 # If False, Z3 gives you a counterexample showing exactly what broke
 ```
+
+It also proves your obligations aren't *self-contradictory*. `["x > 5", "x < 3"]`
+can never hold — Z3 catches that symbolically (variables ranging freely over the
+declared field bounds, not pinned to one value), and the design→contract compiler
+flags it per node before you ship.
 
 ### Confidence intervals on extractions
 

@@ -47,6 +47,9 @@ class NodeContract(BaseModel):
     confidence: float = 0.9                 # nominal conformal coverage
     sandbox_rule: Optional[str] = None
     terminal: bool = False
+    # Symbolically proven satisfiable within the schema bounds (task 0002-C).
+    # None if the node has no obligations. False = a self-contradictory spec.
+    obligations_consistent: Optional[bool] = None
     # Capability-typed dataflow labels.
     untrusted_source: bool = False
     dangerous_sink: bool = False
@@ -140,15 +143,23 @@ def compile_contract(
     sinks = _find_sinks(nodes_dict, transitions)
     entry = _find_init_node(nodes_dict, transitions) if nodes_dict else None
 
+    from ..verification.proof_engine import prove_obligations_satisfiable, field_bounds_from_model
+
     node_contracts: List[NodeContract] = []
     for name, node in nodes_dict.items():
+        obligations = list(node.obligations or [])
+        consistent: Optional[bool] = None
+        if obligations:
+            node_bounds = field_bounds_from_model(node.extracts) if node.extracts else {}
+            consistent = prove_obligations_satisfiable(obligations, node_bounds).satisfiable
         node_contracts.append(NodeContract(
             name=name,
             extracts=node.extracts.__name__ if node.extracts else None,
-            obligations=list(node.obligations or []),
+            obligations=obligations,
             confidence=node.confidence,
             sandbox_rule=node.sandbox_rule,
             terminal=name in sinks,
+            obligations_consistent=consistent,
             untrusted_source=bool(getattr(node, "untrusted_source", False)),
             dangerous_sink=bool(getattr(node, "dangerous_sink", False)),
             sanitizer=bool(getattr(node, "sanitizer", False)),

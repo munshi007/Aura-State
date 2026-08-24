@@ -28,7 +28,10 @@ from .verification.conformal import (
     conformal_interval, conformal_from_extractions,
     PredictionInterval, ConformalResult,
 )
-from .verification.proof_engine import prove_extraction, prove_consistency, ProofResult
+from .verification.proof_engine import (
+    prove_extraction, prove_consistency, ProofResult,
+    prove_obligations_satisfiable, field_bounds_from_model, SatResult,
+)
 from .verification.pipeline_conformal import PipelineConformal
 from .compiler.spec_compiler import (
     compile_contract, diff_contracts, check_faithfulness,
@@ -84,6 +87,9 @@ __all__ = [
     "prove_extraction",
     "prove_consistency",
     "ProofResult",
+    "prove_obligations_satisfiable",
+    "field_bounds_from_model",
+    "SatResult",
     "PipelineConformal",
     # Design→spec compiler
     "compile_contract",
