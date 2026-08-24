@@ -10,7 +10,7 @@
   <img alt="CI" src="https://github.com/munshi007/Aura-State/actions/workflows/ci.yml/badge.svg">
   <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-3d3aa8.svg">
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
-  <img alt="tests" src="https://img.shields.io/badge/tests-125%20passing-1c8a5b.svg">
+  <img alt="tests" src="https://img.shields.io/badge/tests-130%20passing-1c8a5b.svg">
 </p>
 
 ```bash
@@ -198,6 +198,17 @@ class Review(Node):    sanitizer = True            # clears taint
 class SendEmail(Node): dangerous_sink = True       # irreversible action
 
 analyze_taint(engine)   # -> VIOLATED (Ingest -> SendEmail) unless Review is in the path
+```
+
+It's **field-level**: label individual fields, and a clean field passes a sink
+untouched while only a *tainted* field reaching it is a violation — with the exact
+field and its origin named. A field-specific sanitizer clears just its field.
+
+```python
+class Ingest(Node): untrusted_fields = ["note"]   # free text is untrusted
+class Send(Node):   sink_fields = ["account_id"]  # the action consumes account_id
+
+analyze_field_taint(engine)   # PROVEN — the tainted `note` never reaches the sink arg
 ```
 
 Everyone else sells injection *detection* (probabilistic). This is

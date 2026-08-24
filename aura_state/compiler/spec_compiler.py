@@ -66,6 +66,7 @@ class TaintPath(BaseModel):
     source: str
     sink: str
     path: List[str]
+    field: Optional[str] = None      # the tainted field ("*" = any); field-level 0014
 
 
 class TaintContract(BaseModel):
@@ -174,12 +175,15 @@ def compile_contract(
                 verdict="PROVEN" if vr.result == PropertyResult.PROVEN else "VIOLATED",
             ))
 
-    # Capability-typed dataflow verdict (always computed; cheap, static).
-    from ..verification.taint import analyze_taint
-    taint_res = analyze_taint(engine)
+    # Capability-typed dataflow verdict (field-level; always computed).
+    from ..verification.taint import analyze_field_taint
+    taint_res = analyze_field_taint(engine)
     taint_contract = TaintContract(
         verdict="PROVEN" if taint_res.verified else "VIOLATED",
-        violations=[TaintPath(source=v.source, sink=v.sink, path=v.path) for v in taint_res.violations],
+        violations=[
+            TaintPath(source=v.source, sink=v.sink, path=v.path, field=v.field)
+            for v in taint_res.violations
+        ],
     )
 
     m: Dict[str, Any] = dict(meta or {})

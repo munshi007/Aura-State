@@ -67,6 +67,12 @@ class Node:
     untrusted_source: bool = False
     dangerous_sink: bool = False
     sanitizer: bool = False
+    # Field-level provenance (full 0014). Optional refinement of the node-level
+    # flags above: name the specific fields that are untrusted / consumed by a
+    # dangerous action / cleaned, so taint is tracked per value, not per node.
+    untrusted_fields: List[str] = []
+    sink_fields: List[str] = []
+    sanitizes_fields: List[str] = []
     # Risk-controlled abstention (see verification/risk_control.py). If a
     # calibrated controller and an escalation node are set, the engine acts only
     # when risk_score() clears the controller's threshold; otherwise it abstains
@@ -215,6 +221,16 @@ class AuraEngine:
         """
         from ..verification.taint import analyze_taint
         return analyze_taint(self)
+
+    def analyze_field_taint(self):
+        """Field-level taint: prove no *tainted field* reaches a dangerous sink.
+
+        More precise than `analyze_taint` — tracks which named fields are
+        untrusted as they flow, so a clean field passes a sink untouched. See
+        `aura_state.verification.taint.analyze_field_taint`.
+        """
+        from ..verification.taint import analyze_field_taint
+        return analyze_field_taint(self)
 
     def compile_contract(self, properties: Optional[List[Dict[str, Any]]] = None, meta: Optional[Dict[str, Any]] = None):
         """Compile this graph into a portable, versioned AuraContract.

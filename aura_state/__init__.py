@@ -37,7 +37,10 @@ from .compiler.spec_compiler import (
     compile_contract, diff_contracts, check_faithfulness,
     AuraContract, NodeContract, PropertyVerdict, TaintContract, TaintPath, ContractError,
 )
-from .verification.taint import analyze_taint, TaintResult, TaintViolation
+from .verification.taint import (
+    analyze_taint, TaintResult, TaintViolation,
+    analyze_field_taint, FieldTaintResult, FieldTaintViolation,
+)
 from .verification.risk_control import RiskController, learn_then_test
 from .core.replan import (
     counterexample_guided_repair, default_repair,
@@ -105,6 +108,9 @@ __all__ = [
     "analyze_taint",
     "TaintResult",
     "TaintViolation",
+    "analyze_field_taint",
+    "FieldTaintResult",
+    "FieldTaintViolation",
     # Risk-controlled abstention
     "RiskController",
     "learn_then_test",
