@@ -1,10 +1,33 @@
-# Aura-State
+<h1 align="center">Aura-State</h1>
 
-A Python framework for building LLM workflows as state machines, with formal verification built in.
+<p align="center"><b>Build LLM agents you can actually prove things about.</b></p>
+
+<p align="center">
+  Verification that runs <i>in the loop</i>, not the sidebar — Z3 proofs, CTL model checking, and conformal risk control gate every step. A value that can't be proven is never accepted.
+</p>
+
+<p align="center">
+  <img alt="CI" src="https://github.com/munshi007/Aura-State/actions/workflows/ci.yml/badge.svg">
+  <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-3d3aa8.svg">
+  <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
+  <img alt="tests" src="https://img.shields.io/badge/tests-117%20passing-1c8a5b.svg">
+</p>
 
 ```bash
 pip install git+https://github.com/munshi007/Aura-State.git
 ```
+
+## See it in 10 seconds (no API key)
+
+Every guarantee ships as a runnable proof against the real solvers:
+
+| Demo | What it proves |
+|---|---|
+| `python examples/verified_loop_demo.py` | Z3 rejects a hallucinated extraction in the loop, retries, accepts |
+| `python examples/taint_proof_demo.py` | untrusted input provably can't reach a dangerous tool |
+| `python examples/risk_abstention_demo.py` | acts only within a calibrated risk budget, else escalates to a human |
+| `python examples/emit_contract_demo.py` | a portable contract compiled faithfully from the design |
+| `python examples/replan_demo.py` | the verifier *repairs* the plan until it's proven-safe |
 
 ## What this is
 
