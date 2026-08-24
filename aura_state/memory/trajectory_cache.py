@@ -1,9 +1,12 @@
 import json
+import logging
 import os
 import networkx as nx
 from networkx.algorithms import isomorphism
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
+
+logger = logging.getLogger("aura_state.cache")
 
 class GraphRAGCache:
     """

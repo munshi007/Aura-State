@@ -9,10 +9,11 @@ Every process() call runs through:
   5. Multi-provider routing (per-node model + failover)
 """
 import math
+import random
 import time
 import logging
 from concurrent.futures import ThreadPoolExecutor, Future
-from typing import Dict, Any, Optional, Type, List
+from typing import Callable, Dict, Any, Optional, Type, List
 from pydantic import BaseModel, ConfigDict
 import instructor
 from openai import OpenAI
@@ -72,17 +73,22 @@ class AuraEngine:
     2. GraphRAG Subgraph Isomorphism Cache → bypass if topology matches
     3. Bootstrap Teleprompter → KNN Few-Shot injection
     4. Verification Loop → extract→verify→reflect→retry
-    5. MCTS Lookahead → score ambiguous transitions
+    5. Bandit router → score ambiguous transitions (Thompson)
     6. AuraTrace Serialization → dump state for time-travel debugging
     7. Speculative Execution → pre-compute likely next nodes in parallel
     """
     
-    def __init__(self, llm_client: Optional[OpenAI] = None, speculation_depth: int = 1, budget_usd: Optional[float] = None):
+    def __init__(self, llm_client: Optional[OpenAI] = None, speculation_depth: int = 1, budget_usd: Optional[float] = None, route_seed: Optional[int] = None):
         # Core
         self._nodes: Dict[str, Node] = {}
         self._transitions: Dict[str, List[str]] = {}
         self._compiled_transitions: List[CompiledTransition] = []
         self._step_counter: int = 0
+
+        # Router: seedable RNG for deterministic Thompson sampling, plus an
+        # optional CTL-feasibility hook (task 0005 integration point).
+        self._route_rng = random.Random(route_seed)
+        self._feasibility_fn: Optional[Callable[[str, str], bool]] = None
         
         # Single instructor-patched client (avoid creating duplicates)
         self.client = instructor.from_openai(llm_client) if llm_client else None
@@ -177,7 +183,15 @@ class AuraEngine:
                 continue  # Already being speculated
             if candidate not in self._nodes:
                 continue
-            
+            # B5: only speculate nodes that take NO extraction. A node with an
+            # `extracts` schema receives real extracted_data on the live path,
+            # so running its handler speculatively with extracted_data=None
+            # would execute a code path it never sees for real. Restrict
+            # speculation to extraction-free handlers, which genuinely do get
+            # extracted_data=None live.
+            if self._nodes[candidate].extracts is not None:
+                continue
+
             future = self._executor.submit(
                 self._speculative_process_node,
                 candidate, user_text, memory
@@ -218,68 +232,65 @@ class AuraEngine:
         return None
 
     # ─────────────────────────────────────────────────────────
-    # MCTS ROUTING
+    # BANDIT ROUTING (Thompson sampling over feasible transitions)
     # ─────────────────────────────────────────────────────────
-    
-    def _mcts_select(self, current_node: str, state_history: Dict[str, Any]) -> str:
+
+    def set_feasibility_filter(self, fn: Optional[Callable[[str, str], bool]]):
+        """Wire a CTL-feasibility predicate ``fn(from_node, to_node) -> bool``.
+
+        When set, the router restricts candidates to transitions the verifier
+        (task 0005) deems valid, so routing can never disagree with the
+        temporal-logic layer. Structural transitions are always required too.
         """
-        Selects the optimal next state using an Upper Confidence Bound (UCB1) approach.
-        Balances exploitation of high-success paths with exploration of new transitions
-        based on real-world health metrics from the AdaptiveDAG.
+        self._feasibility_fn = fn
+
+    def _is_feasible(self, current_node: str, target: str) -> bool:
+        if target not in self._transitions.get(current_node, []):
+            return False
+        if self._feasibility_fn is not None:
+            return self._feasibility_fn(current_node, target)
+        return True
+
+    def _route_select(self, current_node: str, state_history: Dict[str, Any]) -> str:
+        """
+        Resolve an ambiguous transition with a Thompson-sampling bandit.
+
+        This is a contextual bandit, NOT Monte-Carlo Tree Search: there is no
+        tree, rollout, or backprop -- each candidate edge carries a
+        Beta-Bernoulli posterior (adaptive_graph.EdgeStats) over its success
+        probability, and we draw one sample per feasible edge and take the
+        argmax. Because the reward is a Bernoulli success in [0,1], no
+        exploration constant or reward normalization is required, and sampling
+        gives the explore/exploit balance for free. Candidates are filtered to
+        the CTL-feasible set first, so an infeasible transition is never
+        selectable.
         """
         possible_targets = self._transitions.get(current_node, [])
         if not possible_targets:
             return "END"
-        if len(possible_targets) == 1:
-            return possible_targets[0]
-            
-        logger.info(f"[MCTS] Resolving ambiguous transition at '{current_node}'...")
-        
-        # Hyperparameters for the UCB1 algorithm
-        C = 1.414  # Exploration constant (sqrt(2))
-        best_node = possible_targets[0]
-        max_score = -float('inf')
-        
-        # Calculate total parent visits (sum across all possible child edges)
-        total_visits = sum(
-            self.adaptive_graph.get_health(t).total_executions 
-            for t in possible_targets
-        )
-        
-        for target in possible_targets:
-            health = self.adaptive_graph.get_health(target)
-            visits = health.total_executions
-            
-            # 1. Exploitation term: Estimated success rate
-            # Add a small prior based on node's safeguard features
-            success_rate = 1.0 - health.fail_rate
-            node_obj = self._nodes.get(target)
-            
-            prior_boost = 0.0
-            if node_obj:
-                if node_obj.extracts: prior_boost += 0.1
-                if node_obj.sandbox_rule: prior_boost += 0.1
-            
-            exploitation = success_rate + prior_boost
-            
-            # 2. Exploration term: UCB confidence interval
-            if visits == 0 or total_visits == 0:
-                # Force exploration of unvisited nodes
-                exploration = float('inf')
-            else:
-                exploration = C * math.sqrt(math.log(total_visits) / visits)
-            
-            score = exploitation + exploration
-            
-            # Penalty for known failures in the current execution trace
-            if state_history.get("last_failed_node") == target:
-                score -= 2.0
-                
-            if score > max_score:
-                max_score = score
+
+        feasible = [t for t in possible_targets if self._is_feasible(current_node, t)]
+        if not feasible:
+            logger.warning(f"[Router] No feasible transition from '{current_node}'.")
+            return "END"
+        if len(feasible) == 1:
+            return feasible[0]
+
+        logger.info(f"[Router] Thompson-sampling ambiguous transition at '{current_node}'...")
+
+        last_failed = state_history.get("last_failed_node")
+        best_node = feasible[0]
+        best_sample = -1.0
+        for target in feasible:
+            sample = self.adaptive_graph.sample_edge_score(current_node, target, self._route_rng)
+            # Soft penalty for an edge that just failed this run; stays in [0,1].
+            if target == last_failed:
+                sample *= 0.5
+            if sample > best_sample:
+                best_sample = sample
                 best_node = target
-                
-        logger.info(f"[MCTS] Selected '{best_node}' (UCB1 score: {max_score:.3f})")
+
+        logger.info(f"[Router] Selected '{best_node}' (Thompson sample: {best_sample:.3f})")
         return best_node
 
     # ─────────────────────────────────────────────────────────
@@ -295,7 +306,7 @@ class AuraEngine:
         3. Teleprompter → KNN Few-Shot injection
         4. Compound Verification Loop → extract→verify→reflect→retry
         5. Node.handle() → developer business logic
-        6. MCTS → ambiguous transition resolution
+        6. Bandit router → ambiguous transition resolution
         7. AuraTrace → state serialization
         8. Speculative Execution → pre-compute next branches
         """
@@ -355,11 +366,6 @@ class AuraEngine:
                         response_model=node.extracts,
                         messages=msgs,
                         node_name=current_state,
-                    ) if self.provider._clients else self.client.chat.completions.create(
-                        model=node.model,
-                        response_model=node.extracts,
-                        messages=msgs,
-                        max_retries=3,
                     )
                     runs.append(run_data)
                 
@@ -387,12 +393,12 @@ class AuraEngine:
             memory=memory
         )
         
-        # ── STAGE 5: MCTS Resolution (if ambiguous) ──
+        # ── STAGE 5: Bandit-router resolution (if ambiguous) ──
         allowed = self._transitions.get(current_state, [])
         if next_state not in allowed:
             if allowed:
-                logger.warning(f"[{current_state}] Invalid transition '{next_state}'. Engaging MCTS fallback.")
-                next_state = self._mcts_select(current_state, memory)
+                logger.warning(f"[{current_state}] Invalid transition '{next_state}'. Engaging bandit router fallback.")
+                next_state = self._route_select(current_state, memory)
             else:
                 latency = (time.time() * 1000) - start_ms
                 self.adaptive_graph.record_execution(current_state, False, latency)
@@ -416,9 +422,11 @@ class AuraEngine:
             cache_payload["payload"] = payload
         self.cache.save_trajectory(current_state, user_text, cache_payload)
         
-        # ── STAGE 7: Record Health ──
+        # ── STAGE 7: Record Health + edge outcome (feeds the bandit router) ──
         latency = (time.time() * 1000) - start_ms
         self.adaptive_graph.record_execution(current_state, True, latency)
+        if next_state in self._transitions.get(current_state, []):
+            self.adaptive_graph.record_edge_outcome(current_state, next_state, success=True)
         
         # ── STAGE 8: Speculative Execution ──
         if self._speculation_depth > 0:

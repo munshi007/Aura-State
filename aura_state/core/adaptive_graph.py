@@ -47,6 +47,35 @@ class NodeHealthMetrics:
 
 
 @dataclass
+class EdgeStats:
+    """Beta-Bernoulli posterior for a single directed transition (edge).
+
+    Success/failure are Bernoulli outcomes, so the reward is bounded in [0,1]
+    by construction -- no reward-scale constant is needed. The posterior over
+    the edge's success probability is Beta(alpha, beta), seeded from uniform
+    priors (alpha0 = beta0 = 1). Stale evidence is discounted before each
+    update so the router tracks non-stationary workflows.
+    """
+    alpha: float = 1.0            # prior successes + 1 (uniform Beta(1,1))
+    beta: float = 1.0             # prior failures + 1
+    last_update: Optional[float] = None
+
+    def record(self, success: bool, discount: float = 0.98) -> None:
+        # Decay the surplus over the uniform prior so old outcomes fade.
+        self.alpha = 1.0 + (self.alpha - 1.0) * discount
+        self.beta = 1.0 + (self.beta - 1.0) * discount
+        if success:
+            self.alpha += 1.0
+        else:
+            self.beta += 1.0
+        self.last_update = time.time()
+
+    @property
+    def mean(self) -> float:
+        return self.alpha / (self.alpha + self.beta)
+
+
+@dataclass
 class RuntimeEdge:
     """An edge proposed by the engine at runtime (not developer-defined)."""
     from_node: str
@@ -76,9 +105,29 @@ class AdaptiveDAG:
     
     def __init__(self):
         self._health: Dict[str, NodeHealthMetrics] = defaultdict(NodeHealthMetrics)
+        self._edge_stats: Dict[Tuple[str, str], EdgeStats] = defaultdict(EdgeStats)
         self._proposed_edges: List[RuntimeEdge] = []
         self._bypassed_nodes: Set[str] = set()
         self._reflexion_injected: Set[str] = set()
+
+    # ── Per-edge routing posterior (Thompson / Beta-Bernoulli) ──
+
+    def get_edge_stats(self, from_node: str, to_node: str) -> EdgeStats:
+        return self._edge_stats[(from_node, to_node)]
+
+    def record_edge_outcome(self, from_node: str, to_node: str, success: bool):
+        """Update the Beta-Bernoulli posterior for a taken transition."""
+        self._edge_stats[(from_node, to_node)].record(success)
+
+    def sample_edge_score(self, from_node: str, to_node: str, rng) -> float:
+        """Draw one Thompson sample from the edge's Beta posterior.
+
+        ``rng`` is a ``random.Random`` instance (seedable for deterministic
+        tests). Sampling -- rather than taking the mean -- is what balances
+        exploration against exploitation without any tuning constant.
+        """
+        s = self._edge_stats[(from_node, to_node)]
+        return rng.betavariate(s.alpha, s.beta)
     
     # ── Health Tracking ──
     

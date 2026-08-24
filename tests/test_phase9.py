@@ -188,3 +188,61 @@ class TestProofEngine:
         assert not result.verified
         assert result.counterexample is not None
         assert "failed_constraints" in result.counterexample
+
+
+# ── Regression: proof engine must fail CLOSED, no eval RCE (task 0002) ──
+
+class TestProofEngineFailsClosed:
+    """The proof engine previously failed OPEN: an obligation it could not
+    parse was silently skipped and counted as passed, and obligations were
+    evaluated with eval(). Both are load-bearing correctness bugs."""
+
+    def test_unparseable_obligation_is_unproven_not_passed_fixes_0002(self):
+        # Garbage that cannot compile must NOT be reported as verified.
+        result = prove_extraction({"x": 10}, ["x >>> 0 !!"])
+        assert not result.verified
+        assert "x >>> 0 !!" in result.unproven_obligations
+        assert "x >>> 0 !!" not in result.failed_obligations
+
+    def test_unknown_variable_is_unproven_not_passed_fixes_0002(self):
+        # Obligation references a field that was never extracted.
+        result = prove_extraction({"x": 10}, ["y > 0"])
+        assert not result.verified
+        assert "y > 0" in result.unproven_obligations
+
+    def test_obligation_over_string_field_is_unproven_fixes_0002(self):
+        # Non-numeric data cannot back a numeric obligation -> unproven, not passed.
+        result = prove_extraction({"name": "sarah"}, ["name > 0"])
+        assert not result.verified
+        assert "name > 0" in result.unproven_obligations
+
+    def test_rce_subclasses_gadget_is_rejected_fixes_0002(self):
+        # The classic {"__builtins__": {}} eval escape. Must not execute; the
+        # obligation must be rejected as unproven, and verified stays False.
+        gadget = "().__class__.__bases__[0].__subclasses__()"
+        result = prove_extraction({"x": 1}, [gadget])
+        assert not result.verified
+        assert gadget in result.unproven_obligations
+
+    def test_valid_obligation_still_proves_true(self):
+        result = prove_extraction({"area": 100, "rate": 3, "total": 300},
+                                  ["total == area * rate", "area > 0"])
+        assert result.verified
+        assert result.unproven_obligations == []
+
+    def test_violated_obligation_reports_counterexample(self):
+        result = prove_extraction({"area": 100, "rate": 3, "total": 999},
+                                  ["total == area * rate"])
+        assert not result.verified
+        assert "total == area * rate" in result.failed_obligations
+
+    def test_chained_comparison_supported(self):
+        assert prove_extraction({"p": 5}, ["0 < p < 10"]).verified
+        assert not prove_extraction({"p": 50}, ["0 < p < 10"]).verified
+
+    def test_mixed_valid_and_unproven_fails_closed(self):
+        # One provable, one garbage -> overall must be False.
+        result = prove_extraction({"x": 10}, ["x > 0", "bogus $%"])
+        assert not result.verified
+        assert result.failed_obligations == []
+        assert "bogus $%" in result.unproven_obligations

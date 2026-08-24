@@ -162,6 +162,20 @@ class LLMProvider:
     def set_budget(self, budget_usd: float):
         self._cost_tracker = CostTracker(budget_usd=budget_usd)
     
+    @staticmethod
+    def _usage_from_completion(raw) -> Tuple[int, int]:
+        """Extract (input_tokens, output_tokens) from a raw LLM completion.
+
+        Returns (0, 0) only when the provider genuinely reported no usage --
+        never a fabricated default. Real token counts flow through when present.
+        """
+        usage = getattr(raw, "usage", None)
+        if usage is None:
+            return 0, 0
+        prompt = getattr(usage, "prompt_tokens", None)
+        completion = getattr(usage, "completion_tokens", None)
+        return int(prompt or 0), int(completion or 0)
+
     def _get_client_for_model(self, model: str):
         """Find the registered client for a given model name."""
         for prefix, client in self._clients.items():
@@ -219,24 +233,36 @@ class LLMProvider:
             
             start_ms = time.time() * 1000
             try:
-                result = client.chat.completions.create(
-                    model=current_model,
-                    response_model=response_model,
-                    messages=messages,
-                    max_retries=max_retries,
-                )
+                # Prefer create_with_completion so we can read real token usage
+                # off the raw response; fall back to create() for clients that
+                # don't expose it.
+                raw = None
+                if hasattr(client.chat.completions, "create_with_completion"):
+                    result, raw = client.chat.completions.create_with_completion(
+                        model=current_model,
+                        response_model=response_model,
+                        messages=messages,
+                        max_retries=max_retries,
+                    )
+                else:
+                    result = client.chat.completions.create(
+                        model=current_model,
+                        response_model=response_model,
+                        messages=messages,
+                        max_retries=max_retries,
+                    )
                 latency_ms = (time.time() * 1000) - start_ms
-                
-                # Record success
+
+                in_tokens, out_tokens = self._usage_from_completion(raw)
                 self._cost_tracker.record(
                     node_name=node_name,
                     model=current_model,
-                    input_tokens=0,  # Would need response metadata for exact counts
-                    output_tokens=0,
+                    input_tokens=in_tokens,
+                    output_tokens=out_tokens,
                     latency_ms=latency_ms,
                     success=True,
                 )
-                
+
                 return result
                 
             except Exception as e:
