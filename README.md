@@ -148,7 +148,10 @@ Avg latency:              1.4s
 ```
 
 ```bash
-# Try it yourself — no API key needed
+# See verification reject a hallucination in the loop — no API key needed
+python examples/verified_loop_demo.py
+
+# Full pipeline benchmark — no API key needed
 python examples/benchmark/run_benchmark.py
 
 # With real LLM calls (needs OPENAI_API_KEY in .env)
