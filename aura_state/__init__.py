@@ -31,8 +31,9 @@ from .verification.conformal import (
 from .verification.proof_engine import prove_extraction, prove_consistency, ProofResult
 from .compiler.spec_compiler import (
     compile_contract, diff_contracts, check_faithfulness,
-    AuraContract, NodeContract, PropertyVerdict, ContractError,
+    AuraContract, NodeContract, PropertyVerdict, TaintContract, TaintPath, ContractError,
 )
+from .verification.taint import analyze_taint, TaintResult, TaintViolation
 
 __all__ = [
     "AuraEngine",
@@ -83,5 +84,11 @@ __all__ = [
     "AuraContract",
     "NodeContract",
     "PropertyVerdict",
+    "TaintContract",
+    "TaintPath",
     "ContractError",
+    # Capability-typed dataflow (injection-proof)
+    "analyze_taint",
+    "TaintResult",
+    "TaintViolation",
 ]

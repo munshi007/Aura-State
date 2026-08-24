@@ -60,6 +60,13 @@ class Node:
     consensus: int = 1
     consensus_strategy: ConsensusStrategy = ConsensusStrategy.MAJORITY_VOTE
     confidence: float = 0.9
+    # Capability-typed dataflow labels (see verification/taint.py):
+    #   untrusted_source: this node emits untrusted data (LLM/tool output)
+    #   dangerous_sink:   this node performs an irreversible/side-effecting action
+    #   sanitizer:        this node cleans taint; it does not propagate downstream
+    untrusted_source: bool = False
+    dangerous_sink: bool = False
+    sanitizer: bool = False
     memory_context: Optional[List[str]] = None
     model: str = "gpt-4o"
 
@@ -170,6 +177,16 @@ class AuraEngine:
         """
         from ..verification.temporal_verifier import verify_engine
         return verify_engine(self, properties, init_node=init_node)
+
+    def analyze_taint(self):
+        """Prove no untrusted-source node can reach a dangerous sink (design time).
+
+        Static taint analysis over the typed graph. See
+        `aura_state.verification.taint`. Returns a TaintResult with any
+        violating source->sink paths.
+        """
+        from ..verification.taint import analyze_taint
+        return analyze_taint(self)
 
     def compile_contract(self, properties: Optional[List[Dict[str, Any]]] = None, meta: Optional[Dict[str, Any]] = None):
         """Compile this graph into a portable, versioned AuraContract.

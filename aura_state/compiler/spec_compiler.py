@@ -47,12 +47,28 @@ class NodeContract(BaseModel):
     confidence: float = 0.9                 # nominal conformal coverage
     sandbox_rule: Optional[str] = None
     terminal: bool = False
+    # Capability-typed dataflow labels.
+    untrusted_source: bool = False
+    dangerous_sink: bool = False
+    sanitizer: bool = False
 
 
 class PropertyVerdict(BaseModel):
     description: str
     formula: str                            # CTL formula, as its repr
     verdict: str                            # "PROVEN" | "VIOLATED"
+
+
+class TaintPath(BaseModel):
+    source: str
+    sink: str
+    path: List[str]
+
+
+class TaintContract(BaseModel):
+    """Capability-typed dataflow verdict: can untrusted data reach a sink?"""
+    verdict: str                            # "PROVEN" (safe) | "VIOLATED"
+    violations: List[TaintPath] = Field(default_factory=list)
 
 
 class AuraContract(BaseModel):
@@ -63,6 +79,7 @@ class AuraContract(BaseModel):
     nodes: List[NodeContract] = Field(default_factory=list)
     transitions: Dict[str, List[str]] = Field(default_factory=dict)
     properties: List[PropertyVerdict] = Field(default_factory=list)
+    taint: Optional[TaintContract] = None   # capability-typed dataflow verdict
     meta: Dict[str, Any] = Field(default_factory=dict)   # provenance (hash, version, time)
 
     def _canonical_payload(self) -> dict:
@@ -132,6 +149,9 @@ def compile_contract(
             confidence=node.confidence,
             sandbox_rule=node.sandbox_rule,
             terminal=name in sinks,
+            untrusted_source=bool(getattr(node, "untrusted_source", False)),
+            dangerous_sink=bool(getattr(node, "dangerous_sink", False)),
+            sanitizer=bool(getattr(node, "sanitizer", False)),
         ))
 
     prop_verdicts: List[PropertyVerdict] = []
@@ -143,6 +163,14 @@ def compile_contract(
                 verdict="PROVEN" if vr.result == PropertyResult.PROVEN else "VIOLATED",
             ))
 
+    # Capability-typed dataflow verdict (always computed; cheap, static).
+    from ..verification.taint import analyze_taint
+    taint_res = analyze_taint(engine)
+    taint_contract = TaintContract(
+        verdict="PROVEN" if taint_res.verified else "VIOLATED",
+        violations=[TaintPath(source=v.source, sink=v.sink, path=v.path) for v in taint_res.violations],
+    )
+
     m: Dict[str, Any] = dict(meta or {})
     m["aura_version"] = _aura_version()
 
@@ -152,6 +180,7 @@ def compile_contract(
         nodes=node_contracts,
         transitions=transitions,
         properties=prop_verdicts,
+        taint=taint_contract,
         meta=m,
     )
     contract.meta["content_hash"] = contract.content_hash()

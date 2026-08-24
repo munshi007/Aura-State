@@ -149,6 +149,25 @@ and hand-written policy drifts from the code (and is only 24–35% faithful when
 translated from prose). Here the contract is emitted from the design that was
 proven. See `python examples/emit_contract_demo.py`.
 
+### Prove untrusted data can't reach a dangerous tool (injection-proof)
+
+Label nodes with capability types and the compiler statically proves — over the
+typed graph — that no untrusted source can reach a dangerous sink without
+passing a sanitizer. It tracks *provenance, not content*, so it can't be fooled
+by the encodings that defeat runtime scanners. The verdict compiles into the
+contract, so a runtime can refuse to deploy a `VIOLATED` graph.
+
+```python
+class Ingest(Node):    untrusted_source = True     # LLM / external tool output
+class Review(Node):    sanitizer = True            # clears taint
+class SendEmail(Node): dangerous_sink = True       # irreversible action
+
+analyze_taint(engine)   # -> VIOLATED (Ingest -> SendEmail) unless Review is in the path
+```
+
+Everyone else sells injection *detection* (probabilistic). This is
+*impossibility* over the design. See `python examples/taint_proof_demo.py`.
+
 ## Benchmark results
 
 We ran 10 real-estate sales transcripts through a 4-node pipeline using GPT-4o-mini (30 API calls total):
