@@ -92,27 +92,49 @@ class VerificationLoop:
         sandbox_rule: Optional[str],
         sandbox,  # SandboxedInterpreter instance
         user_text: str,
+        obligations: Optional[List[str]] = None,
+        data_override: Optional[Dict[str, Any]] = None,
     ) -> Tuple[bool, Optional[str]]:
         """
-        Verify extracted data against the node's sandbox_rule.
-        
-        Returns:
-            (passed: bool, error_message: Optional[str])
+        Verify extracted (or provided) data against the node's deterministic
+        contract: the ``sandbox_rule`` AND any Z3 proof ``obligations``.
+
+        ``data_override`` supplies the value dict for nodes that carry a rule
+        but do no LLM extraction (e.g. a pure decision node whose inputs live
+        in ``memory``) -- so the rule fires whether or not the node extracts.
+
+        Returns (passed, error_message). Fails CLOSED: a Z3 obligation that
+        cannot be proven counts as a failure, never a silent pass.
         """
-        if not sandbox_rule or not extracted_data:
-            return True, None
-        
-        try:
-            data_dict = extracted_data.model_dump() if extracted_data else {}
-            result = sandbox.compile_and_run(sandbox_rule, data_dict)
-            
+        if extracted_data is not None:
+            data_dict = extracted_data.model_dump()
+        elif data_override is not None:
+            data_dict = dict(data_override)
+        else:
+            data_dict = {}
+
+        # 1. Sandbox rule (deterministic boolean over the data).
+        if sandbox_rule:
+            if not data_dict:
+                return False, "sandbox_rule present but no data available to check"
+            try:
+                result = sandbox.compile_and_run(sandbox_rule, data_dict)
+            except Exception as e:
+                return False, f"Sandbox verification error: {str(e)}"
             if result is False or result == 0:
                 return False, f"Sandbox rule returned falsy: {result}"
-            
-            return True, None
-            
-        except Exception as e:
-            return False, f"Sandbox verification error: {str(e)}"
+
+        # 2. Z3 proof obligations (formal, fail-closed).
+        if obligations:
+            from ..verification.proof_engine import prove_extraction
+            proof = prove_extraction(data_dict, obligations)
+            if not proof.verified:
+                return False, (
+                    f"Z3 obligations failed: {proof.failed_obligations} "
+                    f"unproven: {proof.unproven_obligations}"
+                )
+
+        return True, None
     
     def generate_critique(
         self,
@@ -157,6 +179,7 @@ class VerificationLoop:
         extract_fn,  # Callable that performs LLM extraction
         sandbox_rule: Optional[str],
         sandbox,
+        obligations: Optional[List[str]] = None,
     ) -> Tuple[Optional[BaseModel], int, bool]:
         """
         Execute the full verification loop.
@@ -178,9 +201,10 @@ class VerificationLoop:
                 logger.warning(f"[VerificationLoop] {node_name}: Extraction returned None on attempt {attempt}")
                 continue
             
-            # Verify
+            # Verify (sandbox rule + Z3 obligations)
             passed, error = self.verify_extraction(
-                node_name, extracted, sandbox_rule, sandbox, user_text
+                node_name, extracted, sandbox_rule, sandbox, user_text,
+                obligations=obligations,
             )
             
             metric = {

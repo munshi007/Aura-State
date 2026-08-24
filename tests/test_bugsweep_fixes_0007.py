@@ -6,7 +6,6 @@ import pytest
 from pydantic import BaseModel
 
 from aura_state.core.providers import LLMProvider
-from aura_state.memory.trajectory_cache import GraphRAGCache
 from aura_state.compiler.dspy_tuner import BootstrapTeleprompter, char_stub_embedder
 
 
@@ -56,16 +55,8 @@ def test_cost_tracker_records_fixes_0007():
     assert report["nodes"]["N"]["gpt-4o-mini"]["output_tokens"] == 500
 
 
-# ── B2: cache hit does not raise NameError (logger was undefined) ──
-
-def test_cache_hit_no_nameerror_fixes_0007(tmp_path):
-    cache = GraphRAGCache(cache_dir=str(tmp_path))
-    prompt = "buy a house in Seattle soon please"
-    cache.save_trajectory("Node", prompt, {"next_state": "END"})
-    # Same prompt -> isomorphic graph -> hit path runs logger.info (line that
-    # used to raise NameError: name 'logger' is not defined).
-    result = cache.check_cache("Node", prompt)
-    assert result == {"next_state": "END"}
+# (B2 obsolete: the GraphRAG trajectory cache was removed as feature-theater
+#  during the design-time-verification refactor, so its logger bug is moot.)
 
 
 # ── B3: default embedder is NOT the ord stub; stub only via injection ──
@@ -119,30 +110,5 @@ def test_extraction_uses_provider_not_dead_branch_fixes_0007(monkeypatch):
     assert called["n"] >= 1  # provider path taken; dead self.client branch gone
 
 
-# ── B5: speculation never runs an extracts-node handler with fake None data ──
-
-def test_speculation_skips_extracts_nodes_fixes_0007():
-    from aura_state.core.engine import AuraEngine, Node
-
-    class WithExtract(Node):
-        system_prompt = "x"
-        extracts = _Dummy
-
-        def handle(self, user_text, extracted_data=None, memory=None):
-            # Would explode if run speculatively with extracted_data=None.
-            raise AssertionError("extracts node must not be speculated")
-
-    class NoExtract(Node):
-        system_prompt = "y"
-
-        def handle(self, user_text, extracted_data=None, memory=None):
-            return "END", {}
-
-    engine = AuraEngine(speculation_depth=1)
-    engine.register(WithExtract, NoExtract)
-    engine._transitions["Start"] = ["WithExtract", "NoExtract"]
-
-    engine._speculative_execute("Start", "text", {})
-    # Only the extraction-free node is speculated.
-    assert "NoExtract" in engine._pending_speculations
-    assert "WithExtract" not in engine._pending_speculations
+# (B5 obsolete: speculative execution was removed as feature-theater during the
+#  design-time-verification refactor -- no handler runs on fabricated data now.)

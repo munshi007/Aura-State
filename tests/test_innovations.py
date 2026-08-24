@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 from pydantic import BaseModel
 
 from aura_state.core.engine import AuraEngine, Node, CompiledTransition
-from aura_state.core.adaptive_graph import AdaptiveDAG, NodeHealthMetrics, RuntimeEdge
+from aura_state.core.adaptive_graph import AdaptiveDAG, NodeHealthMetrics, EdgeStats
 from aura_state.core.verification_loop import VerificationLoop, ReflectionMemory, Reflection
 from aura_state.core.providers import LLMProvider, CostTracker, MODEL_PRICING
 from aura_state.compiler.schema_compiler import (
@@ -17,44 +17,7 @@ from aura_state.compiler.schema_compiler import (
 
 
 # ═══════════════════════════════════════════════════════════════
-# Speculative Node Execution
-# ═══════════════════════════════════════════════════════════════
-
-class GreetNode(Node):
-    system_prompt = "Greet the user."
-    def handle(self, user_text, extracted_data=None, memory=None):
-        return "QualifyNode", {"greeting": "hello"}
-
-class QualifyNode(Node):
-    system_prompt = "Qualify the lead."
-    def handle(self, user_text, extracted_data=None, memory=None):
-        return "EndNode", {"qualified": True}
-
-class EndNode(Node):
-    system_prompt = "End the conversation."
-    def handle(self, user_text, extracted_data=None, memory=None):
-        return "END", {}
-
-
-class TestSpeculativeExecution:
-    def test_engine_has_speculation_cache(self):
-        engine = AuraEngine(speculation_depth=1)
-        assert hasattr(engine, '_pending_speculations')
-        assert hasattr(engine, '_speculation_depth')
-        assert engine._speculation_depth == 1
-    
-    def test_speculation_depth_configurable(self):
-        engine = AuraEngine(speculation_depth=3)
-        assert engine._speculation_depth == 3
-    
-    def test_check_speculation_miss(self):
-        engine = AuraEngine()
-        result = engine._check_speculation("NonExistent")
-        assert result is None
-
-
-# ═══════════════════════════════════════════════════════════════
-# Adaptive Compute Graph
+# Health tracking + edge posteriors
 # ═══════════════════════════════════════════════════════════════
 
 class TestAdaptiveDAG:
@@ -65,50 +28,21 @@ class TestAdaptiveDAG:
         assert health.total_executions == 1
         assert health.failures == 0
         assert health.avg_latency_ms == 50.0
-    
+
     def test_fail_rate(self):
         dag = AdaptiveDAG()
         dag.record_execution("NodeA", success=True, latency_ms=10)
         dag.record_execution("NodeA", success=False, latency_ms=10)
         assert dag.get_health("NodeA").fail_rate == 0.5
-    
-    def test_reflexion_injection_threshold(self):
+
+    def test_edge_stats_update(self):
         dag = AdaptiveDAG()
-        # Not triggered yet
-        assert dag.should_inject_reflexion("NodeA") is False
-        
-        # 3 consecutive failures triggers reflexion
-        for _ in range(3):
-            dag.record_execution("NodeA", success=False, latency_ms=10)
-        assert dag.should_inject_reflexion("NodeA") is True
-        
-        # After marking, doesn't trigger again
-        dag.mark_reflexion_injected("NodeA")
-        assert dag.should_inject_reflexion("NodeA") is False
-    
-    def test_llm_bypass_threshold(self):
-        dag = AdaptiveDAG()
-        # Need MIN_EXECUTIONS_FOR_BYPASS first
-        for _ in range(10):
-            dag.record_execution("NodeA", success=True, latency_ms=5, cache_hit=True)
-        assert dag.should_bypass_llm("NodeA") is True
-    
-    def test_edge_proposal(self):
-        dag = AdaptiveDAG()
-        dag.propose_edge("NodeA", "NodeC", confidence=0.85, evidence="MCTS simulation #4")
-        assert dag.total_proposed_edges == 1
-        
-        proposals = dag.get_proposed_edges()
-        assert len(proposals) == 1
-        assert proposals[0].from_node == "NodeA"
-        assert proposals[0].confidence == 0.85
-    
-    def test_accept_edge(self):
-        dag = AdaptiveDAG()
-        dag.propose_edge("NodeA", "NodeC", confidence=0.9, evidence="test")
-        assert dag.accept_edge("NodeA", "NodeC") is True
-        assert len(dag.get_proposed_edges()) == 0  # No unaccepted proposals
-    
+        dag.record_edge_outcome("A", "B", success=True)
+        dag.record_edge_outcome("A", "B", success=True)
+        s = dag.get_edge_stats("A", "B")
+        assert s.alpha > s.beta  # more successes -> higher mean
+        assert s.mean > 0.5
+
     def test_health_report(self):
         dag = AdaptiveDAG()
         dag.record_execution("NodeA", success=True, latency_ms=50)

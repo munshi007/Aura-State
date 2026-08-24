@@ -9,9 +9,7 @@ A deep-dive into every algorithm powering Aura-State, why we chose it, and how i
 - [CTL Model Checking](#ctl-model-checking-temporal-logic-verification)
 - [Z3 SMT Solving](#z3-smt-solving-proof-engine)
 - [Conformal Prediction](#conformal-prediction)
-- [Monte Carlo Tree Search](#monte-carlo-tree-search-mcts-routing)
-- [UCB1](#ucb1-upper-confidence-bound)
-- [Subgraph Isomorphism](#subgraph-isomorphism-graphrag-cache)
+- [Thompson Sampling (Bandit Router)](#thompson-sampling-bandit-router)
 - [KNN Few-Shot Teleprompting](#knn-few-shot-teleprompting)
 - [AST Sandboxing](#ast-sandboxing-safe-math-execution)
 
@@ -76,23 +74,33 @@ When a proof fails, Z3 produces a **counterexample** — the specific values tha
 
 **What it is:** A distribution-free statistical method that wraps point predictions with prediction intervals that have guaranteed coverage probability. Unlike Bayesian approaches, conformal prediction makes no assumptions about the data distribution.
 
-**Origin:** Vovk, Gammerman & Shafer, 2005 — *"Algorithmic Learning in a Random World."* Based on exchangeability (a weaker assumption than i.i.d.).
+**Origin:** Vovk, Gammerman & Shafer, 2005 — *"Algorithmic Learning in a Random World."* Based on exchangeability (a weaker assumption than i.i.d.). Our estimator is the **jackknife+** variant of Barber, Candès, Ramdas & Tibshirani, 2021 — *"Predictive inference with the jackknife+."*
 
-**How we use it:** When the LLM extracts a numeric value (e.g., budget = $450,000), we run multiple extractions and compute a conformal interval:
+**How we use it:** When the LLM extracts a numeric value (e.g., budget = $450,000), we run multiple extractions and compute a jackknife+ interval:
 
 ```
-Extractions: [$450k, $452k, $448k, $450k, $451k]
+Extractions: [$450k, $452k, $448k, $450k, $451k, ...]
 
-Split conformal method:
-1. Calibration set: first 3 values
-2. Test set: last 2 values
-3. Nonconformity scores: |xi - median|
-4. α = 0.05 (for 95% coverage)
-5. Quantile of scores → interval width
+Jackknife+ method (Barber et al. 2021):
+1. For each i, leave it out and compute μ₋ᵢ = median of the rest
+2. LOO nonconformity score: Rᵢ = |vᵢ − μ₋ᵢ|
+3. α = 0.05 (for 95% coverage); rank k = ceil((1 − α)·(n + 1))
+4. upper = k-th smallest of {μ₋ᵢ + Rᵢ}, lower = (n+1−k)-th smallest of {μ₋ᵢ − Rᵢ}
+   (order statistics, NOT interpolated quantiles)
 
 Result: $450,000 ± $2,200 (95% CI: [$447,800, $452,200])
-Coverage guarantee: ≥ 95% of true values fall within this interval
+Coverage guarantee: covers a fresh draw with probability ≥ 1 − 2α worst-case,
+~ 1 − α empirically for well-behaved data
 ```
+
+Jackknife+ uses every sample via leave-one-out rather than wasting half on a
+disjoint calibration fold, which matters because N here is just a handful of
+consensus runs per field. Below the minimum sample count
+(`n ≥ ceil(1/α) − 1`, = 19 at 95%) there is no valid finite-sample threshold:
+the interval falls back to the raw min..max range and is flagged **uncalibrated**
+(`confidence = None`) — we never stamp a nominal coverage label we can't back up.
+Note the interval measures the model's run-to-run **dispersion / self-agreement**,
+not its error against an external ground truth.
 
 **Why not standard confidence intervals?** Standard CIs assume normality. LLM outputs are not normally distributed — they're discrete, multi-modal, and model-dependent. Conformal prediction is **distribution-free**: the coverage guarantee holds regardless of the underlying distribution.
 
@@ -100,71 +108,24 @@ Coverage guarantee: ≥ 95% of true values fall within this interval
 
 ---
 
-## Monte Carlo Tree Search (MCTS Routing)
+## Thompson Sampling (Bandit Router)
 
-**What it is:** A search algorithm that stochastically samples execution paths to estimate high-reward branches. Traditionally, this involves running thousands of random simulations (rollouts).
+**What it is:** A Bayesian multi-armed bandit strategy. Each arm (here, each outgoing edge) carries a posterior distribution over its success probability. To choose, you draw one sample from every arm's posterior and pick the arm with the highest sample. High-uncertainty arms occasionally sample high and get tried; arms with a proven track record are picked most of the time. Exploration falls out of the posterior variance — there is no exploration constant to tune.
 
-**How we use it:** To maintain low latency and minimize token usage, Aura-State implements **Real-Time MCTS**. Instead of spawning fresh LLM simulations for every decision, we use the **AdaptiveDAG** as the "simulation memory." Every execution in production act as a simulation that updates the edge health.
+**Origin:** Thompson, 1933 — *"On the Likelihood that One Unknown Probability Exceeds Another in View of the Evidence of Two Samples."* The Beta-Bernoulli conjugacy that makes the update a one-line increment is the same result.
 
-When a node has multiple valid transitions, the engine queries the AdaptiveDAG for:
-1. **Node Success Rate**: The historical reliability of the target node.
-2. **Node Priors**: Does the node have Z3 proofs or sandboxing? (higher initial bias).
-3. **Execution Count**: How many times have we explored this path?
+**How we use it:** Routing is a **fallback only**. Normally a node's `handle()` returns the name of the next node, which must be a declared transition. If `handle()` returns an edge that is *not* a declared transition, the engine falls back to the bandit router to pick a feasible edge:
 
-This data is fed into the UCB1 formula to select the next state.
+1. **Filter to CTL-feasible edges first.** Only transitions that the graph's temporal model admits are candidates — the router never invents an unreachable jump.
+2. **Sample each edge's posterior.** Every edge keeps a Beta-Bernoulli posterior in `EdgeStats` (`aura_state/core/adaptive_graph.py`): `Beta(α, β)` where α tracks successes and β tracks failures. We draw `θ_e ~ Beta(α_e, β_e)` for each candidate edge.
+3. **Argmax over samples.** The edge with the largest sampled `θ_e` is selected (`_route_select` in `engine.py`).
+4. **Update.** The Bernoulli reward (success in [0,1]) increments α on success and β on failure, so the posterior sharpens toward the truth over time.
 
-**Why not just let the LLM decide?** LLMs are stateless and have no concept of long-term reward or statistical confidence. MCTS provides a mathematical framework for making decisions that improve over time as more data is collected.
+To stay responsive under **non-stationarity** (a node's reliability drifting over time), the posterior counts are **discounted** — older observations decay, so recent evidence dominates.
 
----
+**Why no exploration constant?** UCB-style policies bolt an explicit exploration bonus onto a point estimate and require tuning a constant `C`. Thompson sampling explores *proportionally to its uncertainty* by construction: a wide posterior naturally produces occasional high draws, and as evidence accumulates the posterior narrows and exploration fades on its own. Nothing to tune, and it matches or beats UCB1 empirically on Bernoulli bandits.
 
-## UCB1 (Upper Confidence Bound)
-
-**What it is:** The selection policy used within MCTS to balance exploitation (staying with a high-success path) and exploration (trying a less-visited path).
-
-**Algorithm:**
-Aura-State uses the standard UCB1 formula:
-`Score = [SuccessRate + Priors] + [C * sqrt(ln(TotalVisits) / NodeVisits)]`
-
-- **Exploitation term**: `SuccessRate` (from AdaptiveDAG) + `Priors` (node features).
-- **Exploration term**: The standard UCB1 confidence interval.
-- **C**: Exploration constant (default is √2).
-
-**Behavior:**
-- **Unvisited Paths**: Paths with 0 visits receive infinite exploration scores, forcing the system to test every edge at least once.
-- **Convergence**: As total executions grow, the exploration bonus decays, and the system converges on the most reliable state transition paths.
-- **Failure Shunning**: If the current execution trace already encountered a failure on a specific path, a local penalty is applied during that specific process call.
-
----
-
-## Subgraph Isomorphism (GraphRAG Cache)
-
-**What it is:** Given two graphs G and H, subgraph isomorphism determines whether G contains a subgraph structurally identical to H. This is an NP-complete problem in general, but efficient for small pattern graphs.
-
-**Origin:** Ullmann, 1976 — *"An Algorithm for Subgraph Isomorphism."* Modern implementations use VF2 (Cordella et al., 2004).
-
-**How we use it:** When a user query comes in, we extract entity-relationship triples into a small **pattern graph** and check if it's isomorphic to any subgraph in our **knowledge graph** (built from past successful executions):
-
-```
-User: "850 sqft room with vaulted ceilings"
-
-Pattern graph:
-  (room)--[has_area]--(850 sqft)
-  (room)--[has_type]--(vaulted ceiling)
-
-Knowledge graph (from past runs):
-  (room_A)--[has_area]--(800 sqft)
-  (room_A)--[has_type]--(vaulted ceiling)
-  (room_A)--[cost]--(12500)
-  ...
-
-VF2 check: Is pattern ⊆ knowledge graph?
-  → YES: return cached result, skip LLM call entirely
-  → NO: proceed with LLM extraction
-```
-
-**Why not vector similarity?** Embedding-based similarity gives you "this is 87% similar" — a fuzzy answer. Subgraph isomorphism gives you a **mathematical guarantee**: the structure is either identical or it isn't. For caching, you want certainty, not probability.
-
-**Implementation:** `aura_state/memory/trajectory_cache.py` using [NetworkX](https://networkx.org/) `is_isomorphic()`.
+**Implementation:** `EdgeStats` posteriors in `aura_state/core/adaptive_graph.py`; selection in `_route_select` in `engine.py`.
 
 ---
 
@@ -221,8 +182,6 @@ VF2 check: Is pattern ⊆ knowledge graph?
 1. Clarke, E.M., Emerson, E.A., & Sistla, A.P. (1986). Automatic verification of finite-state concurrent systems using temporal logic specifications. *ACM TOPLAS*.
 2. de Moura, L., & Bjørner, N. (2008). Z3: An efficient SMT solver. *TACAS*.
 3. Vovk, V., Gammerman, A., & Shafer, G. (2005). *Algorithmic Learning in a Random World*. Springer.
-4. Coulom, R. (2006). Efficient selectivity and backup operators in Monte-Carlo tree search. *CG*.
-5. Auer, P., Cesa-Bianchi, N., & Fischer, P. (2002). Finite-time analysis of the multiarmed bandit problem. *Machine Learning*.
-6. Ullmann, J.R. (1976). An algorithm for subgraph isomorphism. *JACM*.
-7. Khattab, O., et al. (2023). DSPy: Compiling declarative language model calls into self-improving pipelines. *Stanford NLP*.
-8. Silver, D., et al. (2016). Mastering the game of Go with deep neural networks and tree search. *Nature*.
+4. Barber, R.F., Candès, E.J., Ramdas, A., & Tibshirani, R.J. (2021). Predictive inference with the jackknife+. *Annals of Statistics* 49(1): 486-507.
+5. Thompson, W.R. (1933). On the likelihood that one unknown probability exceeds another in view of the evidence of two samples. *Biometrika* 25(3-4): 285-294.
+6. Khattab, O., et al. (2023). DSPy: Compiling declarative language model calls into self-improving pipelines. *Stanford NLP*.

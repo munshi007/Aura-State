@@ -13,11 +13,11 @@ python -m pytest tests/ -v   # 65 tests should pass
 
 ```
 aura_state/
-├── core/           → Engine, MCTS router, adaptive DAG, verification loop, providers
+├── core/           → Engine, bandit router, health/edge metrics, verification loop, providers
 ├── compiler/       → Schema compiler, JSON generator, DSPy-inspired teleprompting
 ├── verification/   → Temporal verifier (CTL), conformal prediction, Z3 proof engine
 ├── execution/      → AuraTrace debugger, AST sandbox
-├── memory/         → GraphRAG cache, context pruner
+├── memory/         → Context pruner
 ├── consensus/      → Multi-run extraction with voting
 └── loaders/        → JSON/YAML graph loader
 ```

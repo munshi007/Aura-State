@@ -8,14 +8,15 @@ pip install git+https://github.com/munshi007/Aura-State.git
 
 ## What this is
 
-Most LLM frameworks let you chain API calls and hope for the best. Aura-State takes a different approach: you define your workflow as a graph of nodes, each with a specific job, and the framework handles extraction, verification, and routing.
+Most LLM frameworks let you chain API calls and hope for the best. Aura-State takes a different approach: you define your workflow as a typed graph of nodes, and **verification runs inside the loop** — every extraction must satisfy its formal contract before the workflow moves on.
 
 The key difference is what happens between nodes:
 
-- **Routing** is scored mathematically (MCTS), not decided by the LLM
-- **Math** runs in a sandboxed interpreter, never hallucinated
-- **Extractions** can be formally proven correct using Z3
-- **Workflows** can be verified for safety properties before they run
+- **Extractions** are checked against Z3 proof obligations, in the extract→verify→retry loop — a value that can't be proven is not accepted (fail-closed)
+- **Math** runs in a no-`exec` sandboxed interpreter, never hallucinated
+- **Uncertainty** is a real conformal interval over repeated runs, not a vibe
+- **Workflows** are model-checked (CTL) for reachability/completion/ordering *before* they run
+- **Routing** (when a node returns an ambiguous edge) is a Thompson-sampling bandit, not an LLM guess
 
 ## Quick example
 
@@ -30,18 +31,20 @@ class LeadData(BaseModel):
     budget: int = Field(description="Budget in USD")
     timeline: str = Field(description="Buying timeline")
 
-# Define a node that extracts it
+# Define a node that extracts it — with a Z3 obligation the value must satisfy
 class ExtractLead(Node):
     system_prompt = "Extract lead info from a sales call transcript."
     extracts = LeadData
+    obligations = ["budget > 0"]   # proven in the loop; unprovable -> not accepted
 
     def handle(self, user_text, extracted_data=None, memory=None):
         return "QualifyBudget", extracted_data.model_dump()
 
-# Define a node that does deterministic math (no LLM)
+# Define a decision node that does deterministic math (no LLM). Its rule runs
+# even though the node does no extraction — it reads prior state from memory.
 class QualifyBudget(Node):
     system_prompt = "Score the lead."
-    sandbox_rule = "result = budget > 100000"  # runs in sandboxed AST, not LLM
+    sandbox_rule = "result = budget > 100000"  # runs in the no-exec sandbox
 
     def handle(self, user_text, extracted_data=None, memory=None):
         return "END", memory
@@ -62,15 +65,19 @@ next_state, data = engine.process("ExtractLead", user_text="Hi, I'm Sarah. Budge
 When you call `engine.process()`, it runs through these steps in order:
 
 ```
-1. Adaptive DAG health check     →  Should this node be skipped or retried?
-2. GraphRAG cache lookup          →  Have we seen this exact input before? Skip the LLM.
-3. Few-shot injection             →  Find similar past successes, inject as examples.
-4. LLM extraction + verification  →  Extract data, verify with Z3, retry if wrong.
-5. Your node's handle() method    →  Your business logic runs here.
-6. MCTS Routing (UCB1)        →  Score branches using UCB1 + AdaptiveDAG metrics.
-7. State serialization            →  Save state for time-travel debugging.
-8. Speculative execution          →  Pre-compute likely next nodes in parallel.
+1. Few-shot injection      →  optional: inject similar past successes as examples.
+2. Verification loop       →  extract → check (sandbox rule + Z3 obligations) → retry.
+                              A value that fails its contract is not accepted (fail-closed).
+3. Conformal interval      →  with consensus > 1, build a real interval over the runs.
+4. Your handle() method    →  your routing / business logic runs here.
+5. Bandit router           →  if handle() returns an invalid edge, Thompson-sample a feasible one.
+6. State serialization     →  save state (JSON, tamper-evident) for time-travel debugging.
 ```
+
+Graph-level properties (reachability, completion, ordering) are checked separately
+at **design time** with `engine.verify([...])` — CTL model checking over the whole
+graph, which per-transition checks can't do. Everything above happens *in the loop*;
+`engine.verification_reports()` returns the proof results and intervals per step.
 
 ## Formal verification (the interesting part)
 
@@ -137,7 +144,6 @@ city                   80%
 
 Temporal properties:       3/3 proven
 Z3 proof obligations:     20/20 passed
-Routing accuracy:          90%
 Avg latency:              1.4s
 ```
 
@@ -154,22 +160,21 @@ python examples/benchmark/run_live.py --model gpt-4o-mini --runs 3
 ```
 aura_state/
 ├── core/
-│   ├── engine.py              # Main engine — process() + MCTS/UCB1 routing
-│   ├── adaptive_graph.py      # Node health monitoring
-│   ├── verification_loop.py   # Extract → verify → retry loop
+│   ├── engine.py              # Main engine — verified process() loop + bandit router
+│   ├── adaptive_graph.py      # Node health metrics + per-edge Beta-Bernoulli posteriors
+│   ├── verification_loop.py   # Extract → verify (sandbox + Z3) → retry loop
 │   └── providers.py           # Multi-model routing + cost tracking
+├── verification/             # ← the core: correct, adversarially-tested primitives
+│   ├── proof_engine.py        # Z3 proofs (fail-closed AST→Z3 compiler, no eval)
+│   ├── conformal.py           # jackknife+ prediction intervals (order statistic)
+│   └── temporal_verifier.py   # Kripke + CTL model checking (init-state, structural deadlocks)
+├── execution/
+│   ├── sandbox.py             # No-exec allowlist AST evaluator (deny-by-default)
+│   └── tracer.py              # State serialization, tamper-evident JSON (time-travel debug)
 ├── compiler/
 │   ├── schema_compiler.py     # JSON Schema → Node classes
-│   └── dspy_tuner.py          # KNN few-shot selection
-├── verification/
-│   ├── temporal_verifier.py   # Kripke + CTL model checking
-│   ├── conformal.py           # Conformal prediction intervals
-│   └── proof_engine.py        # Z3 proofs
-├── execution/
-│   ├── tracer.py              # State serialization (time-travel debug)
-│   └── sandbox.py             # Safe math execution (AST validated)
+│   └── dspy_tuner.py          # KNN few-shot selection (real embedder required)
 ├── memory/
-│   ├── trajectory_cache.py    # Subgraph isomorphism cache
 │   └── pruner.py              # Context window optimization
 └── consensus/
     └── auto_vote.py           # Multi-run extraction with voting
@@ -187,13 +192,13 @@ Python 3.10+ required. Dependencies: `pydantic`, `instructor`, `openai`, `networ
 
 ```bash
 python -m pytest tests/ -v
-# 65 tests passing
+# 100 tests passing
 ```
 
 ## Docs
 
 - [Usage Guide](docs/GUIDE.md) — code examples for every feature
-- [Algorithm Reference](docs/ALGORITHMS.md) — deep-dive into CTL, Z3, MCTS, UCB1, conformal prediction
+- [Algorithm Reference](docs/ALGORITHMS.md) — deep-dive into CTL, Z3, Thompson sampling, conformal prediction
 - [Contributing](CONTRIBUTING.md) — architecture overview and how to contribute
 - [Benchmark](examples/benchmark/) — synthetic and live benchmarks
 

@@ -78,11 +78,6 @@ def test_tracer_is_always_active():
     assert engine.tracer is not None, "AuraTrace must always be initialized"
 
 
-def test_cache_is_always_active():
-    engine = AuraEngine()
-    assert engine.cache is not None, "GraphRAGCache must always be initialized"
-
-
 def test_compiler_is_always_active():
     engine = AuraEngine()
     assert engine.compiler is not None, "BootstrapTeleprompter must always be initialized"

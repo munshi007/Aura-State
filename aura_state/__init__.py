@@ -6,7 +6,6 @@ Usage:
 """
 from .core.engine import AuraEngine, Node, CompiledTransition
 from .execution.tracer import AuraTrace
-from .memory.trajectory_cache import GraphRAGCache
 from .compiler.dspy_tuner import BootstrapTeleprompter
 from .execution.sandbox import SandboxedInterpreter, SandboxExecutionError
 from .memory.pruner import ContextPruner
@@ -15,7 +14,7 @@ from .core.exceptions import AuraStateError, StateTransitionError, MaxRetriesExc
 from .loaders.json_graph import JSONGraphLoader
 
 # ── Core Innovations ──
-from .core.adaptive_graph import AdaptiveDAG, NodeHealthMetrics, RuntimeEdge
+from .core.adaptive_graph import AdaptiveDAG, NodeHealthMetrics, EdgeStats
 from .core.verification_loop import VerificationLoop, ReflectionMemory, Reflection
 from .core.providers import LLMProvider, CostTracker
 from .compiler.schema_compiler import compile_schema, compile_openapi_schemas, levenshtein_distance
@@ -36,11 +35,10 @@ __all__ = [
     "Node",
     "CompiledTransition",
     "AuraTrace",
-    "GraphRAGCache",
     "BootstrapTeleprompter",
     "AdaptiveDAG",
     "NodeHealthMetrics",
-    "RuntimeEdge",
+    "EdgeStats",
     "VerificationLoop",
     "ReflectionMemory",
     "Reflection",

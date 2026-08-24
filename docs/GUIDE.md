@@ -30,7 +30,7 @@ Aura-State models every LLM workflow as a **directed graph of Nodes**. Each Node
 - A **handle()** method where you write your business logic
 - Optional **sandbox rules** for deterministic math
 
-The engine handles everything else: LLM calls, retries, caching, routing, verification.
+The engine handles everything else: LLM calls, retries, verification, routing.
 
 ```
 User Input → Node A (extract) → Node B (calculate) → Node C (decide) → Output
@@ -114,7 +114,7 @@ engine.connect([
 ])
 ```
 
-When a node returns a target that has multiple options, the engine uses MCTS (Monte Carlo Tree Search) to score and select the best path.
+Normally your `handle()` returns exactly which target to go to, and the engine takes that edge. The bandit router only kicks in as a **fallback**: if `handle()` returns an edge that isn't a declared transition, the engine filters to CTL-feasible edges and picks one using a **Thompson-sampling contextual bandit** — each edge carries a Beta-Bernoulli posterior, and selection samples each posterior and takes the argmax. See [ALGORITHMS.md](ALGORITHMS.md#thompson-sampling-bandit-router) for details.
 
 ---
 
@@ -130,15 +130,15 @@ print(next_state)  # "ValidateInvoice"
 print(data)        # {"vendor": "Acme Corp", "amount": 12500.0, "due_date": "March 15, 2026"}
 ```
 
-Every call to `engine.process()` runs through the full pipeline:
-1. Adaptive DAG health check
-2. GraphRAG cache lookup (skip LLM if seen before)
-3. Few-shot teleprompting (inject past successes)
-4. Verification loop (extract → verify → reflect → retry)
-5. Your node's `handle()` logic
-6. MCTS routing (if multiple targets)
-7. AuraTrace state serialization
-8. Speculative pre-computation of next nodes
+Every call to `engine.process()` runs, per transition, through:
+1. Few-shot teleprompting (inject past successes as demonstrations)
+2. Verification loop: extract → check the sandbox rule + Z3 obligations (fail-closed, retry on failure)
+3. Conformal interval over the consensus runs (when `consensus > 1`)
+4. Your node's `handle()` logic
+5. Bandit router — **only** if `handle()` returned an edge that isn't a declared transition (Thompson sampling over CTL-feasible edges)
+6. Tamper-evident JSON trace write
+
+Runtime health metrics (per-node) and per-edge routing posteriors are updated along the way in the adaptive graph.
 
 ---
 
@@ -262,6 +262,16 @@ result = prove_consistency(
     {"unit_cost": 10, "quantity": 5, "total": 50},
     relationships=["total == unit_cost * quantity"],
 )
+```
+
+You usually don't call the prover by hand. A `Node` can declare its own
+`obligations`, and the verification loop discharges them with Z3 on every
+`process()` transition (fail-closed — a failed obligation triggers a retry):
+
+```python
+class CalculateCost(Node):
+    system_prompt = "Calculate the total project cost."
+    obligations = ["total == area * rate", "total > 0"]
 ```
 
 ---

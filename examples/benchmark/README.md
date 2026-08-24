@@ -1,6 +1,6 @@
 # Aura-State Benchmark: Real Estate Lead Qualifier
 
-This benchmark demonstrates the full end-to-end pipeline with formal verification, MCTS routing, and sandboxed math.
+This benchmark demonstrates the full end-to-end pipeline with formal verification, Thompson-bandit routing, and sandboxed math.
 No API keys required — uses mocked LLM responses by default to show exactly what happens at each stage.
 
 ## What It Does
@@ -19,8 +19,8 @@ At each step, different verification and routing features fire:
 | ExtractLead | Verification Loop | Data is verified + conformal confidence intervals |
 | QualifyBudget | Sandbox Interpreter | Math is deterministic, not LLM-hallucinated |
 | VerifyData | Z3 Proof Engine | Extracted data formally satisfies business rules |
-| RouteDecision | MCTS Routing (UCB1) | Transition is scored via AdaptiveDAG health metrics |
-| Every step | Adaptive DAG | Runtime health monitoring and LLM bypass check |
+| RouteDecision | Thompson Bandit | Fallback edge is sampled from per-edge Beta-Bernoulli posteriors |
+| Every step | Adaptive DAG | Runtime health metrics + per-edge routing posteriors |
 
 ## Run It
 

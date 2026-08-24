@@ -34,21 +34,23 @@ class AutoConsensus:
         if strategy == ConsensusStrategy.MAJORITY_VOTE:
             # Find the most common serialized string
             most_common, count = counter.most_common(1)[0]
-            # If the most common only appeared once (and we had >1 run), there's no majority
+            # No value repeated -> there is no consensus. Fail loud rather than
+            # silently trusting an arbitrary run (CLAUDE.md: no fallbacks).
             if count == 1 and len(runs) > 1:
-                # Fallback to first valid, or raise an error in strict mode
-                return runs[0] 
-                
+                raise ValueError(
+                    "Majority consensus required but all runs diverged "
+                    f"({len(runs)} distinct results)."
+                )
+
             # Find the original model that matches the most common JSON
             for run in runs:
                 if run.model_dump_json() == most_common:
                     return run
-                    
+
         elif strategy == ConsensusStrategy.UNANIMOUS:
             most_common, count = counter.most_common(1)[0]
             if count == len(runs):
                 return runs[0]
-            else:
-                raise ValueError("Unanimous consensus required but divergent results found.")
-                
-        return runs[0] # Fallback
+            raise ValueError("Unanimous consensus required but divergent results found.")
+
+        raise ValueError(f"Unknown consensus strategy: {strategy}")
