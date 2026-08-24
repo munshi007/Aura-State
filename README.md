@@ -128,6 +128,27 @@ ci = conformal_interval(budgets, confidence=0.95)
 
 This uses conformal prediction (Vovk et al., 2005) — no distributional assumptions required.
 
+### Compile a runtime contract from the design
+
+The obligations, CTL verdicts, and confidence a workflow was proven against
+compile into a single portable, versioned contract. Because it's derived from
+the same typed design the engine runs, the specification is **faithful by
+construction** — spec and implementation are one artifact and can't drift.
+
+```python
+contract = engine.compile_contract(properties=[
+    {"description": "RouteLead is reachable", "formula": reachability("RouteLead")},
+])
+contract.to_json()                        # portable, content-addressable
+check_faithfulness(contract, "QualifyLead", extracted)   # contract agrees with the loop
+diff_contracts(old, contract)             # design-time regression gate
+```
+
+Every other assurance system *consumes* a behavioral contract it can't author —
+and hand-written policy drifts from the code (and is only 24–35% faithful when
+translated from prose). Here the contract is emitted from the design that was
+proven. See `python examples/emit_contract_demo.py`.
+
 ## Benchmark results
 
 We ran 10 real-estate sales transcripts through a 4-node pipeline using GPT-4o-mini (30 API calls total):

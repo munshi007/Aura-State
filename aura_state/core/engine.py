@@ -171,6 +171,24 @@ class AuraEngine:
         from ..verification.temporal_verifier import verify_engine
         return verify_engine(self, properties, init_node=init_node)
 
+    def compile_contract(self, properties: Optional[List[Dict[str, Any]]] = None, meta: Optional[Dict[str, Any]] = None):
+        """Compile this graph into a portable, versioned AuraContract.
+
+        Captures the node obligations, CTL verdicts (if `properties` given),
+        confidence, and structure -- a specification derived from the design,
+        faithful by construction. See `aura_state.compiler.spec_compiler`.
+        """
+        from ..compiler.spec_compiler import compile_contract
+        return compile_contract(self, properties=properties, meta=meta)
+
+    def emit_contract(self, path: str, properties: Optional[List[Dict[str, Any]]] = None, meta: Optional[Dict[str, Any]] = None):
+        """Compile the contract and write it to `path` as JSON. Returns it."""
+        contract = self.compile_contract(properties=properties, meta=meta)
+        with open(path, "w") as f:
+            f.write(contract.to_json())
+        logger.info(f"Emitted contract → {path} (hash={contract.meta.get('content_hash', '')[:12]})")
+        return contract
+
     # ─────────────────────────────────────────────────────────
     # BANDIT ROUTING (Thompson sampling over feasible transitions)
     # ─────────────────────────────────────────────────────────

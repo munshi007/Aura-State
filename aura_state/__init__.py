@@ -29,6 +29,10 @@ from .verification.conformal import (
     PredictionInterval, ConformalResult,
 )
 from .verification.proof_engine import prove_extraction, prove_consistency, ProofResult
+from .compiler.spec_compiler import (
+    compile_contract, diff_contracts, check_faithfulness,
+    AuraContract, NodeContract, PropertyVerdict, ContractError,
+)
 
 __all__ = [
     "AuraEngine",
@@ -72,4 +76,12 @@ __all__ = [
     "prove_extraction",
     "prove_consistency",
     "ProofResult",
+    # Design→spec compiler
+    "compile_contract",
+    "diff_contracts",
+    "check_faithfulness",
+    "AuraContract",
+    "NodeContract",
+    "PropertyVerdict",
+    "ContractError",
 ]
