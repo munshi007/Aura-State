@@ -14,7 +14,7 @@
 </p>
 
 ```bash
-pip install git+https://github.com/munshi007/Aura-State.git
+pip install aura-state
 ```
 
 ## See it in 10 seconds (no API key)
@@ -308,6 +308,12 @@ aura_state/
 ```
 
 ## Installation
+
+```bash
+pip install aura-state
+```
+
+Or the latest from source:
 
 ```bash
 pip install git+https://github.com/munshi007/Aura-State.git
