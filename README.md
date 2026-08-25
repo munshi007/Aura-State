@@ -68,10 +68,7 @@ counterexamples, and lets you download the audit contract. Nothing leaves your
 machine — no cloud, no API key.
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/studio-dark.png">
-    <img src="assets/studio.png" alt="Aura Studio — a local web app running the real verifiers" width="840">
-  </picture>
+  <img src="assets/studio-violated.png" alt="Aura Studio — a local web app running the real verifiers; here it catches an untrusted-to-sink dataflow" width="900">
 </p>
 
 ## What this is

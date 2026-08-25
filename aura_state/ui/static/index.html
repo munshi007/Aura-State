@@ -8,214 +8,324 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@600;700&display=swap">
 <style>
 :root{
-  --paper:#f4f6f9;--surface:#fff;--surface2:#fbfbfd;--ink:#15171d;--soft:#434955;--muted:#6b7280;--line:#e3e6ec;
-  --accent:#3d3aa8;--accent-soft:#ecebf8;--proven:#1c8a5b;--proven-bg:#e6f3ec;--proven-line:#bfe3d0;
-  --violated:#bd400d;--violated-bg:#fbeadf;--violated-line:#f2c8ac;
-  --untrusted:#bd400d;--sink:#8a1c1c;--sanitize:#1c8a5b;--plain:#6b7280;
-  --shadow:0 1px 2px rgba(21,23,29,.05),0 8px 26px rgba(21,23,29,.06);
+  --bg:#0b0d12;--panel:#12151d;--panel2:#0f121a;--edge:#1e222d;--edge2:#2a3040;
+  --ink:#e9ecf3;--soft:#aeb6c6;--muted:#6d7688;--faint:#454d5d;
+  --indigo:#8b88f5;--indigo-dim:#4d4aa8;--indigo-glow:rgba(139,136,245,.35);
+  --green:#3ecf8e;--green-dim:#1c7a54;--green-bg:rgba(62,207,142,.10);
+  --amber:#f0894e;--amber-dim:#9c4a24;--amber-bg:rgba(240,137,78,.10);--amber-glow:rgba(240,137,78,.45);
+  --grid:rgba(255,255,255,.022);
 }
-@media(prefers-color-scheme:dark){:root{
-  --paper:#0e1015;--surface:#171a21;--surface2:#13161c;--ink:#eceff4;--soft:#b4bac7;--muted:#828997;--line:#262b35;
-  --accent:#a29ff2;--accent-soft:#1d1e37;--proven:#4dc48b;--proven-bg:#112620;--proven-line:#1f4436;
-  --violated:#f18a5b;--violated-bg:#2a1a11;--violated-line:#4a2c19;--untrusted:#f18a5b;--sink:#e46a6a;--sanitize:#4dc48b;--plain:#828997;
-  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.4);}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--paper);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px}
-.mono{font-family:"IBM Plex Mono",monospace}
-h1,h2{font-family:"IBM Plex Serif",Georgia,serif;letter-spacing:-.01em}
-a{color:var(--accent)}
-.bar{border-bottom:1px solid var(--line);background:var(--surface);padding:14px 22px;display:flex;align-items:center;justify-content:space-between}
-.brand{display:flex;align-items:center;gap:10px;font-family:"IBM Plex Serif",serif;font-weight:700;font-size:18px}
-.brand .d{width:12px;height:12px;border-radius:4px;background:var(--proven)}
-.bar .sub{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted)}
-.wrap{max-width:1180px;margin:0 auto;padding:22px;display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
-.card h2{font-size:16px;margin:0;padding:13px 16px;border-bottom:1px solid var(--line);background:var(--surface2);font-family:"IBM Plex Sans";font-weight:600}
-.pad{padding:16px}
-label{display:block;font-size:12px;color:var(--muted);margin:0 0 4px;font-family:"IBM Plex Mono",monospace;letter-spacing:.04em;text-transform:uppercase}
-input,select{width:100%;font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface2);color:var(--ink)}
-.mono input{font-family:"IBM Plex Mono",monospace;font-size:13px}
-table{width:100%;border-collapse:collapse}
-th{text-align:left;font-size:11px;color:var(--muted);font-family:"IBM Plex Mono",monospace;text-transform:uppercase;letter-spacing:.06em;padding:0 6px 6px}
-td{padding:4px 6px;vertical-align:top}
-.row td{border-top:1px solid var(--line);padding-top:10px}
-.btn{font:inherit;font-weight:600;font-size:14px;padding:9px 14px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
-.btn:hover{border-color:var(--accent)}
-.btn.primary{background:var(--accent);color:#fff;border-color:transparent}
-@media(prefers-color-scheme:dark){.btn.primary{color:#12131f}}
-.btn.sm{padding:5px 9px;font-size:12px}
-.btn.x{color:var(--violated);border-color:transparent;background:transparent;padding:4px 6px}
-.controls{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
-svg{display:block;width:100%;height:300px;background:var(--surface2);border-radius:0}
-.verdict{display:flex;align-items:center;gap:10px;padding:12px 16px;font-family:"IBM Plex Mono",monospace;font-weight:600}
-.verdict.ok{color:var(--proven);background:var(--proven-bg);border-bottom:1px solid var(--proven-line)}
-.verdict.bad{color:var(--violated);background:var(--violated-bg);border-bottom:1px solid var(--violated-line)}
-.res{padding:14px 16px;border-top:1px solid var(--line)}
-.res:first-child{border-top:0}
-.res h3{margin:0 0 6px;font-size:13px;font-family:"IBM Plex Mono",monospace;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
-.tag{font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;padding:1px 7px;border-radius:5px}
-.tag.ok{color:var(--proven);background:var(--proven-bg);border:1px solid var(--proven-line)}
-.tag.bad{color:var(--violated);background:var(--violated-bg);border:1px solid var(--violated-line)}
-.line{font-size:13.5px;color:var(--soft);margin:5px 0}
-pre{margin:0;padding:12px;background:var(--surface2);border:1px solid var(--line);border-radius:8px;overflow:auto;max-height:240px;font-family:"IBM Plex Mono",monospace;font-size:12px;line-height:1.6}
-.hint{font-size:12.5px;color:var(--muted);margin-top:10px}
-@media(max-width:940px){.wrap{grid-template-columns:1fr}}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:14px;overflow:hidden}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:var(--edge2);border-radius:6px}
+button{font:inherit;cursor:pointer}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+
+/* ── top bar ── */
+.top{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid var(--edge);background:linear-gradient(180deg,#12151d,#0f121a)}
+.brand{display:flex;align-items:center;gap:11px;font-family:"IBM Plex Serif",serif;font-weight:700;font-size:17px;letter-spacing:-.01em}
+.brand svg{filter:drop-shadow(0 0 10px var(--indigo-glow))}
+.brand .tag{font-family:"IBM Plex Mono",monospace;font-size:10px;font-weight:500;color:var(--muted);border:1px solid var(--edge2);border-radius:5px;padding:2px 7px;letter-spacing:.05em}
+.actions{display:flex;gap:9px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:13px;padding:8px 14px;border-radius:9px;border:1px solid var(--edge2);background:#161a24;color:var(--ink);transition:.12s}
+.btn:hover{border-color:var(--indigo-dim)}
+.btn.primary{background:linear-gradient(180deg,#5c58e0,#4a46c8);border-color:transparent;box-shadow:0 0 0 1px rgba(139,136,245,.3),0 6px 18px rgba(74,70,200,.35)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent}
+.btn svg{opacity:.9}
+
+/* ── layout: rail | canvas | evidence ── */
+.shell{display:grid;grid-template-columns:290px 1fr 340px;height:calc(100vh - 56px)}
+.rail,.evi{overflow-y:auto;background:var(--panel);}
+.rail{border-right:1px solid var(--edge)}
+.evi{border-left:1px solid var(--edge)}
+.canvas-wrap{position:relative;background:
+  radial-gradient(circle at 1px 1px,var(--grid) 1px,transparent 0) 0 0/26px 26px,
+  radial-gradient(1200px 500px at 60% -10%,rgba(139,136,245,.06),transparent 60%),var(--panel2);overflow:hidden}
+#cv{width:100%;height:100%;display:block}
+
+/* ── rail (build) ── */
+.sec{padding:16px 16px 6px}
+.sec h3{margin:0 0 12px;font-size:12.5px;font-weight:600;color:var(--soft);display:flex;align-items:center;justify-content:space-between}
+.nodecard{border:1px solid var(--edge2);border-radius:10px;padding:10px 11px;margin-bottom:9px;background:var(--panel2);cursor:pointer;transition:.12s}
+.nodecard:hover{border-color:var(--indigo-dim)}
+.nodecard.sel{border-color:var(--indigo);box-shadow:0 0 0 1px var(--indigo-dim)}
+.nodecard .r1{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.nodecard .nm{font-weight:600;font-size:13.5px}
+.chip{font-family:"IBM Plex Mono",monospace;font-size:9.5px;font-weight:600;letter-spacing:.04em;padding:2px 7px;border-radius:20px;text-transform:uppercase}
+.chip.untrusted{color:var(--amber);background:var(--amber-bg);border:1px solid var(--amber-dim)}
+.chip.sink{color:#ff7a7a;background:rgba(255,122,122,.1);border:1px solid #6e2a2a}
+.chip.sanitizer{color:var(--green);background:var(--green-bg);border:1px solid var(--green-dim)}
+.chip.plain{color:var(--muted);background:transparent;border:1px solid var(--edge2)}
+.nodecard .ob{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.add{width:100%;text-align:left;color:var(--indigo);background:transparent;border:1px dashed var(--edge2);border-radius:10px;padding:9px 11px;font-weight:600;font-size:12.5px}
+.add:hover{border-color:var(--indigo-dim)}
+
+/* inspector */
+.insp{border-top:1px solid var(--edge);padding:16px}
+.insp label{display:block;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 5px}
+.insp input,.insp select{width:100%;font:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--edge2);border-radius:8px;background:var(--panel2);color:var(--ink);margin-bottom:13px}
+.insp input.mono{font-family:"IBM Plex Mono",monospace;font-size:12px}
+.insp input:focus,.insp select:focus{outline:none;border-color:var(--indigo)}
+.caps{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:13px}
+.caps button{font-size:11.5px;padding:7px;border-radius:8px;border:1px solid var(--edge2);background:var(--panel2);color:var(--soft);font-weight:600}
+.caps button.on{border-color:var(--indigo);color:var(--ink);background:#1a1d2b}
+.insp .del{color:#ff7a7a;background:transparent;border:1px solid #5a2626;border-radius:8px;padding:7px 11px;font-size:12px;font-weight:600;width:100%}
+.edgehint{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5}
+
+/* ── evidence ── */
+.seal{padding:26px 20px 20px;text-align:center;border-bottom:1px solid var(--edge)}
+.sealring{width:96px;height:96px;margin:0 auto 12px;position:relative}
+.sealword{font-family:"IBM Plex Serif",serif;font-size:19px;font-weight:700;letter-spacing:.02em}
+.sealsub{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);margin-top:3px}
+.evrow{padding:14px 18px;border-bottom:1px solid var(--edge)}
+.evrow h4{margin:0 0 9px;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:7px}
+.v{display:inline-flex;align-items:center;gap:5px;font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:20px}
+.v.ok{color:var(--green);background:var(--green-bg);border:1px solid var(--green-dim)}
+.v.bad{color:var(--amber);background:var(--amber-bg);border:1px solid var(--amber-dim)}
+.evline{font-size:13px;color:var(--soft);margin:7px 0;line-height:1.5;display:flex;gap:8px;align-items:flex-start}
+.evempty{padding:40px 18px;text-align:center;color:var(--muted);font-size:13px}
+.cex{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--amber);background:var(--amber-bg);border:1px solid var(--amber-dim);border-radius:7px;padding:8px 10px;margin-top:6px;line-height:1.5}
+.dlrow{padding:14px 18px}
+.dl{width:100%;justify-content:center}
 </style>
 </head>
 <body>
-<div class="bar">
-  <div class="brand"><span class="d"></span>Aura Studio</div>
-  <div class="sub">real verifiers · running locally · no cloud, no key</div>
+<div class="top">
+  <div class="brand">
+    <svg width="22" height="22" viewBox="0 0 128 128" fill="none">
+      <g stroke="#8b88f5" stroke-width="6" stroke-linecap="round"><line x1="46" y1="80" x2="59" y2="55"/><line x1="82" y1="80" x2="69" y2="55"/></g>
+      <circle cx="42" cy="88" r="10" fill="#12151d" stroke="#8b88f5" stroke-width="6"/>
+      <circle cx="86" cy="88" r="10" fill="#12151d" stroke="#8b88f5" stroke-width="6"/>
+      <circle cx="64" cy="42" r="13" fill="#3ecf8e"/><path d="M57.5 42.5 l4.3 4.3 l8-8.6" stroke="#0b0d12" stroke-width="5.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Aura Studio
+    <span class="tag">local · no cloud · no key</span>
+  </div>
+  <div class="actions">
+    <button class="btn ghost" onclick="loadPreset()">Load example</button>
+    <button class="btn ghost" id="repairBtn" style="display:none" onclick="repair()">⟲ Repair</button>
+    <button class="btn primary" onclick="verify()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      Verify
+    </button>
+  </div>
 </div>
 
-<div class="wrap">
-  <!-- LEFT: editor -->
-  <div style="display:flex;flex-direction:column;gap:22px">
-    <div class="card">
-      <h2>Nodes</h2>
-      <div class="pad">
-        <table><thead><tr><th>id</th><th>capability</th><th>obligations (comma-sep)</th><th></th></tr></thead>
-          <tbody id="nodes"></tbody></table>
-        <div class="controls"><button class="btn sm" onclick="addNode()">+ node</button></div>
-        <div class="hint">Capability: <b>untrusted</b> = LLM/tool output · <b>sink</b> = dangerous action · <b>sanitizer</b> = clears taint. Obligations are Z3 constraints, e.g. <span class="mono">total == area * rate</span>.</div>
-      </div>
+<div class="shell">
+  <!-- RAIL -->
+  <div class="rail">
+    <div class="sec">
+      <h3>States <span class="eyebrow" id="nodecount"></span></h3>
+      <div id="nodelist"></div>
+      <button class="add" onclick="addNode()">+ add state</button>
     </div>
-    <div class="card">
-      <h2>Edges</h2>
-      <div class="pad">
-        <table><thead><tr><th>from</th><th>to</th><th></th></tr></thead><tbody id="edges"></tbody></table>
-        <div class="controls"><button class="btn sm" onclick="addEdge()">+ edge</button></div>
-      </div>
-    </div>
-    <div class="controls">
-      <button class="btn primary" onclick="verify()">Verify with Z3 · CTL · taint</button>
-      <button class="btn" onclick="loadPreset()">Load example</button>
-    </div>
+    <div class="insp" id="inspector"></div>
   </div>
 
-  <!-- RIGHT: preview + results -->
-  <div style="display:flex;flex-direction:column;gap:22px">
-    <div class="card"><h2>Graph</h2><svg id="graph" viewBox="0 0 480 300"></svg></div>
-    <div class="card" id="resultsCard" style="display:none">
-      <h2>Verdicts <span id="dl"></span></h2>
-      <div id="verdict" class="verdict"></div>
-      <div id="results"></div>
+  <!-- CANVAS -->
+  <div class="canvas-wrap"><svg id="cv" preserveAspectRatio="xMidYMid meet"></svg></div>
+
+  <!-- EVIDENCE -->
+  <div class="evi">
+    <div class="seal">
+      <div class="sealring" id="sealring"></div>
+      <div class="sealword" id="sealword" style="color:var(--muted)">Not yet verified</div>
+      <div class="sealsub" id="sealsub">build a graph, then Verify</div>
     </div>
+    <div id="evidence"><div class="evempty">Verdicts from Z3, CTL, and static taint appear here.</div></div>
   </div>
 </div>
 
 <script>
-let nodes=[], edges=[], lastContract=null;
+const NS="http://www.w3.org/2000/svg";
 const CAPS=["plain","untrusted","sink","sanitizer"];
-const CAPCOLOR={plain:"var(--plain)",untrusted:"var(--untrusted)",sink:"var(--sink)",sanitizer:"var(--sanitize)"};
+const CAPLABEL={plain:"state",untrusted:"untrusted",sink:"sink",sanitizer:"sanitizer"};
+let nodes=[],edges=[],sel=null,lastContract=null,lastResult=null;
 
 function preset(){
-  nodes=[{id:"Ingest",capability:"untrusted",obligations:""},
-         {id:"PolicyCheck",capability:"sanitizer",obligations:""},
-         {id:"Price",capability:"plain",obligations:"total == area * rate, area > 0"},
-         {id:"SendEmail",capability:"sink",obligations:""}];
+  nodes=[{id:"Ingest",cap:"untrusted",ob:""},{id:"PolicyCheck",cap:"sanitizer",ob:""},
+         {id:"Price",cap:"plain",ob:"total == area * rate, area > 0"},{id:"SendEmail",cap:"sink",ob:""}];
   edges=[["Ingest","PolicyCheck"],["PolicyCheck","Price"],["Price","SendEmail"]];
+  sel="Ingest"; lastResult=null;
 }
-function addNode(){nodes.push({id:"Node"+(nodes.length+1),capability:"plain",obligations:""});render()}
-function addEdge(){edges.push([nodes[0]?.id||"",nodes[0]?.id||""]);render()}
-function loadPreset(){preset();render()}
+function loadPreset(){preset();renderAll()}
+function addNode(){const id="State"+(nodes.length+1);nodes.push({id,cap:"plain",ob:""});sel=id;
+  if(nodes.length>1)edges.push([nodes[nodes.length-2].id,id]);lastResult=null;renderAll()}
+function delNode(id){nodes=nodes.filter(n=>n.id!==id);edges=edges.filter(e=>e[0]!==id&&e[1]!==id);
+  sel=nodes[0]?.id||null;lastResult=null;renderAll()}
+function byId(id){return nodes.find(n=>n.id===id)}
 
-function render(){
-  // nodes table
-  const nb=document.getElementById("nodes"); nb.innerHTML="";
-  nodes.forEach((n,i)=>{
-    const tr=document.createElement("tr"); tr.className="row";
-    tr.innerHTML=`
-      <td><input value="${n.id}" oninput="nodes[${i}].id=this.value;render()"></td>
-      <td><select onchange="nodes[${i}].capability=this.value;render()">${CAPS.map(c=>`<option ${c===n.capability?"selected":""}>${c}</option>`).join("")}</select></td>
-      <td class="mono"><input value="${n.obligations.replace(/"/g,'&quot;')}" oninput="nodes[${i}].obligations=this.value"></td>
-      <td><button class="btn x" onclick="nodes.splice(${i},1);render()">✕</button></td>`;
-    nb.appendChild(tr);
+/* ── rail ── */
+function renderRail(){
+  document.getElementById("nodecount").textContent=nodes.length+" states · "+edges.length+" edges";
+  const L=document.getElementById("nodelist");L.innerHTML="";
+  nodes.forEach(n=>{
+    const d=document.createElement("div");d.className="nodecard"+(n.id===sel?" sel":"");
+    d.onclick=()=>{sel=n.id;renderRail();renderInspector()};
+    d.innerHTML=`<div class="r1"><span class="nm">${esc(n.id)}</span><span class="chip ${n.cap}">${CAPLABEL[n.cap]}</span></div>`+
+      (n.ob?`<div class="ob">⊢ ${esc(n.ob)}</div>`:"");
+    L.appendChild(d);
   });
-  // edges table
-  const eb=document.getElementById("edges"); eb.innerHTML="";
-  edges.forEach((e,i)=>{
-    const opt=(v)=>nodes.map(n=>`<option ${n.id===v?"selected":""}>${n.id}</option>`).join("");
-    const tr=document.createElement("tr"); tr.className="row";
-    tr.innerHTML=`
-      <td><select onchange="edges[${i}][0]=this.value;render()">${opt(e[0])}</select></td>
-      <td><select onchange="edges[${i}][1]=this.value;render()">${opt(e[1])}</select></td>
-      <td><button class="btn x" onclick="edges.splice(${i},1);render()">✕</button></td>`;
-    eb.appendChild(tr);
+  renderInspector();
+}
+function renderInspector(){
+  const I=document.getElementById("inspector");const n=byId(sel);
+  if(!n){I.innerHTML="";return}
+  const outs=edges.filter(e=>e[0]===n.id).map(e=>e[1]);
+  I.innerHTML=`
+    <label>state id</label><input value="${esc(n.id)}" oninput="rename('${n.id}',this.value)">
+    <label>capability</label>
+    <div class="caps">${CAPS.map(c=>`<button class="${c===n.cap?'on':''}" onclick="setCap('${n.id}','${c}')">${CAPLABEL[c]}</button>`).join("")}</div>
+    <label>Z3 obligations (comma-separated)</label>
+    <input class="mono" value="${esc(n.ob).replace(/"/g,'&quot;')}" placeholder="total == area * rate" oninput="byId('${n.id}').ob=this.value;lastResult=null;renderRail()">
+    <label>transitions to</label>
+    <div class="caps" style="grid-template-columns:1fr">
+      ${nodes.filter(m=>m.id!==n.id).map(m=>`<button class="${outs.includes(m.id)?'on':''}" onclick="toggleEdge('${n.id}','${m.id}')">${outs.includes(m.id)?'→ ':''}${esc(m.id)}</button>`).join("")||'<span class="edgehint">add more states to connect</span>'}
+    </div>
+    <button class="del" onclick="delNode('${n.id}')">Delete state</button>`;
+}
+function rename(old,val){const n=byId(old);if(!n||!val)return;
+  edges.forEach(e=>{if(e[0]===old)e[0]=val;if(e[1]===old)e[1]=val});n.id=val;if(sel===old)sel=val;lastResult=null;renderRail();drawCanvas()}
+function setCap(id,c){byId(id).cap=c;lastResult=null;renderRail();drawCanvas()}
+function toggleEdge(a,b){const i=edges.findIndex(e=>e[0]===a&&e[1]===b);
+  if(i>=0)edges.splice(i,1);else edges.push([a,b]);lastResult=null;renderInspector();drawCanvas()}
+
+/* ── canvas ── */
+function layout(){
+  // longest-path layering from sources
+  const succ={},indeg={};nodes.forEach(n=>{succ[n.id]=[];indeg[n.id]=0});
+  edges.forEach(([a,b])=>{if(succ[a]&&b in indeg){succ[a].push(b);indeg[b]++}});
+  const layer={};const q=nodes.filter(n=>indeg[n.id]===0).map(n=>n.id);q.forEach(id=>layer[id]=0);
+  const ind={...indeg};let head=0;
+  while(head<q.length){const u=q[head++];(succ[u]||[]).forEach(v=>{layer[v]=Math.max(layer[v]||0,layer[u]+1);if(--ind[v]===0)q.push(v)})}
+  nodes.forEach(n=>{if(layer[n.id]===undefined)layer[n.id]=0});
+  const cols={};nodes.forEach(n=>{(cols[layer[n.id]]=cols[layer[n.id]]||[]).push(n.id)});
+  const pos={};const W=Math.max(...Object.keys(cols).map(Number))+1;
+  Object.entries(cols).forEach(([c,ids])=>{ids.forEach((id,i)=>{pos[id]={c:+c,i,n:ids.length}})});
+  return {pos,W};
+}
+function drawCanvas(){
+  const cv=document.getElementById("cv");const wrap=cv.parentElement;
+  const w=wrap.clientWidth,h=wrap.clientHeight;cv.setAttribute("viewBox",`0 0 ${w} ${h}`);cv.innerHTML="";
+  const {pos,W}=layout();
+  const NW=150,NH=52;const padX=90,padY=40;
+  const colGap=W>1?(w-2*padX-NW)/(W-1):0;
+  const XY={};nodes.forEach(n=>{const p=pos[n.id];const x=padX+p.c*colGap;
+    const colH=(p.n-1)*(NH+34);const y=(h-colH)/2 - NH/2 + p.i*(NH+34);XY[n.id]={x,y,cx:x+NW/2,cy:y+NH/2}});
+  const badPaths=(lastResult?.taint?.violations||[]).map(v=>v.path);
+  const badEdge=new Set();badPaths.forEach(p=>{for(let i=0;i<p.length-1;i++)badEdge.add(p[i]+">"+p[i+1])});
+
+  // defs
+  const defs=document.createElementNS(NS,"defs");
+  defs.innerHTML=`<marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#3a4152"/></marker>
+  <marker id="arb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#f0894e"/></marker>`;
+  cv.appendChild(defs);
+
+  // edges (curved)
+  edges.forEach(([a,b])=>{if(!XY[a]||!XY[b])return;const s=XY[a],t=XY[b];
+    const x1=s.x+NW,y1=s.cy,x2=t.x,y2=t.cy;const mx=(x1+x2)/2;
+    const bad=badEdge.has(a+">"+b);
+    const p=document.createElementNS(NS,"path");
+    p.setAttribute("d",`M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2-6} ${y2}`);
+    p.setAttribute("fill","none");p.setAttribute("stroke",bad?"#f0894e":"#2e3546");
+    p.setAttribute("stroke-width",bad?2.6:1.8);p.setAttribute("marker-end",bad?"url(#arb)":"url(#ar)");
+    if(bad)p.setAttribute("filter","drop-shadow(0 0 5px var(--amber-glow))");
+    cv.appendChild(p);
   });
-  drawGraph();
+  // nodes as cards
+  const badNode=new Set();badPaths.forEach(p=>p.forEach(id=>badNode.add(id)));
+  nodes.forEach(n=>{const c=XY[n.id];const g=document.createElementNS(NS,"g");g.style.cursor="pointer";
+    g.onclick=()=>{sel=n.id;renderRail();drawCanvas()};
+    const capCol={plain:"#3a4152",untrusted:"#f0894e",sink:"#ff7a7a",sanitizer:"#3ecf8e"}[n.cap];
+    const onBad=badNode.has(n.id);
+    const proven=lastResult&&lastResult.taint.verdict==="PROVEN";
+    let ring=n.id===sel?"#8b88f5":(onBad?"#f0894e":(proven?"#2f6b4f":"#242a37"));
+    const r=document.createElementNS(NS,"rect");r.setAttribute("x",c.x);r.setAttribute("y",c.y);
+    r.setAttribute("width",NW);r.setAttribute("height",NH);r.setAttribute("rx",11);
+    r.setAttribute("fill","#141824");r.setAttribute("stroke",ring);r.setAttribute("stroke-width",n.id===sel?2:1.4);
+    if(onBad)r.setAttribute("filter","drop-shadow(0 0 8px var(--amber-glow))");
+    g.appendChild(r);
+    // capability dot
+    const dot=document.createElementNS(NS,"circle");dot.setAttribute("cx",c.x+16);dot.setAttribute("cy",c.y+18);dot.setAttribute("r",5);dot.setAttribute("fill",capCol);g.appendChild(dot);
+    // name
+    const t=document.createElementNS(NS,"text");t.setAttribute("x",c.x+30);t.setAttribute("y",c.y+22);t.setAttribute("fill","#e9ecf3");t.setAttribute("font-size","13.5");t.setAttribute("font-weight","600");t.setAttribute("font-family","IBM Plex Sans");t.textContent=n.id.length>14?n.id.slice(0,13)+"…":n.id;g.appendChild(t);
+    // capability label
+    const cl=document.createElementNS(NS,"text");cl.setAttribute("x",c.x+30);cl.setAttribute("y",c.y+38);cl.setAttribute("fill",n.cap==="plain"?"#6d7688":capCol);cl.setAttribute("font-size","10");cl.setAttribute("font-family","IBM Plex Mono");cl.textContent=CAPLABEL[n.cap]+(n.ob?"  ·  ⊢ obligations":"");g.appendChild(cl);
+    cv.appendChild(g);
+  });
 }
 
-function drawGraph(violPaths){
-  const svg=document.getElementById("graph"); svg.innerHTML="";
-  const NS="http://www.w3.org/2000/svg";
-  const pos={}; const cols=Math.min(nodes.length,4)||1;
-  nodes.forEach((n,i)=>{ pos[n.id]={x:70+ (i%cols)*(340/Math.max(cols-1,1)), y:70+Math.floor(i/cols)*90}; });
-  const badEdges=new Set(); (violPaths||[]).forEach(p=>{for(let i=0;i<p.length-1;i++)badEdges.add(p[i]+">"+p[i+1])});
-  // edges
-  edges.forEach(([a,b])=>{ if(!pos[a]||!pos[b])return;
-    const bad=badEdges.has(a+">"+b);
-    const l=document.createElementNS(NS,"line");
-    l.setAttribute("x1",pos[a].x);l.setAttribute("y1",pos[a].y);l.setAttribute("x2",pos[b].x);l.setAttribute("y2",pos[b].y);
-    l.setAttribute("stroke",bad?"var(--violated)":"var(--line)");l.setAttribute("stroke-width",bad?3:2);
-    svg.appendChild(l);
-  });
-  // nodes
-  nodes.forEach(n=>{const p=pos[n.id];
-    const c=document.createElementNS(NS,"circle");c.setAttribute("cx",p.x);c.setAttribute("cy",p.y);c.setAttribute("r",26);
-    c.setAttribute("fill","var(--surface)");c.setAttribute("stroke",CAPCOLOR[n.capability]);c.setAttribute("stroke-width",n.capability==="plain"?2:3);
-    svg.appendChild(c);
-    const t=document.createElementNS(NS,"text");t.setAttribute("x",p.x);t.setAttribute("y",p.y+3);t.setAttribute("text-anchor","middle");
-    t.setAttribute("font-size","11");t.setAttribute("font-weight","600");t.setAttribute("fill","var(--ink)");t.textContent=n.id.slice(0,9);
-    svg.appendChild(t);
-    if(n.capability!=="plain"){const s=document.createElementNS(NS,"text");s.setAttribute("x",p.x);s.setAttribute("y",p.y+16);
-      s.setAttribute("text-anchor","middle");s.setAttribute("font-size","8");s.setAttribute("fill",CAPCOLOR[n.capability]);
-      s.setAttribute("font-family","IBM Plex Mono");s.textContent=n.capability;svg.appendChild(s);}
-  });
-}
-
+/* ── verify / evidence ── */
 async function verify(){
-  const spec={nodes:nodes.map(n=>({id:n.id,capability:n.capability,
-    obligations:n.obligations.split(",").map(s=>s.trim()).filter(Boolean)})),edges:edges};
-  let data;
-  try{ const r=await fetch("/api/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(spec)});
-       data=await r.json(); }
-  catch(e){ alert("verify failed: "+e); return; }
-  lastContract=data.contract;
-  const card=document.getElementById("resultsCard"); card.style.display="block";
-  const allOk = data.taint.verdict==="PROVEN" && data.obligations.every(o=>o.consistent) && data.ctl.every(c=>c.verdict==="PROVEN");
-  const v=document.getElementById("verdict");
-  v.className="verdict "+(allOk?"ok":"bad");
-  v.innerHTML = allOk ? "✓ ALL CHECKS PASSED" : "✗ SOME CHECKS FAILED";
+  const spec={nodes:nodes.map(n=>({id:n.id,capability:n.cap,ob:n.ob,
+    obligations:n.ob.split(",").map(s=>s.trim()).filter(Boolean)})),edges};
+  let data;try{const r=await fetch("/api/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(spec)});data=await r.json()}
+  catch(e){alert("verify failed: "+e);return}
+  lastResult=data;lastContract=data.contract;renderEvidence();drawCanvas();
+}
+async function repair(){
+  // insert a sanitizer on the first violating path (mirror engine.repair())
+  const v=lastResult?.taint?.violations?.[0];if(!v){return}
+  const path=v.path;const prev=path[path.length-2],sink=v.sink;
+  const san="Sanitize_"+prev;if(!byId(san))nodes.push({id:san,cap:"sanitizer",ob:""});
+  edges=edges.filter(e=>!(e[0]===prev&&e[1]===sink));edges.push([prev,san]);edges.push([san,sink]);
+  await verify();
+}
+function sealSVG(state){ // proven / violated / idle
+  const col=state==="PROVEN"?"#3ecf8e":state==="VIOLATED"?"#f0894e":"#3a4152";
+  const glow=state==="PROVEN"?"rgba(62,207,142,.4)":state==="VIOLATED"?"rgba(240,137,78,.4)":"none";
+  const inner=state==="PROVEN"
+    ? `<path d="M38 50 l9 9 l17 -19" stroke="#3ecf8e" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`
+    : state==="VIOLATED"
+    ? `<path d="M38 38 l24 24 M62 38 l-24 24" stroke="#f0894e" stroke-width="6" fill="none" stroke-linecap="round"/>`
+    : `<circle cx="50" cy="50" r="5" fill="#3a4152"/>`;
+  return `<svg width="96" height="96" viewBox="0 0 100 100" style="filter:drop-shadow(0 0 18px ${glow})">
+    <circle cx="50" cy="50" r="44" fill="none" stroke="${col}" stroke-width="2" opacity=".35"/>
+    <circle cx="50" cy="50" r="37" fill="#0f121a" stroke="${col}" stroke-width="2.5"/>${inner}</svg>`;
+}
+function renderEvidence(){
+  const d=lastResult;
+  const taintOk=d.taint.verdict==="PROVEN";
+  const ctlOk=d.ctl.every(c=>c.verdict==="PROVEN");
+  const obOk=d.obligations.every(o=>o.consistent);
+  const all=taintOk&&ctlOk&&obOk;
+  document.getElementById("sealring").innerHTML=sealSVG(all?"PROVEN":"VIOLATED");
+  const sw=document.getElementById("sealword");sw.textContent=all?"PROVEN":"VIOLATED";
+  sw.style.color=all?"var(--green)":"var(--amber)";
+  document.getElementById("sealsub").textContent=all?"all checks satisfied":"see failing checks below";
+  document.getElementById("repairBtn").style.display=(!taintOk)?"inline-flex":"none";
 
-  const violPaths=data.taint.violations.map(x=>x.path);
-  drawGraph(violPaths);
-
-  const R=document.getElementById("results"); R.innerHTML="";
+  const E=document.getElementById("evidence");let h="";
   // taint
-  let h=`<div class="res"><h3>Injection-safe dataflow (taint)</h3>`;
-  h+=`<span class="tag ${data.taint.verdict==='PROVEN'?'ok':'bad'}">${data.taint.verdict}</span>`;
-  data.taint.violations.forEach(x=>{h+=`<div class="line">tainted <b>${x.field}</b> from ‘${x.source}’ reaches sink ‘${x.sink}’ via ${x.path.join(" → ")}</div>`});
+  h+=`<div class="evrow"><h4>Injection-safe dataflow · static taint</h4><span class="v ${taintOk?'ok':'bad'}">${taintOk?'✓ PROVEN':'✕ VIOLATED'}</span>`;
+  d.taint.violations.forEach(x=>{h+=`<div class="cex">untrusted <b>${esc(x.field)}</b> from ‘${esc(x.source)}’ reaches sink ‘${esc(x.sink)}’<br>via ${x.path.map(esc).join(" → ")}</div>`});
   h+=`</div>`;
   // ctl
-  h+=`<div class="res"><h3>Reachability (CTL model checking)</h3>`;
-  data.ctl.forEach(c=>{h+=`<div class="line"><span class="tag ${c.verdict==='PROVEN'?'ok':'bad'}">${c.verdict}</span> ${c.property}</div>`});
+  h+=`<div class="evrow"><h4>Reachability · CTL model checking</h4>`;
+  d.ctl.forEach(c=>{h+=`<div class="evline"><span class="v ${c.verdict==='PROVEN'?'ok':'bad'}">${c.verdict==='PROVEN'?'✓':'✕'}</span><span>${esc(c.property)}</span></div>`});
   h+=`</div>`;
-  // obligations
-  if(data.obligations.length){h+=`<div class="res"><h3>Obligation consistency (Z3)</h3>`;
-    data.obligations.forEach(o=>{h+=`<div class="line"><span class="tag ${o.consistent?'ok':'bad'}">${o.consistent?'SATISFIABLE':'CONTRADICTORY'}</span> ${o.node}${o.reason?` — ${o.reason}`:''}</div>`});
+  // z3
+  if(d.obligations.length){h+=`<div class="evrow"><h4>Obligation consistency · Z3 SMT</h4>`;
+    d.obligations.forEach(o=>{h+=`<div class="evline"><span class="v ${o.consistent?'ok':'bad'}">${o.consistent?'SAT':'UNSAT'}</span><span>${esc(o.node)}${o.reason?` — ${esc(o.reason)}`:''}</span></div>`});
     h+=`</div>`;}
-  R.innerHTML=h;
-  document.getElementById("dl").innerHTML=`<button class="btn sm" style="float:right;margin:-2px 0" onclick="downloadContract()">download contract</button>`;
+  h+=`<div class="dlrow"><button class="btn dl" onclick="downloadContract()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+    Download audit contract</button></div>`;
+  E.innerHTML=h;
 }
+function downloadContract(){if(!lastContract)return;
+  const b=new Blob([JSON.stringify(lastContract,null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="aura_contract.json";a.click()}
 
-function downloadContract(){
-  if(!lastContract)return;
-  const blob=new Blob([JSON.stringify(lastContract,null,2)],{type:"application/json"});
-  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="aura_contract.json";a.click();
-}
-
-preset(); render();
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+function renderAll(){renderRail();drawCanvas()}
+document.getElementById("sealring").innerHTML=sealSVG("idle");
+window.addEventListener("resize",drawCanvas);
+preset();renderAll();
 </script>
 </body>
 </html>
