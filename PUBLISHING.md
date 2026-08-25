@@ -1,8 +1,44 @@
 # Publishing `aura-state` to PyPI
 
+Two ways. **Trusted Publishing via GitHub is recommended** — no tokens, no
+secrets. The manual token flow is the fallback.
+
+---
+
+## Recommended: publish from GitHub (Trusted Publishing, no token)
+
+A workflow is already committed at `.github/workflows/publish.yml`. It publishes
+automatically when you create a GitHub Release, authenticating via OIDC — you
+never handle a token.
+
+**One-time setup on PyPI** (before the first release):
+1. NOTE: the "Connect GitHub" button under *Account → connect external accounts*
+   is only for account login/recovery — it does NOT publish. Skip it.
+2. Go to **https://pypi.org/manage/account/publishing/**
+3. Under **"Add a new pending publisher"**, fill in exactly:
+   - **PyPI Project Name:** `aura-state`
+   - **Owner:** `munshi007`
+   - **Repository name:** `Aura-State`
+   - **Workflow name:** `publish.yml`
+   - **Environment name:** *(leave blank)*
+4. Click **Add**.
+
+**Then publish** (each release):
+1. Make sure the repo is public and `publish.yml` is pushed to `main`.
+2. On GitHub: **Releases → Draft a new release**.
+3. **Choose a tag →** type `v0.2.0` → "Create new tag on publish".
+4. Title `v0.2.0`, click **Publish release**.
+5. The Actions tab shows "Publish to PyPI" running; ~1 min later
+   `pip install aura-state` is live. (Watch it: repo → Actions.)
+
+For the next version: bump `version` in `pyproject.toml`, push, then draft a new
+release with the new tag (e.g. `v0.2.1`).
+
+---
+
+## Fallback: manual upload with an API token
+
 The package builds cleanly and installs from a wheel in a fresh environment.
-Uploading needs **your** PyPI account + API token — do it once, then
-`pip install aura-state` works for everyone.
 
 ## One-time setup
 1. Create a PyPI account: https://pypi.org/account/register/
