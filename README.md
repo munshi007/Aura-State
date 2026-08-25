@@ -7,6 +7,7 @@
 </p>
 
 <p align="center">
+  <a href="https://pypi.org/project/aura-state/"><img alt="PyPI" src="https://img.shields.io/pypi/v/aura-state.svg?color=3d3aa8"></a>
   <img alt="CI" src="https://github.com/munshi007/Aura-State/actions/workflows/ci.yml/badge.svg">
   <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-3d3aa8.svg">
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
@@ -19,7 +20,21 @@ pip install aura-state
 
 ## See it in 10 seconds (no API key)
 
-Every guarantee ships as a runnable proof against the real solvers:
+Paste this after installing — Z3 rejects a hallucinated value and accepts a correct one, in the loop:
+
+```python
+from aura_state import prove_extraction
+
+print(prove_extraction({"area": 100, "rate": 3, "total": 999}, ["total == area * rate"]).verified)  # False
+print(prove_extraction({"area": 100, "rate": 3, "total": 300}, ["total == area * rate"]).verified)  # True
+```
+
+For the full runnable proofs against the real solvers — each ~10s, no API key — clone the repo:
+
+```bash
+git clone https://github.com/munshi007/Aura-State && cd Aura-State
+pip install -e .
+```
 
 | Demo | What it proves |
 |---|---|
@@ -325,7 +340,7 @@ Python 3.10+ required. Dependencies: `pydantic`, `instructor`, `openai`, `networ
 
 ```bash
 python -m pytest tests/ -v
-# 100 tests passing
+# 130 tests passing
 ```
 
 ## Docs
