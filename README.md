@@ -361,6 +361,8 @@ local recipes. Your API key is read from your environment — never hard-coded.
 ## Docs
 
 - [Cookbook](examples/cookbook/) — realistic agents, verified end to end; any provider
+- [LangGraph integration](examples/integrations/) — a real LangGraph agent on a local model (Ollama), verified by Aura-State — no API key
+- [Real-data verification](examples/real_data/) — the conformal guarantee on a real dataset (91.3% coverage on real diabetes records)
 - [Comparison](docs/COMPARISON.md) — Aura-State vs LangGraph / CrewAI / Guardrails (they orchestrate; we verify)
 - [Usage Guide](docs/GUIDE.md) — code examples for every feature
 - [Algorithm Reference](docs/ALGORITHMS.md) — deep-dive into CTL, Z3, Thompson sampling, conformal prediction
