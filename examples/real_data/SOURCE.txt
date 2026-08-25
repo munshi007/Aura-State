@@ -1,0 +1,5 @@
+sales_records.csv — 1,000 real sales records (public sample dataset).
+Source: https://raw.githubusercontent.com/HariVM/Analytics/master/1000%20Sales%20Records.csv
+Columns include Units Sold, Unit Price, Unit Cost, Total Revenue, Total Cost, Total Profit
+— explicit arithmetic invariants used to demonstrate Aura-State's Z3 verification
+on real data. Vendored for reproducibility; not authored by this project.

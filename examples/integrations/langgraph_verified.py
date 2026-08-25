@@ -34,6 +34,8 @@ from aura_state import (
 )
 
 OLLAMA_URL = "http://localhost:11434/v1"
+# Small models are plenty for structured extraction. Override with OLLAMA_MODEL.
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.2:1b")
 
 
 class Refund(BaseModel):
@@ -52,7 +54,7 @@ def _extract_with_ollama(message: str):
             mode=instructor.Mode.JSON,
         )
         return client.chat.completions.create(
-            model="llama3.1", response_model=Refund, max_retries=1,
+            model=OLLAMA_MODEL, response_model=Refund, max_retries=1,
             messages=[{"role": "user", "content": message}],
         )
     except Exception:
