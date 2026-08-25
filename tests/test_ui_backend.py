@@ -41,3 +41,25 @@ def test_sanitizer_makes_it_safe():
     }
     r = client.post("/api/verify", json=spec).json()
     assert r["taint"]["verdict"] == "PROVEN"
+
+
+def test_conformal_endpoint():
+    r = client.post("/api/conformal", json={"values": [100, 102, 98, 101, 99] * 5, "confidence": 0.9}).json()
+    assert r["mode"] == "interval" and r["calibrated"] is True and r["lower"] <= r["upper"]
+
+
+def test_risk_endpoint():
+    import random
+    rng = random.Random(0)
+    s = [rng.random() for _ in range(300)]
+    c = [rng.random() < x for x in s]
+    r = client.post("/api/risk", json={"scores": s, "correct": c, "epsilon": 0.1, "test_score": 0.95}).json()
+    assert r["calibrated"] is True
+    assert r["realized_false_action_rate"] <= 0.13
+    assert r["decision"] == "act"
+
+
+def test_providers_endpoint():
+    provs = {p["name"]: p for p in client.get("/api/providers").json()}
+    assert "ollama" in provs and provs["ollama"]["available"] is True   # local, no key
+    assert provs["openai"]["needs"] == "OPENAI_API_KEY"

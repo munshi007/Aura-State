@@ -18,7 +18,7 @@
   <img alt="CI" src="https://github.com/munshi007/Aura-State/actions/workflows/ci.yml/badge.svg">
   <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-3d3aa8.svg">
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
-  <img alt="tests" src="https://img.shields.io/badge/tests-136%20passing-1c8a5b.svg">
+  <img alt="tests" src="https://img.shields.io/badge/tests-139%20passing-1c8a5b.svg">
 </p>
 
 ```bash
@@ -52,23 +52,35 @@ pip install -e .
 | `python examples/replan_demo.py` | the verifier *repairs* the plan until it's proven-safe |
 | `python examples/pasc_demo.py` | pipeline-aware conformal calibrates the end-to-end answer, not just each step |
 
-## Local studio — click, don't code (no cloud, no key)
+## Aura Studio — the whole platform, running locally (no cloud, no key)
 
-Prefer a UI? Launch a web app that runs the **real** verifiers on your own machine:
+Prefer a console to code? Launch a local web app that runs the **real** verifiers
+on your own machine. One command, nothing leaves your laptop:
 
 ```bash
 pip install "aura-state[ui]"
 aura-state ui          # opens http://127.0.0.1:8155 in your browser
 ```
 
-Build an agent graph visually, label capabilities (untrusted / sink / sanitizer),
-add Z3 obligations, and hit **Verify** — the local backend runs the actual Z3
-proofs, CTL model checking, and static taint analysis, shows the verdicts and
-counterexamples, and lets you download the audit contract. Nothing leaves your
-machine — no cloud, no API key.
+A four-module workbench covering the whole library:
+
+| Module | What you do | Runs |
+|---|---|---|
+| **Verify design** | build an agent graph, label capabilities, add Z3 obligations → get PROVEN/VIOLATED + counterexamples + a downloadable contract; **Repair** fixes the graph | Z3 · CTL · taint · contract |
+| **Live agent** | run a **real** model (local Ollama, or OpenAI/Gemini/DeepSeek with your key) and prove its output | any provider + Z3 |
+| **Uncertainty** | calibrated prediction intervals on your samples | conformal · PASC |
+| **Risk control** | calibrate an act/abstain gate with a provable false-action bound | Conformal Risk Control |
+
+Every check is the actual framework verifier — no browser mockups. Keys are read
+from your environment; a local Ollama model needs no key at all.
 
 <p align="center">
-  <img src="assets/studio-violated.png" alt="Aura Studio — a local web app running the real verifiers; here it catches an untrusted-to-sink dataflow" width="900">
+  <img src="assets/studio-violated.png" alt="Aura Studio catching an untrusted-to-sink dataflow — the violating path glows amber" width="900">
+  <br><em>Verify design — the violating path glows amber, with the counterexample spelled out</em>
+</p>
+<p align="center">
+  <img src="assets/studio-agent.png" alt="Aura Studio Live Agent — a real Ollama model's output verified with Z3" width="900">
+  <br><em>Live agent — a real local model runs and its output is proven with Z3</em>
 </p>
 
 ## What this is
@@ -363,7 +375,7 @@ Python 3.10+ required. Dependencies: `pydantic`, `instructor`, `openai`, `networ
 
 ```bash
 python -m pytest tests/ -v
-# 136 tests passing
+# 139 tests passing
 ```
 
 ## Works with any LLM provider
