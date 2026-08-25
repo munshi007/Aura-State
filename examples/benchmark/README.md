@@ -1,5 +1,10 @@
 # Aura-State Benchmark: Real Estate Lead Qualifier
 
+> Illustrative end-to-end walkthrough with a **mocked** LLM (no API key needed).
+> For measured results on **real** data and a **real** local-model agent, see
+> [`examples/real_data/`](../real_data/) and [`examples/integrations/`](../integrations/).
+
+
 This benchmark demonstrates the full end-to-end pipeline with formal verification, Thompson-bandit routing, and sandboxed math.
 No API keys required — uses mocked LLM responses by default to show exactly what happens at each stage.
 

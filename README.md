@@ -267,35 +267,32 @@ Never a silent pass — an unrepairable design aborts with the violation named.
 Refs: PAT-Agent (arXiv:2509.23675), VERIMAP (arXiv:2510.17109). See
 `python examples/replan_demo.py`.
 
-## Benchmark results
+## Results — real data, reproducible, no API key
 
-We ran 10 real-estate sales transcripts through a 4-node pipeline using GPT-4o-mini (30 API calls total):
+Every number below comes from running Aura-State on real, public data (or a real
+local model). Nothing here is simulated.
 
-```
-Field             Accuracy
-──────────────   ──────────
-name                  100%
-budget                100%
-bedrooms              100%
-pre_approved           90%
-timeline               90%
-city                   80%
-
-Temporal properties:       3/3 proven
-Z3 proof obligations:     20/20 passed
-Avg latency:              1.4s
-```
+| What | Real subject | Result | Reproduce |
+|---|---|---|---|
+| **Z3 verifies invariants at scale** | 1,000 real public sales records (3 arithmetic invariants each) | **1,000/1,000 verified**, 3,000 obligations, **~1,200 records/sec**; rejects a corrupted record with the exact failing obligation | `python examples/real_data/verify_real_dataset.py` |
+| **Conformal coverage on real data** | 442 real diabetes patient records (scikit-learn) | requested 90% → **91.3% empirical coverage** on held-out patients | `python examples/real_data/conformal_on_real_data.py` |
+| **A real LangGraph agent, local model** | `qwen2.5:0.5b` via Ollama — no key, no cloud | agent's extraction **Z3-verified**, tool graph **proven injection-safe**, audit contract emitted | `python examples/integrations/langgraph_verified.py` |
 
 ```bash
-# See verification reject a hallucination in the loop — no API key needed
+# real data through the verifier — no LLM, no key
+python examples/real_data/verify_real_dataset.py
+pip install scikit-learn && python examples/real_data/conformal_on_real_data.py
+
+# a real LangGraph agent on a local model — no key, no cloud
+ollama pull qwen2.5:0.5b && pip install langgraph
+OLLAMA_MODEL=qwen2.5:0.5b python examples/integrations/langgraph_verified.py
+
+# verification rejects a hallucination in the loop — no key
 python examples/verified_loop_demo.py
-
-# Full pipeline benchmark — no API key needed
-python examples/benchmark/run_benchmark.py
-
-# With real LLM calls (needs OPENAI_API_KEY in .env)
-python examples/benchmark/run_live.py --model gpt-4o-mini --runs 3
 ```
+
+See [`examples/real_data/`](examples/real_data/) and
+[`examples/integrations/`](examples/integrations/) for the full runs.
 
 ## Project structure
 
@@ -367,7 +364,7 @@ local recipes. Your API key is read from your environment — never hard-coded.
 - [Usage Guide](docs/GUIDE.md) — code examples for every feature
 - [Algorithm Reference](docs/ALGORITHMS.md) — deep-dive into CTL, Z3, Thompson sampling, conformal prediction
 - [Contributing](CONTRIBUTING.md) — architecture overview and how to contribute
-- [Benchmark](examples/benchmark/) — synthetic and live benchmarks
+- [Pipeline walkthrough](examples/benchmark/) — an illustrative end-to-end pipeline (mocked LLM); for measured results see [real-data](examples/real_data/)
 
 ## License
 
