@@ -135,6 +135,7 @@ const NS="http://www.w3.org/2000/svg";
 function ic(p){return `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`}
 const MODULES=[
   {id:"verify",name:"Verify design",sub:"Z3 · CTL · taint · contract",icon:'<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>'},
+  {id:"prove",name:"Prove data",sub:"Z3 point-check + consistency",icon:'<path d="M14 3v5h5"/><path d="M6 3h8l5 5v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M9 14l2 2 4-4"/>'},
   {id:"agent",name:"Live agent",sub:"run + verify a real model",icon:'<path d="M12 2a3 3 0 0 1 3 3v2a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M5 22v-1a7 7 0 0 1 14 0v1"/>'},
   {id:"uncertainty",name:"Uncertainty",sub:"conformal · PASC",icon:'<path d="M3 12h4l3 8 4-16 3 8h4"/>'},
   {id:"risk",name:"Risk control",sub:"abstention · escalate",icon:'<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/>'},
@@ -151,7 +152,7 @@ function go(id){current=id;renderNav();
   const m=MODULES.find(x=>x.id===id);
   document.getElementById("wstitle").innerHTML=`${m.name} <span class="sub">${m.sub}</span>`;
   document.getElementById("wsactions").innerHTML="";
-  ({verify:Verify,agent:Agent,uncertainty:Uncertainty,risk:Risk})[id]();
+  ({verify:Verify,prove:Prove,agent:Agent,uncertainty:Uncertainty,risk:Risk})[id]();
 }
 
 /* ══════════ MODULE: VERIFY (graph) ══════════ */
@@ -275,22 +276,77 @@ async function agRun(){const out=document.getElementById("ag_out");out.innerHTML
     ${d.failed&&d.failed.length?`<div class="cex" style="margin-top:10px">failed: ${d.failed.map(esc).join(", ")}</div>`:''}</div>
     <div class="hint">The model's output was checked against your obligations with real Z3 — a value that can't be proven is rejected, not trusted.</div>`}
 
+/* ══════════ MODULE: PROVE (Z3 point-check) ══════════ */
+let proveRows=[{k:"area",v:"100"},{k:"rate",v:"3"},{k:"total",v:"999"}];
+function Prove(){
+  document.getElementById("ws").innerHTML=`<div class="cols">
+    <div class="form">
+      <div class="fld"><label>Data (as an agent would extract it)</label><table class="mini" id="pr_rows"></table><button class="addrow" onclick="prAdd()">+ field</button></div>
+      <div class="fld"><label>Z3 obligations (comma-sep)</label><input id="pr_ob" class="mono" value="total == area * rate, area > 0"></div>
+      <div class="hint">The same fail-closed AST→Z3 check that gates every extraction in the loop. It also proves the obligation set isn't self-contradictory (e.g. <span class="mono">x > 5, x < 3</span>).</div>
+    </div>
+    <div class="out" id="pr_out"><div class="empty">Enter data + obligations to prove or refute with Z3.</div></div>
+  </div>`;
+  document.getElementById("wsactions").innerHTML=`<button class="btn primary" onclick="prRun()">✓ Prove with Z3</button>`;
+  prRender();
+}
+function prRender(){document.getElementById("pr_rows").innerHTML=proveRows.map((r,i)=>`<tr>
+  <td><input value="${esc(r.k)}" oninput="proveRows[${i}].k=this.value"></td>
+  <td><input class="mono" value="${esc(r.v)}" oninput="proveRows[${i}].v=this.value"></td>
+  <td style="width:34px"><button class="rowbtn" onclick="proveRows.splice(${i},1);prRender()">✕</button></td></tr>`).join("")}
+function prAdd(){proveRows.push({k:"field",v:"0"});prRender()}
+function coerce(v){const t=v.trim();if(t==="true")return true;if(t==="false")return false;
+  if(/^-?\d+$/.test(t))return parseInt(t);if(/^-?\d*\.\d+$/.test(t))return parseFloat(t);return v}
+async function prRun(){const data={};proveRows.forEach(r=>{if(r.k.trim())data[r.k.trim()]=coerce(r.v)});
+  const obs=document.getElementById("pr_ob").value.split(",").map(s=>s.trim()).filter(Boolean);const out=document.getElementById("pr_out");
+  let d;try{d=await(await fetch("/api/prove",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({data,obligations:obs})})).json()}catch(e){out.innerHTML="error";return}
+  const vc=d.verified?'ok':'bad';
+  out.innerHTML=`<div class="metric"><div class="k">Z3 verdict for the data</div><div style="margin-top:8px"><span class="v ${vc}">${d.verified?'✓ PROVEN':'✕ REFUTED'}</span></div>
+      ${d.failed&&d.failed.length?`<div class="cex" style="margin-top:10px">violated: ${d.failed.map(esc).join(", ")}</div>`:''}
+      ${d.unproven&&d.unproven.length?`<div class="cex" style="margin-top:10px">unproven (uncompilable/unbound): ${d.unproven.map(esc).join(", ")}</div>`:''}</div>
+    <div class="metric"><div class="k">obligation set consistency (symbolic Z3)</div><div style="margin-top:8px"><span class="v ${d.consistent?'ok':'bad'}">${d.consistent?'✓ SATISFIABLE':'✕ CONTRADICTORY'}</span></div>
+      ${d.reason?`<div class="hint" style="margin-top:8px">${esc(d.reason)}</div>`:(d.witness?`<div class="hint" style="margin-top:8px">a valid assignment exists, e.g. ${esc(JSON.stringify(d.witness))}</div>`:'')}</div>
+    <div class="hint">Point-check verifies these concrete values; the consistency check proves the spec is satisfiable for <em>some</em> values (variables range freely). A contradictory spec can never hold — caught before you ship.</div>`}
+
 /* ══════════ MODULE: UNCERTAINTY ══════════ */
+let cfMode="interval";
 function Uncertainty(){
   document.getElementById("ws").innerHTML=`<div class="cols">
     <div class="form">
-      <div class="fld"><label>Repeated measurements / samples (comma-sep)</label>
-        <textarea id="cf_vals">450000, 452000, 448000, 451000, 449000, 450500, 447500, 452500, 449500, 450000, 451500, 448500, 450200, 449800, 451000, 448000, 452000, 450000, 449000, 451000</textarea></div>
+      <div class="fld"><label>Estimator</label><div class="caps" style="grid-template-columns:1fr 1fr">
+        <button class="${cfMode==='interval'?'on':''}" onclick="cfSet('interval')">Repeated samples</button>
+        <button class="${cfMode==='pasc'?'on':''}" onclick="cfSet('pasc')">Pipeline (PASC)</button></div></div>
+      <div id="cf_inputs"></div>
       <div class="fld"><label>Confidence</label><select id="cf_conf"><option>0.9</option><option>0.95</option><option>0.8</option></select></div>
-      <div class="hint">Split/jackknife+ conformal — distribution-free. A tighter interval means the model is more self-consistent. (PASC calibrates the composed pipeline output.)</div>
+      <div class="hint" id="cf_hint"></div>
     </div>
-    <div class="out" id="cf_out"><div class="empty">A calibrated prediction interval appears here.</div></div>
+    <div class="out" id="cf_out"><div class="empty">A calibrated result appears here.</div></div>
   </div>`;
-  document.getElementById("wsactions").innerHTML=`<button class="btn primary" onclick="cfRun()">Compute interval</button>`;
+  document.getElementById("wsactions").innerHTML=`<button class="btn primary" onclick="cfRun()">Compute</button>`;
+  cfInputs();
 }
-async function cfRun(){const vals=document.getElementById("cf_vals").value.split(",").map(s=>parseFloat(s.trim())).filter(x=>!isNaN(x));
-  const conf=parseFloat(document.getElementById("cf_conf").value);const out=document.getElementById("cf_out");
-  let d;try{d=await(await fetch("/api/conformal",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({values:vals,confidence:conf})})).json()}catch(e){out.innerHTML="error";return}
+function cfSet(m){cfMode=m;Uncertainty()}
+function cfInputs(){
+  const I=document.getElementById("cf_inputs");
+  if(cfMode==="interval"){
+    I.innerHTML=`<div class="fld"><label>Repeated measurements / samples (comma-sep)</label><textarea id="cf_vals">450000, 452000, 448000, 451000, 449000, 450500, 447500, 452500, 449500, 450000, 451500, 448500, 450200, 449800, 451000, 448000, 452000, 450000, 449000, 451000</textarea></div>`;
+    document.getElementById("cf_hint").innerHTML="Split/jackknife+ conformal — distribution-free. A tight interval means the model is self-consistent across runs.";
+  }else{
+    I.innerHTML=`<div class="fld"><label>Pipeline predictions (comma-sep)</label><textarea id="cf_pred">10.2, 9.7, 11.4, 8.9, 10.1, 12.0, 9.3, 10.8, 11.1, 9.9, 10.4, 8.7, 11.6, 10.0, 9.5, 10.9, 11.2, 9.1, 10.3, 10.7</textarea></div>
+    <div class="fld"><label>Ground-truth outcomes (comma-sep)</label><textarea id="cf_true">10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0</textarea></div>`;
+    document.getElementById("cf_hint").innerHTML="PASC calibrates the <b>end-to-end</b> pipeline output — errors compound across steps, so per-step coverage under-covers the final answer.";
+  }
+}
+async function cfRun(){const conf=parseFloat(document.getElementById("cf_conf").value);const out=document.getElementById("cf_out");
+  let body;
+  if(cfMode==="interval"){const vals=document.getElementById("cf_vals").value.split(",").map(s=>parseFloat(s.trim())).filter(x=>!isNaN(x));body={values:vals,confidence:conf}}
+  else{const pred=document.getElementById("cf_pred").value.split(",").map(s=>parseFloat(s.trim())).filter(x=>!isNaN(x));
+       const tru=document.getElementById("cf_true").value.split(",").map(s=>parseFloat(s.trim())).filter(x=>!isNaN(x));body={predictions:pred,truths:tru,confidence:conf}}
+  let d;try{d=await(await fetch("/api/conformal",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})).json()}catch(e){out.innerHTML="error";return}
+  if(d.mode==="pasc"){out.innerHTML=`<div class="metric"><div class="k">end-to-end coverage (PASC)</div><div class="big" style="margin-top:8px">${(d.coverage*100).toFixed(1)}%</div>
+      <div style="margin-top:8px"><span class="v ${d.calibrated?'ok':'bad'}">${d.calibrated?'CALIBRATED':'UNCALIBRATED — too few runs'}</span> · target ${(conf*100)}%</div></div>
+    <div class="metric"><div class="k">interval half-width</div><div class="big" style="font-size:24px;margin-top:6px">±${d.q_hat==null?'—':fmt(d.q_hat)}</div>
+      <div class="hint" style="margin-top:8px">covers the composed pipeline output, not just one step</div></div>`;return}
   const cal=d.calibrated;
   out.innerHTML=`<div class="metric"><div class="k">${(conf*100)}% prediction interval</div>
       <div class="big" style="margin-top:8px">${d.lower==null?'—':fmt(d.lower)} – ${d.upper==null?'—':fmt(d.upper)}</div>

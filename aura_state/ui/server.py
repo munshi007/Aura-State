@@ -238,6 +238,25 @@ def create_app() -> "FastAPI":
             out["test_score"] = req.test_score
         return out
 
+    # ── Prove module (Z3 point-check + spec consistency on any data) ──
+    class ProveReq(BaseModel):
+        data: Dict[str, Any] = {}
+        obligations: List[str] = []
+
+    @app.post("/api/prove")
+    def prove(req: ProveReq):
+        r = prove_extraction(req.data, req.obligations)
+        sat = prove_obligations_satisfiable(req.obligations)
+        return {
+            "verified": r.verified,
+            "failed": r.failed_obligations,
+            "unproven": r.unproven_obligations,
+            "counterexample": r.counterexample,
+            "consistent": sat.satisfiable,
+            "witness": sat.witness,
+            "reason": sat.reason,
+        }
+
     if os.path.isdir(_STATIC):
         app.mount("/static", StaticFiles(directory=_STATIC), name="static")
     return app

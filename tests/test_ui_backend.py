@@ -63,3 +63,11 @@ def test_providers_endpoint():
     provs = {p["name"]: p for p in client.get("/api/providers").json()}
     assert "ollama" in provs and provs["ollama"]["available"] is True   # local, no key
     assert provs["openai"]["needs"] == "OPENAI_API_KEY"
+
+
+def test_prove_endpoint():
+    r = client.post("/api/prove", json={"data": {"area": 100, "rate": 3, "total": 999},
+                                        "obligations": ["total == area * rate"]}).json()
+    assert r["verified"] is False and "total == area * rate" in r["failed"]
+    r2 = client.post("/api/prove", json={"data": {"x": 1}, "obligations": ["x > 5", "x < 3"]}).json()
+    assert r2["consistent"] is False
