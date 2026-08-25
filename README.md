@@ -18,7 +18,7 @@
   <img alt="CI" src="https://github.com/munshi007/Aura-State/actions/workflows/ci.yml/badge.svg">
   <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-3d3aa8.svg">
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
-  <img alt="tests" src="https://img.shields.io/badge/tests-133%20passing-1c8a5b.svg">
+  <img alt="tests" src="https://img.shields.io/badge/tests-136%20passing-1c8a5b.svg">
 </p>
 
 ```bash
@@ -51,6 +51,21 @@ pip install -e .
 | `python examples/emit_contract_demo.py` | a portable contract compiled faithfully from the design |
 | `python examples/replan_demo.py` | the verifier *repairs* the plan until it's proven-safe |
 | `python examples/pasc_demo.py` | pipeline-aware conformal calibrates the end-to-end answer, not just each step |
+
+## Local studio — click, don't code (no cloud, no key)
+
+Prefer a UI? Launch a web app that runs the **real** verifiers on your own machine:
+
+```bash
+pip install "aura-state[ui]"
+aura-state ui          # opens http://127.0.0.1:8155 in your browser
+```
+
+Build an agent graph visually, label capabilities (untrusted / sink / sanitizer),
+add Z3 obligations, and hit **Verify** — the local backend runs the actual Z3
+proofs, CTL model checking, and static taint analysis, shows the verdicts and
+counterexamples, and lets you download the audit contract. Nothing leaves your
+machine — no cloud, no API key.
 
 ## What this is
 
@@ -344,7 +359,7 @@ Python 3.10+ required. Dependencies: `pydantic`, `instructor`, `openai`, `networ
 
 ```bash
 python -m pytest tests/ -v
-# 133 tests passing
+# 136 tests passing
 ```
 
 ## Works with any LLM provider

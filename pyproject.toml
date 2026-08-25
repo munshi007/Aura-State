@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "aura-state"
-version = "0.3.0"
+version = "0.4.0"
 description = "Build LLM agents you can prove things about — Z3 proofs, CTL model checking, and conformal risk control, verified in the loop."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -42,7 +42,11 @@ Homepage = "https://github.com/munshi007/Aura-State"
 Repository = "https://github.com/munshi007/Aura-State"
 Issues = "https://github.com/munshi007/Aura-State/issues"
 
+[project.scripts]
+aura-state = "aura_state.cli:main"
+
 [project.optional-dependencies]
+ui = ["fastapi>=0.110", "uvicorn>=0.27"]
 dev = [
     "pytest",
     "pytest-asyncio",

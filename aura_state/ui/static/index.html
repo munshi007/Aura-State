@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Aura Studio</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@600;700&display=swap">
+<style>
+:root{
+  --paper:#f4f6f9;--surface:#fff;--surface2:#fbfbfd;--ink:#15171d;--soft:#434955;--muted:#6b7280;--line:#e3e6ec;
+  --accent:#3d3aa8;--accent-soft:#ecebf8;--proven:#1c8a5b;--proven-bg:#e6f3ec;--proven-line:#bfe3d0;
+  --violated:#bd400d;--violated-bg:#fbeadf;--violated-line:#f2c8ac;
+  --untrusted:#bd400d;--sink:#8a1c1c;--sanitize:#1c8a5b;--plain:#6b7280;
+  --shadow:0 1px 2px rgba(21,23,29,.05),0 8px 26px rgba(21,23,29,.06);
+}
+@media(prefers-color-scheme:dark){:root{
+  --paper:#0e1015;--surface:#171a21;--surface2:#13161c;--ink:#eceff4;--soft:#b4bac7;--muted:#828997;--line:#262b35;
+  --accent:#a29ff2;--accent-soft:#1d1e37;--proven:#4dc48b;--proven-bg:#112620;--proven-line:#1f4436;
+  --violated:#f18a5b;--violated-bg:#2a1a11;--violated-line:#4a2c19;--untrusted:#f18a5b;--sink:#e46a6a;--sanitize:#4dc48b;--plain:#828997;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.4);}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px}
+.mono{font-family:"IBM Plex Mono",monospace}
+h1,h2{font-family:"IBM Plex Serif",Georgia,serif;letter-spacing:-.01em}
+a{color:var(--accent)}
+.bar{border-bottom:1px solid var(--line);background:var(--surface);padding:14px 22px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px;font-family:"IBM Plex Serif",serif;font-weight:700;font-size:18px}
+.brand .d{width:12px;height:12px;border-radius:4px;background:var(--proven)}
+.bar .sub{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted)}
+.wrap{max-width:1180px;margin:0 auto;padding:22px;display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+.card h2{font-size:16px;margin:0;padding:13px 16px;border-bottom:1px solid var(--line);background:var(--surface2);font-family:"IBM Plex Sans";font-weight:600}
+.pad{padding:16px}
+label{display:block;font-size:12px;color:var(--muted);margin:0 0 4px;font-family:"IBM Plex Mono",monospace;letter-spacing:.04em;text-transform:uppercase}
+input,select{width:100%;font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface2);color:var(--ink)}
+.mono input{font-family:"IBM Plex Mono",monospace;font-size:13px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11px;color:var(--muted);font-family:"IBM Plex Mono",monospace;text-transform:uppercase;letter-spacing:.06em;padding:0 6px 6px}
+td{padding:4px 6px;vertical-align:top}
+.row td{border-top:1px solid var(--line);padding-top:10px}
+.btn{font:inherit;font-weight:600;font-size:14px;padding:9px 14px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:#fff;border-color:transparent}
+@media(prefers-color-scheme:dark){.btn.primary{color:#12131f}}
+.btn.sm{padding:5px 9px;font-size:12px}
+.btn.x{color:var(--violated);border-color:transparent;background:transparent;padding:4px 6px}
+.controls{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+svg{display:block;width:100%;height:300px;background:var(--surface2);border-radius:0}
+.verdict{display:flex;align-items:center;gap:10px;padding:12px 16px;font-family:"IBM Plex Mono",monospace;font-weight:600}
+.verdict.ok{color:var(--proven);background:var(--proven-bg);border-bottom:1px solid var(--proven-line)}
+.verdict.bad{color:var(--violated);background:var(--violated-bg);border-bottom:1px solid var(--violated-line)}
+.res{padding:14px 16px;border-top:1px solid var(--line)}
+.res:first-child{border-top:0}
+.res h3{margin:0 0 6px;font-size:13px;font-family:"IBM Plex Mono",monospace;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.tag{font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;padding:1px 7px;border-radius:5px}
+.tag.ok{color:var(--proven);background:var(--proven-bg);border:1px solid var(--proven-line)}
+.tag.bad{color:var(--violated);background:var(--violated-bg);border:1px solid var(--violated-line)}
+.line{font-size:13.5px;color:var(--soft);margin:5px 0}
+pre{margin:0;padding:12px;background:var(--surface2);border:1px solid var(--line);border-radius:8px;overflow:auto;max-height:240px;font-family:"IBM Plex Mono",monospace;font-size:12px;line-height:1.6}
+.hint{font-size:12.5px;color:var(--muted);margin-top:10px}
+@media(max-width:940px){.wrap{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="brand"><span class="d"></span>Aura Studio</div>
+  <div class="sub">real verifiers · running locally · no cloud, no key</div>
+</div>
+
+<div class="wrap">
+  <!-- LEFT: editor -->
+  <div style="display:flex;flex-direction:column;gap:22px">
+    <div class="card">
+      <h2>Nodes</h2>
+      <div class="pad">
+        <table><thead><tr><th>id</th><th>capability</th><th>obligations (comma-sep)</th><th></th></tr></thead>
+          <tbody id="nodes"></tbody></table>
+        <div class="controls"><button class="btn sm" onclick="addNode()">+ node</button></div>
+        <div class="hint">Capability: <b>untrusted</b> = LLM/tool output · <b>sink</b> = dangerous action · <b>sanitizer</b> = clears taint. Obligations are Z3 constraints, e.g. <span class="mono">total == area * rate</span>.</div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Edges</h2>
+      <div class="pad">
+        <table><thead><tr><th>from</th><th>to</th><th></th></tr></thead><tbody id="edges"></tbody></table>
+        <div class="controls"><button class="btn sm" onclick="addEdge()">+ edge</button></div>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn primary" onclick="verify()">Verify with Z3 · CTL · taint</button>
+      <button class="btn" onclick="loadPreset()">Load example</button>
+    </div>
+  </div>
+
+  <!-- RIGHT: preview + results -->
+  <div style="display:flex;flex-direction:column;gap:22px">
+    <div class="card"><h2>Graph</h2><svg id="graph" viewBox="0 0 480 300"></svg></div>
+    <div class="card" id="resultsCard" style="display:none">
+      <h2>Verdicts <span id="dl"></span></h2>
+      <div id="verdict" class="verdict"></div>
+      <div id="results"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let nodes=[], edges=[], lastContract=null;
+const CAPS=["plain","untrusted","sink","sanitizer"];
+const CAPCOLOR={plain:"var(--plain)",untrusted:"var(--untrusted)",sink:"var(--sink)",sanitizer:"var(--sanitize)"};
+
+function preset(){
+  nodes=[{id:"Ingest",capability:"untrusted",obligations:""},
+         {id:"PolicyCheck",capability:"sanitizer",obligations:""},
+         {id:"Price",capability:"plain",obligations:"total == area * rate, area > 0"},
+         {id:"SendEmail",capability:"sink",obligations:""}];
+  edges=[["Ingest","PolicyCheck"],["PolicyCheck","Price"],["Price","SendEmail"]];
+}
+function addNode(){nodes.push({id:"Node"+(nodes.length+1),capability:"plain",obligations:""});render()}
+function addEdge(){edges.push([nodes[0]?.id||"",nodes[0]?.id||""]);render()}
+function loadPreset(){preset();render()}
+
+function render(){
+  // nodes table
+  const nb=document.getElementById("nodes"); nb.innerHTML="";
+  nodes.forEach((n,i)=>{
+    const tr=document.createElement("tr"); tr.className="row";
+    tr.innerHTML=`
+      <td><input value="${n.id}" oninput="nodes[${i}].id=this.value;render()"></td>
+      <td><select onchange="nodes[${i}].capability=this.value;render()">${CAPS.map(c=>`<option ${c===n.capability?"selected":""}>${c}</option>`).join("")}</select></td>
+      <td class="mono"><input value="${n.obligations.replace(/"/g,'&quot;')}" oninput="nodes[${i}].obligations=this.value"></td>
+      <td><button class="btn x" onclick="nodes.splice(${i},1);render()">✕</button></td>`;
+    nb.appendChild(tr);
+  });
+  // edges table
+  const eb=document.getElementById("edges"); eb.innerHTML="";
+  edges.forEach((e,i)=>{
+    const opt=(v)=>nodes.map(n=>`<option ${n.id===v?"selected":""}>${n.id}</option>`).join("");
+    const tr=document.createElement("tr"); tr.className="row";
+    tr.innerHTML=`
+      <td><select onchange="edges[${i}][0]=this.value;render()">${opt(e[0])}</select></td>
+      <td><select onchange="edges[${i}][1]=this.value;render()">${opt(e[1])}</select></td>
+      <td><button class="btn x" onclick="edges.splice(${i},1);render()">✕</button></td>`;
+    eb.appendChild(tr);
+  });
+  drawGraph();
+}
+
+function drawGraph(violPaths){
+  const svg=document.getElementById("graph"); svg.innerHTML="";
+  const NS="http://www.w3.org/2000/svg";
+  const pos={}; const cols=Math.min(nodes.length,4)||1;
+  nodes.forEach((n,i)=>{ pos[n.id]={x:70+ (i%cols)*(340/Math.max(cols-1,1)), y:70+Math.floor(i/cols)*90}; });
+  const badEdges=new Set(); (violPaths||[]).forEach(p=>{for(let i=0;i<p.length-1;i++)badEdges.add(p[i]+">"+p[i+1])});
+  // edges
+  edges.forEach(([a,b])=>{ if(!pos[a]||!pos[b])return;
+    const bad=badEdges.has(a+">"+b);
+    const l=document.createElementNS(NS,"line");
+    l.setAttribute("x1",pos[a].x);l.setAttribute("y1",pos[a].y);l.setAttribute("x2",pos[b].x);l.setAttribute("y2",pos[b].y);
+    l.setAttribute("stroke",bad?"var(--violated)":"var(--line)");l.setAttribute("stroke-width",bad?3:2);
+    svg.appendChild(l);
+  });
+  // nodes
+  nodes.forEach(n=>{const p=pos[n.id];
+    const c=document.createElementNS(NS,"circle");c.setAttribute("cx",p.x);c.setAttribute("cy",p.y);c.setAttribute("r",26);
+    c.setAttribute("fill","var(--surface)");c.setAttribute("stroke",CAPCOLOR[n.capability]);c.setAttribute("stroke-width",n.capability==="plain"?2:3);
+    svg.appendChild(c);
+    const t=document.createElementNS(NS,"text");t.setAttribute("x",p.x);t.setAttribute("y",p.y+3);t.setAttribute("text-anchor","middle");
+    t.setAttribute("font-size","11");t.setAttribute("font-weight","600");t.setAttribute("fill","var(--ink)");t.textContent=n.id.slice(0,9);
+    svg.appendChild(t);
+    if(n.capability!=="plain"){const s=document.createElementNS(NS,"text");s.setAttribute("x",p.x);s.setAttribute("y",p.y+16);
+      s.setAttribute("text-anchor","middle");s.setAttribute("font-size","8");s.setAttribute("fill",CAPCOLOR[n.capability]);
+      s.setAttribute("font-family","IBM Plex Mono");s.textContent=n.capability;svg.appendChild(s);}
+  });
+}
+
+async function verify(){
+  const spec={nodes:nodes.map(n=>({id:n.id,capability:n.capability,
+    obligations:n.obligations.split(",").map(s=>s.trim()).filter(Boolean)})),edges:edges};
+  let data;
+  try{ const r=await fetch("/api/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(spec)});
+       data=await r.json(); }
+  catch(e){ alert("verify failed: "+e); return; }
+  lastContract=data.contract;
+  const card=document.getElementById("resultsCard"); card.style.display="block";
+  const allOk = data.taint.verdict==="PROVEN" && data.obligations.every(o=>o.consistent) && data.ctl.every(c=>c.verdict==="PROVEN");
+  const v=document.getElementById("verdict");
+  v.className="verdict "+(allOk?"ok":"bad");
+  v.innerHTML = allOk ? "✓ ALL CHECKS PASSED" : "✗ SOME CHECKS FAILED";
+
+  const violPaths=data.taint.violations.map(x=>x.path);
+  drawGraph(violPaths);
+
+  const R=document.getElementById("results"); R.innerHTML="";
+  // taint
+  let h=`<div class="res"><h3>Injection-safe dataflow (taint)</h3>`;
+  h+=`<span class="tag ${data.taint.verdict==='PROVEN'?'ok':'bad'}">${data.taint.verdict}</span>`;
+  data.taint.violations.forEach(x=>{h+=`<div class="line">tainted <b>${x.field}</b> from ‘${x.source}’ reaches sink ‘${x.sink}’ via ${x.path.join(" → ")}</div>`});
+  h+=`</div>`;
+  // ctl
+  h+=`<div class="res"><h3>Reachability (CTL model checking)</h3>`;
+  data.ctl.forEach(c=>{h+=`<div class="line"><span class="tag ${c.verdict==='PROVEN'?'ok':'bad'}">${c.verdict}</span> ${c.property}</div>`});
+  h+=`</div>`;
+  // obligations
+  if(data.obligations.length){h+=`<div class="res"><h3>Obligation consistency (Z3)</h3>`;
+    data.obligations.forEach(o=>{h+=`<div class="line"><span class="tag ${o.consistent?'ok':'bad'}">${o.consistent?'SATISFIABLE':'CONTRADICTORY'}</span> ${o.node}${o.reason?` — ${o.reason}`:''}</div>`});
+    h+=`</div>`;}
+  R.innerHTML=h;
+  document.getElementById("dl").innerHTML=`<button class="btn sm" style="float:right;margin:-2px 0" onclick="downloadContract()">download contract</button>`;
+}
+
+function downloadContract(){
+  if(!lastContract)return;
+  const blob=new Blob([JSON.stringify(lastContract,null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="aura_contract.json";a.click();
+}
+
+preset(); render();
+</script>
+</body>
+</html>
