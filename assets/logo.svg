@@ -1,0 +1,23 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Aura-State logo">
+  <!-- tile -->
+  <rect x="6" y="6" width="116" height="116" rx="27" fill="#f5f6f9" stroke="#e3e6ec" stroke-width="2"/>
+
+  <!-- edges: two premise states transition up into the proven state (∴ / therefore) -->
+  <g stroke="#3d3aa8" stroke-width="3.4" stroke-linecap="round">
+    <line x1="46.7" y1="78.1" x2="58.6" y2="53.6"/>
+    <line x1="81.3" y1="78.1" x2="69.4" y2="53.6"/>
+  </g>
+  <!-- arrowheads into the proven node -->
+  <g fill="#3d3aa8">
+    <path d="M58.6 53.6 l-5.2 -0.2 l3.4 3.9 z"/>
+    <path d="M69.4 53.6 l5.2 -0.2 l-3.4 3.9 z"/>
+  </g>
+
+  <!-- premise states (unproven) -->
+  <circle cx="42" cy="88" r="11" fill="#f5f6f9" stroke="#3d3aa8" stroke-width="3.4"/>
+  <circle cx="86" cy="88" r="11" fill="#f5f6f9" stroke="#3d3aa8" stroke-width="3.4"/>
+
+  <!-- proven end state: green with a check (QED) -->
+  <circle cx="64" cy="42" r="14" fill="#1c8a5b"/>
+  <path d="M57.5 42.3 l4.2 4.3 l8.1 -8.7" fill="none" stroke="#ffffff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

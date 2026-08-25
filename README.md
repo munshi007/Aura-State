@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+    <img src="assets/logo.svg" alt="Aura-State" width="104" height="104">
+  </picture>
+</p>
+
 <h1 align="center">Aura-State</h1>
 
 <p align="center"><b>Build LLM agents you can actually prove things about.</b></p>
