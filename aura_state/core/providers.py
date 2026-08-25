@@ -177,10 +177,17 @@ class LLMProvider:
         return int(prompt or 0), int(completion or 0)
 
     def _get_client_for_model(self, model: str):
-        """Find the registered client for a given model name."""
+        """Find the registered client for a given model name.
+
+        Falls back to the sole registered client when no prefix matches, so a
+        single provider (Gemini, DeepSeek, a local model, ...) serves any model
+        name without needing its prefix registered.
+        """
         for prefix, client in self._clients.items():
             if model.startswith(prefix):
                 return client
+        if len(self._clients) == 1:
+            return next(iter(self._clients.values()))
         return None
     
     def _get_failover_model(self, failed_model: str) -> Optional[str]:

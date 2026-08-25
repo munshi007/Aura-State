@@ -110,7 +110,7 @@ class AuraEngine:
     The main execution engine for verified LLM state machines.
     """
 
-    def __init__(self, llm_client: Optional[OpenAI] = None, budget_usd: Optional[float] = None, route_seed: Optional[int] = None):
+    def __init__(self, llm_client: Optional[Any] = None, budget_usd: Optional[float] = None, route_seed: Optional[int] = None):
         # Core graph
         self._nodes: Dict[str, Node] = {}
         self._transitions: Dict[str, List[str]] = {}
@@ -122,8 +122,20 @@ class AuraEngine:
         self._route_rng = random.Random(route_seed)
         self._feasibility_fn: Optional[Callable[[str, str], bool]] = None
 
-        # Single instructor-patched client (avoid creating duplicates)
-        self.client = instructor.from_openai(llm_client) if llm_client else None
+        # Provider-agnostic client. Aura-State's verification (Z3 / CTL / taint /
+        # conformal) is independent of the LLM; only extraction calls a model.
+        # `llm_client` accepts any of:
+        #   - a raw OpenAI() (auto-patched with instructor) — also covers any
+        #     OpenAI-compatible endpoint (Gemini, DeepSeek, Ollama, Together,
+        #     vLLM, ...) via OpenAI(base_url=..., api_key=...)
+        #   - an already instructor-patched client for any provider
+        # Node.model then just names the model (e.g. "gemini-2.0-flash").
+        if llm_client is None:
+            self.client = None
+        elif isinstance(llm_client, (instructor.Instructor, instructor.AsyncInstructor)):
+            self.client = llm_client                       # already patched (any provider)
+        else:
+            self.client = instructor.from_openai(llm_client)   # raw OpenAI-compatible client
 
         # Core internals
         self.tracer = AuraTrace()
@@ -137,7 +149,10 @@ class AuraEngine:
         self._verification_reports: List[Dict[str, Any]] = []
 
         if self.client:
-            self.provider.register_client("gpt", self.client)
+            # Register as the default provider. The provider layer falls back to
+            # this single client for any model name, so non-"gpt" models
+            # (gemini-*, deepseek-*, local models) route here without extra setup.
+            self.provider.register_client("default", self.client)
         if budget_usd:
             self.provider.set_budget(budget_usd)
 

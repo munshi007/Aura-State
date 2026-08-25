@@ -11,7 +11,7 @@
   <img alt="CI" src="https://github.com/munshi007/Aura-State/actions/workflows/ci.yml/badge.svg">
   <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-3d3aa8.svg">
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
-  <img alt="tests" src="https://img.shields.io/badge/tests-130%20passing-1c8a5b.svg">
+  <img alt="tests" src="https://img.shields.io/badge/tests-133%20passing-1c8a5b.svg">
 </p>
 
 ```bash
@@ -340,11 +340,28 @@ Python 3.10+ required. Dependencies: `pydantic`, `instructor`, `openai`, `networ
 
 ```bash
 python -m pytest tests/ -v
-# 130 tests passing
+# 133 tests passing
 ```
+
+## Works with any LLM provider
+
+Aura-State's verification is independent of the model — only extraction calls
+one, and nearly every provider speaks the OpenAI-compatible API. Point the client
+anywhere; the Z3/CTL/taint/conformal code is identical:
+
+```python
+from openai import OpenAI
+# Gemini, DeepSeek, Together, or a local model via Ollama/vLLM — just the base_url
+engine = AuraEngine(llm_client=OpenAI(api_key=key, base_url="https://api.deepseek.com"))
+```
+
+See [`examples/cookbook/`](examples/cookbook/) for OpenAI / Gemini / DeepSeek /
+local recipes. Your API key is read from your environment — never hard-coded.
 
 ## Docs
 
+- [Cookbook](examples/cookbook/) — realistic agents, verified end to end; any provider
+- [Comparison](docs/COMPARISON.md) — Aura-State vs LangGraph / CrewAI / Guardrails (they orchestrate; we verify)
 - [Usage Guide](docs/GUIDE.md) — code examples for every feature
 - [Algorithm Reference](docs/ALGORITHMS.md) — deep-dive into CTL, Z3, Thompson sampling, conformal prediction
 - [Contributing](CONTRIBUTING.md) — architecture overview and how to contribute
