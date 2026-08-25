@@ -67,6 +67,13 @@ proofs, CTL model checking, and static taint analysis, shows the verdicts and
 counterexamples, and lets you download the audit contract. Nothing leaves your
 machine — no cloud, no API key.
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/studio-dark.png">
+    <img src="assets/studio.png" alt="Aura Studio — a local web app running the real verifiers" width="840">
+  </picture>
+</p>
+
 ## What this is
 
 Most LLM frameworks let you chain API calls and hope for the best. Aura-State takes a different approach: you define your workflow as a typed graph of nodes, and **verification runs inside the loop** — every extraction must satisfy its formal contract before the workflow moves on.
