@@ -89,3 +89,24 @@ def test_verify_dataset():
     r = client.post("/api/verify_dataset", json={"records": recs, "obligations": ["t == a*b"]}).json()
     assert r["total"] == 3 and r["passed"] == 2 and r["failed"] == 1
     assert r["violations"][0]["row"] == 2
+
+
+def test_run_no_llm_decision_flow():
+    # A decision-only flow needs no model; the engine runs it end to end.
+    flow = {"provider": "ollama",
+            "nodes": [{"id": "Gate", "type": "decision", "sandbox_rule": "result = True"}],
+            "edges": [], "entry": "Gate", "input": "x"}
+    r = client.post("/api/run", json=flow).json()
+    assert "error" not in r
+    assert r["steps"] == 1
+    assert r["trace"][0]["node"] == "Gate" and r["trace"][0]["next"] == "END"
+
+
+def test_flows_save_list_get(tmp_path, monkeypatch):
+    import aura_state.ui.server as srv
+    flow = {"name": "t", "provider": "ollama", "nodes": [{"id": "A", "type": "decision"}], "edges": [], "entry": "A"}
+    r = client.post("/api/flows/save", json={"name": "unit-test-flow", "flow": flow}).json()
+    assert r["ok"] is True
+    assert "unit-test-flow" in client.get("/api/flows").json()
+    got = client.get("/api/flows/unit-test-flow").json()
+    assert got["entry"] == "A"

@@ -110,3 +110,17 @@ def test_decision_node_rule_fires_without_extraction():
 
     e.process("Qualify", "text", memory={"budget": 50000})
     assert e.verification_reports()[-1]["contract_verified"] is False
+
+
+def test_end_is_universal_terminal():
+    # A node with no outgoing edges that returns "END" must terminate cleanly,
+    # not raise a dead-end error.
+    class Only(Node):
+        system_prompt = "s"
+        def handle(self, user_text, extracted_data=None, memory=None):
+            return "END", {}
+    e = AuraEngine()
+    e.register(Only)
+    e._transitions["Only"] = []
+    nxt, _ = e.process("Only", "hi")
+    assert nxt == "END"

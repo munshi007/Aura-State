@@ -5,6 +5,7 @@ All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 ## [0.5.0]
 
 ### Added
+- **Agent IDE** in the studio: **Build** (click a node, configure the full `Node` -- provider, model, system prompt, extraction schema, obligations, capability, consensus, confidence, transitions) and **Run** (execute the whole agent end-to-end through the real engine, with a live per-step trace + emitted contract); Settings with save/load. Engine: `"END"` is now a universal terminal (a node may end the run whether or not it declares transitions).
 - Hooks SDK (`aura_state.hooks`) -- verify your agent's output in your own code and stream it to a running studio: `Monitor` client, `@verified(...)` decorator (fail-closed with `strict=True`), and a `verify()` helper. Works with any framework (CrewAI, LangGraph, plain functions).
 - Studio: **Monitor** module (live feed of your real agent's verified outputs via `/api/ingest`), **Import data** module (bulk-verify a CSV/JSON dataset against obligations), and a nav grouped by Design & verify / Runtime / Calibration.
 

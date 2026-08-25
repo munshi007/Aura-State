@@ -7,6 +7,7 @@ design->contract compiler, and returns the verdicts + counterexamples.
 
 Launched via `aura-state ui`.
 """
+import json
 import logging
 import os
 from typing import Any, Dict, List, Optional
@@ -311,6 +312,142 @@ def create_app() -> "FastAPI":
             "witness": sat.witness,
             "reason": sat.reason,
         }
+
+    # ── Build + Run: construct a real engine from a flow and run it end to end ──
+    def _client_for(provider: str):
+        import instructor
+        from openai import OpenAI
+        cfg = _PROVIDERS.get(provider) or _PROVIDERS["ollama"]
+        if cfg["env"] and not os.environ.get(cfg["env"]):
+            raise RuntimeError(f"set {cfg['env']} to use {provider}")
+        client = OpenAI(api_key=os.environ.get(cfg["env"], "ollama") if cfg["env"] else "ollama",
+                        base_url=cfg["base_url"])
+        return instructor.from_openai(client, mode=getattr(instructor.Mode, cfg["mode"])), cfg["model"]
+
+    def _build_engine(spec: Dict[str, Any]):
+        from pydantic import create_model
+        engine = AuraEngine()
+        provider = spec.get("provider", "ollama")
+        needs_llm = any(n.get("type") == "extract" for n in spec["nodes"])
+        default_model = None
+        if needs_llm:
+            engine.client, default_model = _client_for(provider)
+            engine.provider.register_client("default", engine.client)
+
+        edgemap: Dict[str, List[str]] = {}
+        for a, b in spec.get("edges", []):
+            edgemap.setdefault(a, []).append(b)
+        typemap = {"str": str, "int": int, "float": float, "bool": bool}
+
+        def make_handle(target):
+            def handle(self, user_text, extracted_data=None, memory=None):
+                data = extracted_data.model_dump() if extracted_data is not None else dict(memory or {})
+                return target, data
+            return handle
+
+        classes = {}
+        for n in spec["nodes"]:
+            nxt = edgemap.get(n["id"], [])
+            attrs: Dict[str, Any] = {
+                "system_prompt": n.get("system_prompt") or n["id"],
+                "model": n.get("model") or default_model or "gpt-4o",
+                "obligations": list(n.get("obligations", [])),
+                "consensus": int(n.get("consensus", 1) or 1),
+                "confidence": float(n.get("confidence", 0.9) or 0.9),
+                "handle": make_handle(nxt[0] if nxt else "END"),
+            }
+            cap = n.get("capability", "plain")
+            if cap == "untrusted": attrs["untrusted_source"] = True
+            elif cap == "sink": attrs["dangerous_sink"] = True
+            elif cap == "sanitizer": attrs["sanitizer"] = True
+            if n.get("sandbox_rule"): attrs["sandbox_rule"] = n["sandbox_rule"]
+            if n.get("type") == "extract":
+                defs = {f["name"]: (typemap.get(f.get("type", "str"), str), ...)
+                        for f in n.get("fields", []) if f.get("name")}
+                if defs:
+                    attrs["extracts"] = create_model(n["id"] + "Data", **defs)
+            cls = type(n["id"], (Node,), attrs)
+            classes[n["id"]] = cls
+            engine.register(cls)
+        for a, b in spec.get("edges", []):
+            if a in classes and b in classes:
+                engine.connect([CompiledTransition(from_node=classes[a], to_node=classes[b])])
+        return engine
+
+    class RunReq(BaseModel):
+        nodes: List[Dict[str, Any]]
+        edges: List[List[str]] = []
+        entry: Optional[str] = None
+        input: str = ""
+        provider: str = "ollama"
+
+    @app.post("/api/run")
+    def run(req: RunReq):
+        spec = req.model_dump()
+        if not spec["nodes"]:
+            return {"error": "add at least one node"}
+        try:
+            engine = _build_engine(spec)
+        except Exception as e:
+            return {"error": str(e)[:220]}
+        entry = req.entry or spec["nodes"][0]["id"]
+        state, memory, trace = entry, {}, []
+        for _ in range(24):
+            try:
+                nxt, payload = engine.process(state, req.input, memory=memory)
+            except Exception as e:
+                trace.append({"node": state, "error": str(e)[:180]})
+                break
+            reps = engine.verification_reports()
+            rep = reps[-1] if reps else {}
+            step = {"node": state, "next": nxt,
+                    "extracted": payload if isinstance(payload, dict) else {},
+                    "verified": rep.get("extraction_verified", rep.get("contract_verified")),
+                    "iterations": rep.get("iterations"),
+                    "abstained": rep.get("abstained", False)}
+            conf = rep.get("conformal")
+            if conf is not None:
+                step["conformal"] = {"covered": list(getattr(conf, "covered_fields", []))}
+            trace.append(step)
+            memory = payload if isinstance(payload, dict) else memory
+            if nxt == "END" or nxt not in engine._nodes:
+                break
+            state = nxt
+        try:
+            contract = engine.compile_contract().model_dump()
+        except Exception:
+            contract = None
+        return {"trace": trace, "contract": contract, "steps": len(trace)}
+
+    # ── Flow persistence (save / load agents as JSON) ──
+    _FLOW_DIR = os.path.join(os.path.expanduser("~"), ".aura_studio", "flows")
+
+    class SaveReq(BaseModel):
+        name: str
+        flow: Dict[str, Any]
+
+    @app.post("/api/flows/save")
+    def save_flow(req: SaveReq):
+        os.makedirs(_FLOW_DIR, exist_ok=True)
+        safe = "".join(c for c in req.name if c.isalnum() or c in "-_ ").strip() or "agent"
+        with open(os.path.join(_FLOW_DIR, safe + ".json"), "w") as f:
+            json.dump(req.flow, f, indent=2)
+        return {"ok": True, "name": safe}
+
+    @app.get("/api/flows")
+    def list_flows():
+        if not os.path.isdir(_FLOW_DIR):
+            return []
+        return sorted(n[:-5] for n in os.listdir(_FLOW_DIR) if n.endswith(".json"))
+
+    @app.get("/api/flows/{name}")
+    def get_flow(name: str):
+        safe = "".join(c for c in name if c.isalnum() or c in "-_ ").strip()
+        path = os.path.join(_FLOW_DIR, safe + ".json")
+        if not os.path.isfile(path):
+            return JSONResponse({"error": "not found"}, status_code=404)
+        with open(path) as f:
+            return json.load(f)
 
     if os.path.isdir(_STATIC):
         app.mount("/static", StaticFiles(directory=_STATIC), name="static")

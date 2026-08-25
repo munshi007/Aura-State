@@ -433,8 +433,10 @@ class AuraEngine:
                 return esc, {"abstained": True, "risk_score": score, "escalated_to": esc}
 
         # ── STAGE 5: Bandit-router resolution (if handle returned an invalid edge) ──
+        # "END" is the universal terminal sentinel: a node may always end the run,
+        # whether or not it declares outgoing transitions.
         allowed = self._transitions.get(current_state, [])
-        if next_state not in allowed:
+        if next_state != "END" and next_state not in allowed:
             if allowed:
                 logger.warning(f"[{current_state}] Invalid transition '{next_state}'. Engaging bandit router fallback.")
                 next_state = self._route_select(current_state, memory)

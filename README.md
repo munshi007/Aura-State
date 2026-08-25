@@ -18,7 +18,7 @@
   <img alt="CI" src="https://github.com/munshi007/Aura-State/actions/workflows/ci.yml/badge.svg">
   <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-3d3aa8.svg">
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
-  <img alt="tests" src="https://img.shields.io/badge/tests-146%20passing-1c8a5b.svg">
+  <img alt="tests" src="https://img.shields.io/badge/tests-149%20passing-1c8a5b.svg">
 </p>
 
 ```bash
@@ -62,18 +62,20 @@ pip install "aura-state[ui]"
 aura-state ui          # opens http://127.0.0.1:8155 in your browser
 ```
 
-A workbench covering the whole library — and it plugs into the agent you already
-have (see *Connect your agent* below), so it's not a sandbox you type into:
+A full agent IDE — **build an agent, run it end-to-end, and prove it**, all in one
+local console. Not a sandbox you type into: it configures the real library and
+plugs into the agent you already have (see *Connect your agent*).
 
 | Module | What you do | Runs |
 |---|---|---|
-| **Verify design** | build an agent graph, add Z3 obligations & capability labels → PROVEN/VIOLATED + counterexamples + a contract; **Repair** fixes the graph | Z3 · CTL · taint · contract |
+| **Build** | design a typed agent — click a node, configure *everything* (provider · model · system prompt · extraction schema · Z3 obligations · capability · consensus · confidence · transitions); Verify the design | full `Node` config → Z3 · CTL · taint |
+| **Run** | enter an input → the **real engine** executes the whole flow (extract → prove → route → next node) with a live per-step trace + the emitted audit contract | `engine.process()` · any provider |
 | **Prove data** | Z3 point-check on any data + symbolic spec-consistency | Z3 SMT |
-| **Import data** | upload a CSV/JSON dataset → bulk-verify every row against your obligations | Z3 at scale |
-| **Live agent** | run a **real** model (local Ollama, or OpenAI/Gemini/DeepSeek with your key) and prove its output | any provider + Z3 |
+| **Import data** | upload a CSV/JSON dataset → bulk-verify every row | Z3 at scale |
 | **Monitor** | a live feed of your **real agent's** outputs, verified as they happen | Z3 · SDK |
-| **Uncertainty** | conformal intervals + PASC (end-to-end pipeline coverage) | conformal · PASC |
+| **Uncertainty** | conformal intervals + PASC | conformal · PASC |
 | **Risk control** | calibrate an act/abstain gate with a provable false-action bound | Conformal Risk Control |
+| **Settings** | providers, save/load agents as JSON | — |
 
 Every check is the actual framework verifier — no browser mockups. Keys are read
 from your environment; a local Ollama model needs no key at all.
@@ -103,12 +105,12 @@ Verification runs in your code even if the studio is closed; when it's open, the
 **Monitor** shows every output proven or rejected, live.
 
 <p align="center">
-  <img src="assets/studio-violated.png" alt="Aura Studio catching an untrusted-to-sink dataflow — the violating path glows amber" width="900">
-  <br><em>Verify design — the violating path glows amber, with the counterexample spelled out</em>
+  <img src="assets/studio-build.png" alt="Aura Studio Build — configure every part of a typed agent" width="900">
+  <br><em>Build — click a node, configure everything (prompt, model, schema, obligations, transitions)</em>
 </p>
 <p align="center">
-  <img src="assets/studio-agent.png" alt="Aura Studio Live Agent — a real Ollama model's output verified with Z3" width="900">
-  <br><em>Live agent — a real local model runs and its output is proven with Z3</em>
+  <img src="assets/studio-run.png" alt="Aura Studio Run — the full agent executes end-to-end with a live verified trace" width="900">
+  <br><em>Run — the real engine executes the whole agent; each step extracted, Z3-verified, and a contract emitted</em>
 </p>
 <p align="center">
   <img src="assets/studio-monitor.png" alt="Aura Studio Monitor — your real agent's outputs streamed in via the SDK and verified live" width="900">
@@ -407,7 +409,7 @@ Python 3.10+ required. Dependencies: `pydantic`, `instructor`, `openai`, `networ
 
 ```bash
 python -m pytest tests/ -v
-# 146 tests passing
+# 149 tests passing
 ```
 
 ## Works with any LLM provider

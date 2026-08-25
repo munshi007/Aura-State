@@ -14,104 +14,98 @@
   --green:#3ecf8e;--green-dim:#1c7a54;--green-bg:rgba(62,207,142,.10);
   --amber:#f0894e;--amber-dim:#9c4a24;--amber-bg:rgba(240,137,78,.10);--amber-glow:rgba(240,137,78,.45);
   --grid:rgba(255,255,255,.022);
+  --extract:#8b88f5;--decision:#5fb3d9;--sink:#ff7a7a;--sanitizer:#3ecf8e;--plain:#6d7688;
 }
 *{box-sizing:border-box}html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:14px;overflow:hidden}
 .mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
 ::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:var(--edge2);border-radius:6px}
 button{font:inherit;cursor:pointer}input,select,textarea{font:inherit}
-.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
 h1,h2,h3{font-family:"IBM Plex Serif",serif}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
 
-.app{display:grid;grid-template-columns:216px 1fr;height:100vh}
-/* ── left nav ── */
+.app{display:grid;grid-template-columns:220px 1fr;height:100vh}
+/* nav */
 .nav{background:linear-gradient(180deg,#12151d,#0d1017);border-right:1px solid var(--edge);display:flex;flex-direction:column}
 .nav .brand{display:flex;align-items:center;gap:10px;padding:16px 16px 14px;font-family:"IBM Plex Serif",serif;font-weight:700;font-size:16px;border-bottom:1px solid var(--edge)}
 .nav .brand svg{filter:drop-shadow(0 0 9px var(--indigo-glow))}
-.navlist{padding:10px 8px;flex:1}
+.navlist{padding:8px 8px;flex:1;overflow:auto}
 .navsec{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);padding:12px 10px 6px}
 .navitem{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:9px;color:var(--soft);font-weight:500;font-size:13.5px;cursor:pointer;margin-bottom:2px}
-.navitem:hover{background:#161a24;color:var(--ink)}
-.navitem.on{background:#1a1d2b;color:var(--ink)}
-.navitem.on .ic{color:var(--indigo)}
-.navitem .ic{width:17px;height:17px;color:var(--muted);flex:none}
-.navitem.on .ic{color:var(--indigo)}
-.nav .foot{padding:12px 16px;border-top:1px solid var(--edge);font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--muted);letter-spacing:.04em}
-
-/* ── workspace ── */
+.navitem:hover{background:#161a24;color:var(--ink)}.navitem.on{background:#1a1d2b;color:var(--ink)}
+.navitem .ic{width:17px;height:17px;color:var(--muted);flex:none}.navitem.on .ic{color:var(--indigo)}
+.nav .foot{padding:12px 16px;border-top:1px solid var(--edge);font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--muted)}
+/* workspace */
 .ws{overflow:hidden;display:flex;flex-direction:column;min-width:0}
-.wsbar{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid var(--edge);background:var(--panel)}
-.wsbar .ttl{font-weight:600;font-size:15px;display:flex;align-items:center;gap:10px}
+.wsbar{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid var(--edge);background:var(--panel);gap:14px}
+.wsbar .ttl{font-weight:600;font-size:15px;display:flex;align-items:center;gap:10px;white-space:nowrap}
 .wsbar .ttl .sub{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);font-weight:400}
-.wsbody{flex:1;overflow:auto;min-height:0}
-.btn{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:13px;padding:8px 14px;border-radius:9px;border:1px solid var(--edge2);background:#161a24;color:var(--ink);transition:.12s}
+.wsbody{flex:1;overflow:hidden;min-height:0}
+.btn{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:13px;padding:8px 14px;border-radius:9px;border:1px solid var(--edge2);background:#161a24;color:var(--ink);transition:.12s;white-space:nowrap}
 .btn:hover{border-color:var(--indigo-dim)}
 .btn.primary{background:linear-gradient(180deg,#5c58e0,#4a46c8);border-color:transparent;box-shadow:0 0 0 1px rgba(139,136,245,.3),0 6px 18px rgba(74,70,200,.35)}
-.btn.primary:hover{filter:brightness(1.08)}
-.btn.ghost{background:transparent}
+.btn.primary:hover{filter:brightness(1.08)}.btn.ghost{background:transparent}.btn.sm{padding:5px 10px;font-size:12px}
 .actions{display:flex;gap:9px;align-items:center}
+.pill{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);border:1px solid var(--edge2);border-radius:6px;padding:5px 9px}
 
-/* generic form cards */
-.cols{display:grid;grid-template-columns:1fr 1fr;gap:0;height:100%}
-.form{padding:22px;border-right:1px solid var(--edge);overflow:auto}
-.out{padding:22px;overflow:auto;background:var(--panel2)}
-.fld{margin-bottom:16px}
-.fld label{display:block;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
-.fld input,.fld select,.fld textarea{width:100%;padding:9px 11px;border:1px solid var(--edge2);border-radius:9px;background:var(--panel2);color:var(--ink);font-size:13px}
-.fld textarea{font-family:"IBM Plex Mono",monospace;font-size:12.5px;min-height:70px;resize:vertical;line-height:1.6}
+/* BUILD layout: palette+list | canvas | inspector */
+.build{display:grid;grid-template-columns:250px 1fr 320px;height:100%}
+.rail,.insp{overflow-y:auto;background:var(--panel)}
+.rail{border-right:1px solid var(--edge)}.insp{border-left:1px solid var(--edge)}
+.canvas-wrap{position:relative;background:radial-gradient(circle at 1px 1px,var(--grid) 1px,transparent 0) 0 0/26px 26px,radial-gradient(1200px 500px at 55% -10%,rgba(139,136,245,.06),transparent 60%),var(--panel2);overflow:hidden}
+#cv{width:100%;height:100%;display:block}
+.sec{padding:14px 14px 4px}.sec h3{margin:0 0 10px;font-size:12px;font-weight:600;color:var(--soft);font-family:"IBM Plex Sans"}
+.palette{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px}
+.palette button{display:flex;flex-direction:column;gap:3px;align-items:flex-start;padding:9px 10px;border-radius:9px;border:1px solid var(--edge2);background:var(--panel2);color:var(--ink);font-size:12px;font-weight:600}
+.palette button:hover{border-color:var(--indigo-dim)}
+.palette .dot{width:8px;height:8px;border-radius:50%}
+.nlist .ncard{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--edge2);border-radius:9px;padding:9px 11px;margin-bottom:7px;background:var(--panel2);cursor:pointer}
+.nlist .ncard:hover{border-color:var(--indigo-dim)}.nlist .ncard.sel{border-color:var(--indigo);box-shadow:0 0 0 1px var(--indigo-dim)}
+.nlist .nm{font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px}
+.tdot{width:8px;height:8px;border-radius:50%;flex:none}
+.badge{font-family:"IBM Plex Mono",monospace;font-size:9px;color:var(--muted)}
+/* inspector fields */
+.fld{margin:0 0 14px}
+.fld label{display:block;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0 0 5px}
+.fld input,.fld select,.fld textarea{width:100%;padding:8px 10px;border:1px solid var(--edge2);border-radius:8px;background:var(--panel2);color:var(--ink);font-size:13px}
+.fld textarea{font-family:"IBM Plex Mono",monospace;font-size:12px;min-height:60px;resize:vertical;line-height:1.55}
+.fld input.mono{font-family:"IBM Plex Mono",monospace;font-size:12px}
 .fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--indigo)}
-.hint{font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.5}
-.big{font-family:"IBM Plex Serif",serif;font-weight:700;font-size:34px;font-variant-numeric:tabular-nums}
-.metric{border:1px solid var(--edge2);border-radius:12px;padding:16px 18px;margin-bottom:14px;background:var(--panel)}
-.metric .k{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.two{display:flex;gap:10px}.two>div{flex:1}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--soft);margin-bottom:12px;cursor:pointer}
+.chk input{width:auto}
+.mini{width:100%;border-collapse:collapse}.mini td{padding:3px 3px}.mini input,.mini select{width:100%}
+.rowbtn{color:#ff7a7a;background:transparent;border:none;padding:4px 6px}
+.addrow{color:var(--indigo);background:transparent;border:1px dashed var(--edge2);border-radius:8px;padding:6px;font-weight:600;font-size:12px;width:100%;margin-top:6px}
+.del{color:#ff7a7a;background:transparent;border:1px solid #5a2626;border-radius:8px;padding:8px;font-size:12px;font-weight:600;width:100%;margin-top:6px}
+.insphdr{padding:14px 16px;border-bottom:1px solid var(--edge);display:flex;align-items:center;gap:9px;font-weight:600}
+.inspbody{padding:16px}
+.empty{color:var(--muted);text-align:center;padding:50px 20px;font-size:13px;line-height:1.6}
+
+/* generic 2-col (Run, Prove, etc.) */
+.cols{display:grid;grid-template-columns:1fr 1fr;height:100%}
+.form{padding:22px;border-right:1px solid var(--edge);overflow:auto}
+.out{padding:20px;overflow:auto;background:var(--panel2)}
+.metric{border:1px solid var(--edge2);border-radius:12px;padding:15px 17px;margin-bottom:13px;background:var(--panel)}
+.metric .k{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.big{font-family:"IBM Plex Serif",serif;font-weight:700;font-size:30px;font-variant-numeric:tabular-nums}
 .v{display:inline-flex;align-items:center;gap:5px;font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px}
 .v.ok{color:var(--green);background:var(--green-bg);border:1px solid var(--green-dim)}
 .v.bad{color:var(--amber);background:var(--amber-bg);border:1px solid var(--amber-dim)}
 .v.muted{color:var(--muted);border:1px solid var(--edge2)}
-pre{margin:0;padding:13px;background:#0c0e14;border:1px solid var(--edge2);border-radius:10px;overflow:auto;font-family:"IBM Plex Mono",monospace;font-size:12px;line-height:1.6;color:var(--soft)}
-.empty{color:var(--muted);text-align:center;padding:60px 20px;font-size:13px}
-table.mini{width:100%;border-collapse:collapse;margin-top:6px}
-table.mini td{padding:4px}table.mini input,table.mini select{width:100%}
-.rowbtn{color:#ff7a7a;background:transparent;border:none;padding:4px 8px;font-size:13px}
-.addrow{color:var(--indigo);background:transparent;border:1px dashed var(--edge2);border-radius:8px;padding:7px;font-weight:600;font-size:12px;width:100%;margin-top:8px}
-
-/* ── verify module (graph) ── */
-.vshell{display:grid;grid-template-columns:280px 1fr 330px;height:100%}
-.rail,.evi{overflow-y:auto;background:var(--panel)}
-.rail{border-right:1px solid var(--edge)}.evi{border-left:1px solid var(--edge)}
-.canvas-wrap{position:relative;background:radial-gradient(circle at 1px 1px,var(--grid) 1px,transparent 0) 0 0/26px 26px,radial-gradient(1200px 500px at 60% -10%,rgba(139,136,245,.06),transparent 60%),var(--panel2);overflow:hidden}
-#cv{width:100%;height:100%;display:block}
-.sec{padding:16px 15px 6px}.sec h3{margin:0 0 12px;font-size:12.5px;font-weight:600;color:var(--soft);display:flex;justify-content:space-between;font-family:"IBM Plex Sans"}
-.nodecard{border:1px solid var(--edge2);border-radius:10px;padding:10px 11px;margin-bottom:9px;background:var(--panel2);cursor:pointer}
-.nodecard:hover{border-color:var(--indigo-dim)}.nodecard.sel{border-color:var(--indigo);box-shadow:0 0 0 1px var(--indigo-dim)}
-.nodecard .r1{display:flex;align-items:center;justify-content:space-between;gap:8px}.nodecard .nm{font-weight:600;font-size:13.5px}
-.chip{font-family:"IBM Plex Mono",monospace;font-size:9.5px;font-weight:600;padding:2px 7px;border-radius:20px;text-transform:uppercase}
-.chip.untrusted{color:var(--amber);background:var(--amber-bg);border:1px solid var(--amber-dim)}
-.chip.sink{color:#ff7a7a;background:rgba(255,122,122,.1);border:1px solid #6e2a2a}
-.chip.sanitizer{color:var(--green);background:var(--green-bg);border:1px solid var(--green-dim)}
-.chip.plain{color:var(--muted);border:1px solid var(--edge2)}
-.nodecard .ob{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.add{width:100%;text-align:left;color:var(--indigo);background:transparent;border:1px dashed var(--edge2);border-radius:10px;padding:9px 11px;font-weight:600;font-size:12.5px}
-.insp{border-top:1px solid var(--edge);padding:15px}
-.insp label{display:block;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 5px}
-.insp input,.insp select{width:100%;font-size:13px;padding:8px 10px;border:1px solid var(--edge2);border-radius:8px;background:var(--panel2);color:var(--ink);margin-bottom:12px}
-.insp input.mono{font-family:"IBM Plex Mono",monospace;font-size:12px}.insp input:focus,.insp select:focus{outline:none;border-color:var(--indigo)}
-.caps{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px}
-.caps button{font-size:11.5px;padding:7px;border-radius:8px;border:1px solid var(--edge2);background:var(--panel2);color:var(--soft);font-weight:600}
-.caps button.on{border-color:var(--indigo);color:var(--ink);background:#1a1d2b}
-.insp .del{color:#ff7a7a;background:transparent;border:1px solid #5a2626;border-radius:8px;padding:7px 11px;font-size:12px;font-weight:600;width:100%}
-.seal{padding:24px 20px 18px;text-align:center;border-bottom:1px solid var(--edge)}
-.sealword{font-family:"IBM Plex Serif",serif;font-size:19px;font-weight:700}.sealsub{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);margin-top:3px}
-.evrow{padding:14px 18px;border-bottom:1px solid var(--edge)}
-.evrow h4{margin:0 0 9px;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
-.evline{font-size:13px;color:var(--soft);margin:7px 0;display:flex;gap:8px;align-items:flex-start}
+pre{margin:0;padding:12px;background:#0c0e14;border:1px solid var(--edge2);border-radius:9px;overflow:auto;font-family:"IBM Plex Mono",monospace;font-size:12px;line-height:1.55;color:var(--soft)}
+.hint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
 .cex{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--amber);background:var(--amber-bg);border:1px solid var(--amber-dim);border-radius:7px;padding:8px 10px;margin-top:6px;line-height:1.5}
-.dlrow{padding:14px 18px}.dl{width:100%;justify-content:center}
+/* run trace */
+.step{border:1px solid var(--edge2);border-radius:11px;padding:13px 15px;margin-bottom:11px;background:var(--panel);position:relative}
+.step .sh{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.step .nm{font-weight:600;display:flex;align-items:center;gap:8px}
+.step .arrow{color:var(--muted);font-family:"IBM Plex Mono",monospace;font-size:11px}
+.feedrow{padding:13px 16px;border-bottom:1px solid var(--edge)}
 </style>
 </head>
 <body>
 <div class="app">
-  <!-- NAV -->
   <div class="nav">
     <div class="brand">
       <svg width="20" height="20" viewBox="0 0 128 128" fill="none">
@@ -121,9 +115,8 @@ table.mini td{padding:4px}table.mini input,table.mini select{width:100%}
       </svg>Aura Studio
     </div>
     <div class="navlist" id="nav"></div>
-    <div class="foot">local · no cloud · no key<br>v0.4 · MIT</div>
+    <div class="foot">local · no cloud · no key<br>v0.5 · MIT</div>
   </div>
-  <!-- WORKSPACE -->
   <div class="ws">
     <div class="wsbar"><div class="ttl" id="wstitle"></div><div class="actions" id="wsactions"></div></div>
     <div class="wsbody" id="ws"></div>
@@ -133,339 +126,278 @@ table.mini td{padding:4px}table.mini input,table.mini select{width:100%}
 <script>
 const NS="http://www.w3.org/2000/svg";
 function ic(p){return `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`}
-const MODULES=[
-  {id:"verify",group:"Design & verify",name:"Verify design",sub:"Z3 · CTL · taint · contract",icon:'<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>'},
-  {id:"prove",group:"Design & verify",name:"Prove data",sub:"Z3 point-check + consistency",icon:'<path d="M14 3v5h5"/><path d="M6 3h8l5 5v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M9 14l2 2 4-4"/>'},
-  {id:"data",group:"Design & verify",name:"Import data",sub:"bulk-verify a dataset",icon:'<path d="M12 3v11"/><path d="M8 7l4-4 4 4"/><path d="M4 21h16"/>'},
-  {id:"agent",group:"Runtime",name:"Live agent",sub:"run + verify a real model",icon:'<path d="M12 2a3 3 0 0 1 3 3v2a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M5 22v-1a7 7 0 0 1 14 0v1"/>'},
-  {id:"monitor",group:"Runtime",name:"Monitor",sub:"live feed from your agent",icon:'<path d="M2 12h4l2-6 4 12 3-9 2 3h5"/>'},
-  {id:"uncertainty",group:"Calibration",name:"Uncertainty",sub:"conformal · PASC",icon:'<path d="M3 12h4l3 8 4-16 3 8h4"/>'},
-  {id:"risk",group:"Calibration",name:"Risk control",sub:"abstention · escalate",icon:'<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/>'},
-];
-let current="verify",feedTimer=null;
 function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+const MODULES=[
+  {id:"build",group:"Agent",name:"Build",sub:"design your agent",icon:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><path d="M10 6.5h4a2 2 0 0 1 2 2V14"/>'},
+  {id:"run",group:"Agent",name:"Run",sub:"execute + trace + prove",icon:'<path d="M6 4l14 8-14 8z"/>'},
+  {id:"prove",group:"Verify",name:"Prove data",sub:"Z3 point-check",icon:'<path d="M14 3v5h5"/><path d="M6 3h8l5 5v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M9 14l2 2 4-4"/>'},
+  {id:"data",group:"Verify",name:"Import data",sub:"bulk-verify a dataset",icon:'<path d="M12 3v11"/><path d="M8 7l4-4 4 4"/><path d="M4 21h16"/>'},
+  {id:"monitor",group:"Runtime",name:"Monitor",sub:"live feed from your agent",icon:'<path d="M2 12h4l2-6 4 12 3-9 2 3h5"/>'},
+  {id:"uncertainty",group:"Calibrate",name:"Uncertainty",sub:"conformal · PASC",icon:'<path d="M3 12h4l3 8 4-16 3 8h4"/>'},
+  {id:"risk",group:"Calibrate",name:"Risk control",sub:"abstention · escalate",icon:'<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/>'},
+  {id:"settings",group:"System",name:"Settings",sub:"providers · save / load",icon:'<circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.6-2-3.4-2.4 1a7 7 0 0 0-1.7-1L14.5 2h-5l-.3 2.9a7 7 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.3 2.9h5l.3-2.9a7 7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6a7 7 0 0 0 .1-1z"/>'},
+];
+let current="build",feedTimer=null;
 
-function renderNav(){
-  const n=document.getElementById("nav");
-  const groups=[...new Set(MODULES.map(m=>m.group))];
+/* ── AGENT MODEL (shared) ── */
+const TYPES={extract:{label:"Extract",color:"var(--extract)"},decision:{label:"Decision",color:"var(--decision)"},
+  tool:{label:"Tool / sink",color:"var(--sink)"},sanitizer:{label:"Sanitizer",color:"var(--sanitizer)"}};
+let AG={name:"refund-agent",provider:"ollama",nodes:[],edges:[],entry:null,sel:null};
+function preset(){AG.nodes=[
+  {id:"Ingest",type:"extract",system_prompt:"Extract the customer's refund request from the message.",model:"",
+   fields:[{name:"refund_amount",type:"int"},{name:"order_total",type:"int"}],obligations:"refund_amount <= order_total, refund_amount >= 0",
+   consensus:1,confidence:0.9,untrusted:true},
+  {id:"Review",type:"sanitizer",system_prompt:"Policy review that sanitizes the request."},
+  {id:"IssueRefund",type:"tool",system_prompt:"Issue the refund (irreversible).",sink_fields:""}];
+  AG.edges=[["Ingest","Review"],["Review","IssueRefund"]];AG.entry="Ingest";AG.sel="Ingest"}
+function nodeById(id){return AG.nodes.find(n=>n.id===id)}
+function capOf(n){if(n.type==="extract")return n.untrusted?"untrusted":"plain";if(n.type==="tool")return "sink";if(n.type==="sanitizer")return "sanitizer";return "plain"}
+function specForBackend(withInput){
+  const nodes=AG.nodes.map(n=>({id:n.id,type:n.type==="tool"?"tool":n.type,capability:capOf(n),
+    system_prompt:n.system_prompt||"",model:n.model||"",fields:n.fields||[],
+    obligations:(n.obligations||"").split(",").map(s=>s.trim()).filter(Boolean),
+    sandbox_rule:n.sandbox_rule||"",consensus:n.consensus||1,confidence:n.confidence||0.9}));
+  const s={provider:AG.provider,nodes,edges:AG.edges,entry:AG.entry||AG.nodes[0]?.id};
+  if(withInput!==undefined)s.input=withInput;return s}
+
+/* ── NAV ── */
+function renderNav(){const n=document.getElementById("nav");const groups=[...new Set(MODULES.map(m=>m.group))];
   n.innerHTML=groups.map(g=>`<div class="navsec">${g}</div>`+MODULES.filter(m=>m.group===g).map(m=>
-    `<div class="navitem ${m.id===current?'on':''}" onclick="go('${m.id}')">${ic(m.icon)}<span>${m.name}</span></div>`).join("")).join("");
-}
+    `<div class="navitem ${m.id===current?'on':''}" onclick="go('${m.id}')">${ic(m.icon)}<span>${m.name}</span></div>`).join("")).join("")}
 function go(id){if(feedTimer){clearInterval(feedTimer);feedTimer=null}current=id;renderNav();
-  const m=MODULES.find(x=>x.id===id);
-  document.getElementById("wstitle").innerHTML=`${m.name} <span class="sub">${m.sub}</span>`;
+  const m=MODULES.find(x=>x.id===id);document.getElementById("wstitle").innerHTML=`${m.name} <span class="sub">${m.sub}</span>`;
   document.getElementById("wsactions").innerHTML="";
-  ({verify:Verify,prove:Prove,data:DataImport,agent:Agent,monitor:Monitor,uncertainty:Uncertainty,risk:Risk})[id]();
-}
+  ({build:Build,run:Run,prove:Prove,data:DataImport,monitor:Monitor,uncertainty:Uncertainty,risk:Risk,settings:Settings})[id]()}
 
-/* ══════════ MODULE: VERIFY (graph) ══════════ */
-let nodes=[],edges=[],sel=null,lastContract=null,lastResult=null;
-function vpreset(){nodes=[{id:"Ingest",cap:"untrusted",ob:""},{id:"PolicyCheck",cap:"sanitizer",ob:""},
-  {id:"Price",cap:"plain",ob:"total == area * rate, area > 0"},{id:"SendEmail",cap:"sink",ob:""}];
-  edges=[["Ingest","PolicyCheck"],["PolicyCheck","Price"],["Price","SendEmail"]];sel="Ingest";lastResult=null}
-if(!nodes.length)vpreset();
-const CAPLABEL={plain:"state",untrusted:"untrusted",sink:"sink",sanitizer:"sanitizer"};const CAPS=["plain","untrusted","sink","sanitizer"];
-function byId(id){return nodes.find(n=>n.id===id)}
-
-function Verify(){
+/* ══════════ BUILD ══════════ */
+function Build(){
   document.getElementById("wsactions").innerHTML=
-    `<button class="btn ghost" onclick="vpreset();vAll()">Load example</button>
-     <button class="btn ghost" id="repairBtn" style="display:none" onclick="vrepair()">⟲ Repair</button>
-     <button class="btn primary" onclick="vverify()">✓ Verify</button>`;
-  document.getElementById("ws").innerHTML=`
-    <div class="vshell">
-      <div class="rail"><div class="sec"><h3>States <span class="eyebrow" id="ncount"></span></h3><div id="nlist"></div>
-        <button class="add" onclick="vadd()">+ add state</button></div><div class="insp" id="insp"></div></div>
-      <div class="canvas-wrap"><svg id="cv" preserveAspectRatio="xMidYMid meet"></svg></div>
-      <div class="evi"><div class="seal"><div id="sealring"></div><div class="sealword" id="sw" style="color:var(--muted)">Not verified</div>
-        <div class="sealsub" id="ss">build a graph, then Verify</div></div>
-        <div id="evidence"><div class="empty">Verdicts from Z3, CTL, and taint appear here.</div></div></div>
-    </div>`;
-  document.getElementById("sealring").innerHTML=seal("idle");vAll();
+    `<span class="pill" id="agname">${esc(AG.name)}</span>
+     <button class="btn ghost" onclick="bVerify()">Verify design</button>
+     <button class="btn primary" onclick="go('run')">Run ▶</button>`;
+  document.getElementById("ws").innerHTML=`<div class="build">
+    <div class="rail"><div class="sec"><h3>Add a node</h3>
+      <div class="palette">
+        <button onclick="bAdd('extract')"><span class="dot" style="background:var(--extract)"></span>Extract</button>
+        <button onclick="bAdd('decision')"><span class="dot" style="background:var(--decision)"></span>Decision</button>
+        <button onclick="bAdd('tool')"><span class="dot" style="background:var(--sink)"></span>Tool / sink</button>
+        <button onclick="bAdd('sanitizer')"><span class="dot" style="background:var(--sanitizer)"></span>Sanitizer</button>
+      </div>
+      <h3>Nodes</h3><div class="nlist" id="nlist"></div></div></div>
+    <div class="canvas-wrap"><svg id="cv" preserveAspectRatio="xMidYMid meet"></svg></div>
+    <div class="insp" id="insp"></div></div>`;
+  bRail();bCanvas();bInsp();
 }
-function vadd(){const id="State"+(nodes.length+1);nodes.push({id,cap:"plain",ob:""});sel=id;
-  if(nodes.length>1)edges.push([nodes[nodes.length-2].id,id]);lastResult=null;vAll()}
-function vdel(id){nodes=nodes.filter(n=>n.id!==id);edges=edges.filter(e=>e[0]!==id&&e[1]!==id);sel=nodes[0]?.id||null;lastResult=null;vAll()}
-function vAll(){vrail();vcanvas()}
-function vrail(){const cc=document.getElementById("ncount");if(!cc)return;cc.textContent=nodes.length+" states · "+edges.length+" edges";
-  const L=document.getElementById("nlist");L.innerHTML="";nodes.forEach(n=>{const d=document.createElement("div");
-    d.className="nodecard"+(n.id===sel?" sel":"");d.onclick=()=>{sel=n.id;vrail()};
-    d.innerHTML=`<div class="r1"><span class="nm">${esc(n.id)}</span><span class="chip ${n.cap}">${CAPLABEL[n.cap]}</span></div>`+(n.ob?`<div class="ob">⊢ ${esc(n.ob)}</div>`:"");L.appendChild(d)});
-  vinsp()}
-function vinsp(){const I=document.getElementById("insp");const n=byId(sel);if(!I)return;if(!n){I.innerHTML="";return}
-  const outs=edges.filter(e=>e[0]===n.id).map(e=>e[1]);
-  I.innerHTML=`<label>state id</label><input value="${esc(n.id)}" oninput="vrename('${n.id}',this.value)">
-    <label>capability</label><div class="caps">${CAPS.map(c=>`<button class="${c===n.cap?'on':''}" onclick="vcap('${n.id}','${c}')">${CAPLABEL[c]}</button>`).join("")}</div>
-    <label>Z3 obligations (comma-sep)</label><input class="mono" value="${esc(n.ob).replace(/"/g,'&quot;')}" placeholder="total == area * rate" oninput="byId('${n.id}').ob=this.value;lastResult=null;vrail()">
-    <label>transitions to</label><div class="caps" style="grid-template-columns:1fr">${nodes.filter(m=>m.id!==n.id).map(m=>`<button class="${outs.includes(m.id)?'on':''}" onclick="vedge('${n.id}','${m.id}')">${outs.includes(m.id)?'→ ':''}${esc(m.id)}</button>`).join("")||'<span class="hint">add more states to connect</span>'}</div>
-    <button class="del" onclick="vdel('${n.id}')">Delete state</button>`}
-function vrename(o,v){const n=byId(o);if(!n||!v)return;edges.forEach(e=>{if(e[0]===o)e[0]=v;if(e[1]===o)e[1]=v});n.id=v;if(sel===o)sel=v;lastResult=null;vrail();vcanvas()}
-function vcap(id,c){byId(id).cap=c;lastResult=null;vrail();vcanvas()}
-function vedge(a,b){const i=edges.findIndex(e=>e[0]===a&&e[1]===b);if(i>=0)edges.splice(i,1);else edges.push([a,b]);lastResult=null;vinsp();vcanvas()}
-function vlayout(){const succ={},indeg={};nodes.forEach(n=>{succ[n.id]=[];indeg[n.id]=0});
-  edges.forEach(([a,b])=>{if(succ[a]&&b in indeg){succ[a].push(b);indeg[b]++}});
-  const layer={};const q=nodes.filter(n=>indeg[n.id]===0).map(n=>n.id);q.forEach(id=>layer[id]=0);const ind={...indeg};let h=0;
-  while(h<q.length){const u=q[h++];(succ[u]||[]).forEach(v=>{layer[v]=Math.max(layer[v]||0,layer[u]+1);if(--ind[v]===0)q.push(v)})}
-  nodes.forEach(n=>{if(layer[n.id]===undefined)layer[n.id]=0});const cols={};nodes.forEach(n=>{(cols[layer[n.id]]=cols[layer[n.id]]||[]).push(n.id)});
-  const pos={};nodes.forEach(n=>{});Object.entries(cols).forEach(([c,ids])=>ids.forEach((id,i)=>pos[id]={c:+c,i,n:ids.length}));
-  return {pos,W:Math.max(...Object.keys(cols).map(Number))+1}}
-function vcanvas(){const cv=document.getElementById("cv");if(!cv)return;const wrap=cv.parentElement;const w=wrap.clientWidth,h=wrap.clientHeight;
-  cv.setAttribute("viewBox",`0 0 ${w} ${h}`);cv.innerHTML="";const {pos,W}=vlayout();const NW=152,NH=52;const padX=90;
-  const colGap=W>1?(w-2*padX-NW)/(W-1):0;const XY={};nodes.forEach(n=>{const p=pos[n.id];const x=padX+p.c*colGap;
-    const colH=(p.n-1)*(NH+34);const y=(h-colH)/2-NH/2+p.i*(NH+34);XY[n.id]={x,y,cx:x+NW/2,cy:y+NH/2}});
-  const bp=(lastResult?.taint?.violations||[]).map(v=>v.path);const bE=new Set();bp.forEach(p=>{for(let i=0;i<p.length-1;i++)bE.add(p[i]+">"+p[i+1])});const bN=new Set();bp.forEach(p=>p.forEach(id=>bN.add(id)));
+function bAdd(type){let base=type==="extract"?"Extract":type==="decision"?"Decide":type==="tool"?"Action":"Clean";
+  let id=base,i=1;while(nodeById(id)){id=base+(++i)}
+  const n={id,type,system_prompt:"",model:""};if(type==="extract"){n.fields=[{name:"value",type:"str"}];n.obligations="";n.consensus=1;n.confidence=0.9;n.untrusted=true}
+  if(AG.nodes.length)AG.edges.push([AG.nodes[AG.nodes.length-1].id,id]);
+  AG.nodes.push(n);AG.sel=id;if(!AG.entry)AG.entry=id;bRail();bCanvas();bInsp()}
+function bDel(id){AG.nodes=AG.nodes.filter(n=>n.id!==id);AG.edges=AG.edges.filter(e=>e[0]!==id&&e[1]!==id);
+  if(AG.entry===id)AG.entry=AG.nodes[0]?.id||null;AG.sel=AG.nodes[0]?.id||null;bRail();bCanvas();bInsp()}
+function bRail(){const L=document.getElementById("nlist");if(!L)return;L.innerHTML=AG.nodes.map(n=>
+  `<div class="ncard ${n.id===AG.sel?'sel':''}" onclick="AG.sel='${n.id}';bRail();bInsp()">
+    <span class="nm"><span class="tdot" style="background:${TYPES[n.type].color}"></span>${esc(n.id)}${n.id===AG.entry?' <span class="badge">entry</span>':''}</span>
+    <span class="badge">${TYPES[n.type].label}</span></div>`).join("")||'<div class="hint">add a node to begin</div>'}
+function bInsp(){const I=document.getElementById("insp");const n=nodeById(AG.sel);if(!I)return;
+  if(!n){I.innerHTML='<div class="empty">Select a node to configure it,<br>or add one from the palette.</div>';return}
+  const outs=AG.edges.filter(e=>e[0]===n.id).map(e=>e[1]);
+  let body=`<div class="fld"><label>node id</label><input value="${esc(n.id)}" oninput="bRename('${n.id}',this.value)"></div>
+    <div class="fld"><label>node type</label><select onchange="bType('${n.id}',this.value)">${Object.keys(TYPES).map(t=>`<option value="${t}" ${t===n.type?'selected':''}>${TYPES[t].label}</option>`).join("")}</select></div>
+    <div class="fld"><label>system prompt</label><textarea oninput="nodeById('${n.id}').system_prompt=this.value">${esc(n.system_prompt||"")}</textarea></div>`;
+  if(n.type==="extract"){
+    body+=`<div class="fld"><label>model (blank = provider default)</label><input class="mono" value="${esc(n.model||"")}" placeholder="qwen2.5:0.5b" oninput="nodeById('${n.id}').model=this.value"></div>
+      <div class="fld"><label>extraction fields</label><table class="mini" id="flds"></table><button class="addrow" onclick="bAddField('${n.id}')">+ field</button></div>
+      <label class="chk"><input type="checkbox" ${n.untrusted?'checked':''} onchange="nodeById('${n.id}').untrusted=this.checked;bCanvas()"> output is untrusted (taint source)</label>
+      <div class="two"><div class="fld"><label>consensus runs</label><input type="number" min="1" value="${n.consensus||1}" oninput="nodeById('${n.id}').consensus=+this.value"></div>
+        <div class="fld"><label>confidence</label><select onchange="nodeById('${n.id}').confidence=+this.value"><option ${n.confidence==0.9?'selected':''}>0.9</option><option ${n.confidence==0.95?'selected':''}>0.95</option><option ${n.confidence==0.8?'selected':''}>0.8</option></select></div></div>
+      <div class="fld"><label>Z3 obligations (comma-sep)</label><input class="mono" value="${esc(n.obligations||"")}" placeholder="total == area * rate" oninput="nodeById('${n.id}').obligations=this.value"></div>`;
+  }else if(n.type==="decision"){
+    body+=`<div class="fld"><label>sandbox rule (no-exec)</label><input class="mono" value="${esc(n.sandbox_rule||"")}" placeholder="result = budget > 100000" oninput="nodeById('${n.id}').sandbox_rule=this.value"></div>
+      <div class="fld"><label>Z3 obligations (comma-sep)</label><input class="mono" value="${esc(n.obligations||"")}" oninput="nodeById('${n.id}').obligations=this.value"></div>`;
+  }else if(n.type==="tool"){
+    body+=`<div class="fld"><label>guarded fields (comma-sep, blank = any)</label><input class="mono" value="${esc(n.sink_fields||"")}" placeholder="account_id, amount" oninput="nodeById('${n.id}').sink_fields=this.value"></div>
+      <div class="hint">Marked a <b>dangerous sink</b> — taint analysis proves no untrusted field reaches it.</div>`;
+  }else if(n.type==="sanitizer"){
+    body+=`<div class="fld"><label>sanitized fields (comma-sep, blank = all)</label><input class="mono" value="${esc(n.sanitizes_fields||"")}" oninput="nodeById('${n.id}').sanitizes_fields=this.value"></div>
+      <div class="hint">Clears taint — untrusted data can't pass through unless it goes through here.</div>`;
+  }
+  body+=`<div class="fld"><label>transitions to</label>${AG.nodes.filter(m=>m.id!==n.id).map(m=>`<label class="chk"><input type="checkbox" ${outs.includes(m.id)?'checked':''} onchange="bEdge('${n.id}','${m.id}',this.checked)"> ${esc(m.id)}</label>`).join("")||'<div class="hint">add more nodes to connect</div>'}</div>
+    <button class="btn sm ghost" style="width:100%;justify-content:center;margin-bottom:8px" onclick="AG.entry='${n.id}';bRail();bCanvas()">Set as entry node</button>
+    <button class="del" onclick="bDel('${n.id}')">Delete node</button>`;
+  I.innerHTML=`<div class="insphdr"><span class="tdot" style="background:${TYPES[n.type].color}"></span>${esc(n.id)}</div><div class="inspbody">${body}</div>`;
+  if(n.type==="extract")bFields(n.id);
+}
+function bFields(id){const t=document.getElementById("flds");if(!t)return;const n=nodeById(id);
+  t.innerHTML=(n.fields||[]).map((f,i)=>`<tr><td><input value="${esc(f.name)}" oninput="nodeById('${id}').fields[${i}].name=this.value"></td>
+    <td style="width:78px"><select onchange="nodeById('${id}').fields[${i}].type=this.value">${["str","int","float","bool"].map(x=>`<option ${x===f.type?'selected':''}>${x}</option>`).join("")}</select></td>
+    <td style="width:30px"><button class="rowbtn" onclick="nodeById('${id}').fields.splice(${i},1);bFields('${id}')">✕</button></td></tr>`).join("")}
+function bAddField(id){nodeById(id).fields=nodeById(id).fields||[];nodeById(id).fields.push({name:"field",type:"str"});bFields(id)}
+function bRename(o,v){if(!v)return;const n=nodeById(o);AG.edges.forEach(e=>{if(e[0]===o)e[0]=v;if(e[1]===o)e[1]=v});if(AG.entry===o)AG.entry=v;n.id=v;if(AG.sel===o)AG.sel=v;bRail();bCanvas()}
+function bType(id,t){const n=nodeById(id);n.type=t;if(t==="extract"&&!n.fields){n.fields=[{name:"value",type:"str"}];n.confidence=0.9;n.consensus=1;n.untrusted=true}bRail();bCanvas();bInsp()}
+function bEdge(a,b,on){const i=AG.edges.findIndex(e=>e[0]===a&&e[1]===b);if(on&&i<0)AG.edges.push([a,b]);if(!on&&i>=0)AG.edges.splice(i,1);bCanvas()}
+function bCanvas(vio){const cv=document.getElementById("cv");if(!cv)return;const wrap=cv.parentElement;const w=wrap.clientWidth,h=wrap.clientHeight;
+  cv.setAttribute("viewBox",`0 0 ${w} ${h}`);cv.innerHTML="";
+  // layout by longest path
+  const succ={},indeg={};AG.nodes.forEach(n=>{succ[n.id]=[];indeg[n.id]=0});AG.edges.forEach(([a,b])=>{if(succ[a]&&b in indeg){succ[a].push(b);indeg[b]++}});
+  const layer={};const q=AG.nodes.filter(n=>indeg[n.id]===0).map(n=>n.id);q.forEach(id=>layer[id]=0);const ind={...indeg};let hd=0;
+  while(hd<q.length){const u=q[hd++];(succ[u]||[]).forEach(v=>{layer[v]=Math.max(layer[v]||0,layer[u]+1);if(--ind[v]===0)q.push(v)})}
+  AG.nodes.forEach(n=>{if(layer[n.id]===undefined)layer[n.id]=0});const cols={};AG.nodes.forEach(n=>{(cols[layer[n.id]]=cols[layer[n.id]]||[]).push(n.id)});
+  const W=Math.max(...Object.keys(cols).map(Number),0)+1;const pos={};Object.entries(cols).forEach(([c,ids])=>ids.forEach((id,i)=>pos[id]={c:+c,i,n:ids.length}));
+  const NW=160,NH=56,padX=90;const colGap=W>1?(w-2*padX-NW)/(W-1):0;const XY={};
+  AG.nodes.forEach(n=>{const p=pos[n.id];const x=padX+p.c*colGap;const colH=(p.n-1)*(NH+36);const y=(h-colH)/2-NH/2+p.i*(NH+36);XY[n.id]={x,y,cy:y+NH/2}});
+  const bp=(vio||[]).map(v=>v.path);const bE=new Set();bp.forEach(p=>{for(let i=0;i<p.length-1;i++)bE.add(p[i]+">"+p[i+1])});const bN=new Set();bp.forEach(p=>p.forEach(id=>bN.add(id)));
   const defs=document.createElementNS(NS,"defs");defs.innerHTML=`<marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#3a4152"/></marker><marker id="arb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#f0894e"/></marker>`;cv.appendChild(defs);
-  edges.forEach(([a,b])=>{if(!XY[a]||!XY[b])return;const s=XY[a],t=XY[b];const x1=s.x+NW,y1=s.cy,x2=t.x,y2=t.cy;const mx=(x1+x2)/2;const bad=bE.has(a+">"+b);
-    const p=document.createElementNS(NS,"path");p.setAttribute("d",`M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2-6} ${y2}`);p.setAttribute("fill","none");
-    p.setAttribute("stroke",bad?"#f0894e":"#2e3546");p.setAttribute("stroke-width",bad?2.6:1.8);p.setAttribute("marker-end",bad?"url(#arb)":"url(#ar)");if(bad)p.setAttribute("filter","drop-shadow(0 0 5px var(--amber-glow))");cv.appendChild(p)});
-  const proven=lastResult&&lastResult.taint.verdict==="PROVEN";
-  nodes.forEach(n=>{const c=XY[n.id];const g=document.createElementNS(NS,"g");g.style.cursor="pointer";g.onclick=()=>{sel=n.id;vrail();vcanvas()};
-    const capCol={plain:"#3a4152",untrusted:"#f0894e",sink:"#ff7a7a",sanitizer:"#3ecf8e"}[n.cap];const onBad=bN.has(n.id);
-    let ring=n.id===sel?"#8b88f5":(onBad?"#f0894e":(proven?"#2f6b4f":"#242a37"));
-    const r=document.createElementNS(NS,"rect");r.setAttribute("x",c.x);r.setAttribute("y",c.y);r.setAttribute("width",NW);r.setAttribute("height",NH);r.setAttribute("rx",11);
-    r.setAttribute("fill","#141824");r.setAttribute("stroke",ring);r.setAttribute("stroke-width",n.id===sel?2:1.4);if(onBad)r.setAttribute("filter","drop-shadow(0 0 8px var(--amber-glow))");g.appendChild(r);
-    const dot=document.createElementNS(NS,"circle");dot.setAttribute("cx",c.x+16);dot.setAttribute("cy",c.y+18);dot.setAttribute("r",5);dot.setAttribute("fill",capCol);g.appendChild(dot);
-    const t=document.createElementNS(NS,"text");t.setAttribute("x",c.x+30);t.setAttribute("y",c.y+22);t.setAttribute("fill","#e9ecf3");t.setAttribute("font-size","13.5");t.setAttribute("font-weight","600");t.setAttribute("font-family","IBM Plex Sans");t.textContent=n.id.length>15?n.id.slice(0,14)+"…":n.id;g.appendChild(t);
-    const cl=document.createElementNS(NS,"text");cl.setAttribute("x",c.x+30);cl.setAttribute("y",c.y+38);cl.setAttribute("fill",n.cap==="plain"?"#6d7688":capCol);cl.setAttribute("font-size","10");cl.setAttribute("font-family","IBM Plex Mono");cl.textContent=CAPLABEL[n.cap]+(n.ob?"  ·  ⊢ obligations":"");g.appendChild(cl);cv.appendChild(g)})}
-async function vverify(){const spec={nodes:nodes.map(n=>({id:n.id,capability:n.cap,ob:n.ob,obligations:n.ob.split(",").map(s=>s.trim()).filter(Boolean)})),edges};
-  let d;try{d=await(await fetch("/api/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(spec)})).json()}catch(e){alert(e);return}
-  lastResult=d;lastContract=d.contract;vevidence();vcanvas()}
-async function vrepair(){const v=lastResult?.taint?.violations?.[0];if(!v)return;const path=v.path;const prev=path[path.length-2],sink=v.sink;const san="Sanitize_"+prev;
-  if(!byId(san))nodes.push({id:san,cap:"sanitizer",ob:""});edges=edges.filter(e=>!(e[0]===prev&&e[1]===sink));edges.push([prev,san]);edges.push([san,sink]);await vverify()}
-function seal(st){const col=st==="PROVEN"?"#3ecf8e":st==="VIOLATED"?"#f0894e":"#3a4152";const glow=st==="PROVEN"?"rgba(62,207,142,.4)":st==="VIOLATED"?"rgba(240,137,78,.4)":"none";
-  const inner=st==="PROVEN"?`<path d="M38 50 l9 9 l17 -19" stroke="#3ecf8e" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`:st==="VIOLATED"?`<path d="M38 38 l24 24 M62 38 l-24 24" stroke="#f0894e" stroke-width="6" fill="none" stroke-linecap="round"/>`:`<circle cx="50" cy="50" r="5" fill="#3a4152"/>`;
-  return `<svg width="90" height="90" viewBox="0 0 100 100" style="margin:0 auto 12px;display:block;filter:drop-shadow(0 0 18px ${glow})"><circle cx="50" cy="50" r="44" fill="none" stroke="${col}" stroke-width="2" opacity=".35"/><circle cx="50" cy="50" r="37" fill="#0f121a" stroke="${col}" stroke-width="2.5"/>${inner}</svg>`}
-function vevidence(){const d=lastResult;const tO=d.taint.verdict==="PROVEN";const cO=d.ctl.every(c=>c.verdict==="PROVEN");const oO=d.obligations.every(o=>o.consistent);const all=tO&&cO&&oO;
-  document.getElementById("sealring").innerHTML=seal(all?"PROVEN":"VIOLATED");const sw=document.getElementById("sw");sw.textContent=all?"PROVEN":"VIOLATED";sw.style.color=all?"var(--green)":"var(--amber)";
-  document.getElementById("ss").textContent=all?"all checks satisfied":"see failing checks below";document.getElementById("repairBtn").style.display=(!tO)?"inline-flex":"none";
-  let h=`<div class="evrow"><h4>Injection-safe dataflow · static taint</h4><span class="v ${tO?'ok':'bad'}">${tO?'✓ PROVEN':'✕ VIOLATED'}</span>`;
-  d.taint.violations.forEach(x=>{h+=`<div class="cex">untrusted <b>${esc(x.field)}</b> from ‘${esc(x.source)}’ reaches sink ‘${esc(x.sink)}’<br>via ${x.path.map(esc).join(" → ")}</div>`});h+=`</div>`;
-  h+=`<div class="evrow"><h4>Reachability · CTL model checking</h4>`;d.ctl.forEach(c=>h+=`<div class="evline"><span class="v ${c.verdict==='PROVEN'?'ok':'bad'}">${c.verdict==='PROVEN'?'✓':'✕'}</span><span>${esc(c.property)}</span></div>`);h+=`</div>`;
-  if(d.obligations.length){h+=`<div class="evrow"><h4>Obligation consistency · Z3 SMT</h4>`;d.obligations.forEach(o=>h+=`<div class="evline"><span class="v ${o.consistent?'ok':'bad'}">${o.consistent?'SAT':'UNSAT'}</span><span>${esc(o.node)}${o.reason?` — ${esc(o.reason)}`:''}</span></div>`);h+=`</div>`}
-  h+=`<div class="dlrow"><button class="btn dl" onclick="vdl()">↓ Download audit contract</button></div>`;document.getElementById("evidence").innerHTML=h}
-function vdl(){if(!lastContract)return;const b=new Blob([JSON.stringify(lastContract,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="aura_contract.json";a.click()}
+  AG.edges.forEach(([a,b])=>{if(!XY[a]||!XY[b])return;const s=XY[a],t=XY[b];const x1=s.x+NW,y1=s.cy,x2=t.x,y2=t.cy;const mx=(x1+x2)/2;const bad=bE.has(a+">"+b);
+    const p=document.createElementNS(NS,"path");p.setAttribute("d",`M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2-6} ${y2}`);p.setAttribute("fill","none");p.setAttribute("stroke",bad?"#f0894e":"#2e3546");p.setAttribute("stroke-width",bad?2.6:1.8);p.setAttribute("marker-end",bad?"url(#arb)":"url(#ar)");if(bad)p.setAttribute("filter","drop-shadow(0 0 5px var(--amber-glow))");cv.appendChild(p)});
+  AG.nodes.forEach(n=>{const c=XY[n.id];const g=document.createElementNS(NS,"g");g.style.cursor="pointer";g.onclick=()=>{AG.sel=n.id;bRail();bInsp();bCanvas()};
+    const col=TYPES[n.type].color;const onBad=bN.has(n.id);const ring=n.id===AG.sel?"#8b88f5":(onBad?"#f0894e":"#242a37");
+    const r=document.createElementNS(NS,"rect");r.setAttribute("x",c.x);r.setAttribute("y",c.y);r.setAttribute("width",NW);r.setAttribute("height",NH);r.setAttribute("rx",12);r.setAttribute("fill","#141824");r.setAttribute("stroke",ring);r.setAttribute("stroke-width",n.id===AG.sel?2:1.4);if(onBad)r.setAttribute("filter","drop-shadow(0 0 8px var(--amber-glow))");g.appendChild(r);
+    const dot=document.createElementNS(NS,"circle");dot.setAttribute("cx",c.x+16);dot.setAttribute("cy",c.y+19);dot.setAttribute("r",5);dot.setAttribute("fill",col.startsWith("var")?getCSS(col):col);g.appendChild(dot);
+    const t=document.createElementNS(NS,"text");t.setAttribute("x",c.x+30);t.setAttribute("y",c.y+23);t.setAttribute("fill","#e9ecf3");t.setAttribute("font-size","13.5");t.setAttribute("font-weight","600");t.setAttribute("font-family","IBM Plex Sans");t.textContent=n.id.length>15?n.id.slice(0,14)+"…":n.id;g.appendChild(t);
+    const cl=document.createElementNS(NS,"text");cl.setAttribute("x",c.x+30);cl.setAttribute("y",c.y+39);cl.setAttribute("fill","#6d7688");cl.setAttribute("font-size","10");cl.setAttribute("font-family","IBM Plex Mono");cl.textContent=TYPES[n.type].label+(n.id===AG.entry?" · entry":"");g.appendChild(cl);cv.appendChild(g)})}
+function getCSS(v){return getComputedStyle(document.documentElement).getPropertyValue(v.slice(4,-1)).trim()||"#8b88f5"}
+async function bVerify(){let d;try{d=await(await fetch("/api/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nodes:AG.nodes.map(n=>({id:n.id,capability:capOf(n),obligations:(n.obligations||"").split(",").map(s=>s.trim()).filter(Boolean)})),edges:AG.edges})})).json()}catch(e){return}
+  bCanvas(d.taint.violations);
+  const all=d.taint.verdict==="PROVEN"&&d.ctl.every(c=>c.verdict==="PROVEN")&&d.obligations.every(o=>o.consistent);
+  alert(all?"✓ Design PROVEN — injection-safe, reachable, obligations consistent.":"✕ Design VIOLATED — see the amber path. taint="+d.taint.verdict)}
 
-/* ══════════ MODULE: LIVE AGENT ══════════ */
-let agentFields=[{name:"refund_amount",type:"int",description:"refund in dollars"},{name:"order_total",type:"int",description:"order total in dollars"}];
-async function Agent(){
-  const provs=await (await fetch("/api/providers")).json();
-  const ws=document.getElementById("ws");
-  ws.innerHTML=`<div class="cols">
+/* ══════════ RUN ══════════ */
+async function Run(){
+  const provs=await(await fetch("/api/providers")).json();
+  document.getElementById("wsactions").innerHTML=`<button class="btn primary" onclick="rRun()">▶ Run agent</button>`;
+  document.getElementById("ws").innerHTML=`<div class="cols">
     <div class="form">
-      <div class="fld"><label>Provider (local or your key)</label><select id="ag_prov">${provs.map(p=>`<option value="${p.name}" ${p.available?'':'disabled'}>${p.name}${p.available?'':' — set '+p.needs}</option>`).join("")}</select>
-        <div class="hint">Keys are read from your environment. Ollama runs a local model — no key.</div></div>
-      <div class="fld"><label>Prompt</label><textarea id="ag_prompt">Sarah's item arrived broken; she wants a refund of $180 on her $200 order.</textarea></div>
-      <div class="fld"><label>Fields to extract</label><table class="mini" id="ag_fields"></table><button class="addrow" onclick="agAddField()">+ field</button></div>
-      <div class="fld"><label>Z3 obligations (comma-sep)</label><input id="ag_ob" class="mono" value="refund_amount <= order_total, refund_amount >= 0"></div>
+      <div class="fld"><label>Provider</label><select id="r_prov" onchange="AG.provider=this.value">${provs.map(p=>`<option value="${p.name}" ${p.name===AG.provider?'selected':''} ${p.available?'':'disabled'}>${p.name}${p.available?'':' — set '+p.needs}</option>`).join("")}</select></div>
+      <div class="fld"><label>Input to the agent</label><textarea id="r_input" style="min-height:90px">Sarah's item arrived broken; she wants a refund of $180 on her $200 order.</textarea></div>
+      <div class="metric"><div class="k">agent</div><div style="margin-top:6px">${AG.nodes.length} nodes · entry <b>${esc(AG.entry||'—')}</b> · <a href="#" onclick="go('build');return false" style="color:var(--indigo)">edit in Build →</a></div></div>
+      <div class="hint">Runs the real engine end-to-end: each node extracts, its output is proven with Z3 (retry on failure), then routes to the next. Uses your selected provider (Ollama runs locally).</div>
     </div>
-    <div class="out" id="ag_out"><div class="empty">Run a real model; Aura-State proves its output with Z3.</div></div>
-  </div>`;
-  document.getElementById("wsactions").innerHTML=`<button class="btn primary" onclick="agRun()">▶ Run &amp; verify</button>`;
-  agRenderFields();
+    <div class="out" id="r_out"><div class="empty">Run the agent to see a live, verified execution trace.</div></div></div>`;
 }
-function agRenderFields(){const t=document.getElementById("ag_fields");t.innerHTML=agentFields.map((f,i)=>`<tr>
-  <td><input value="${esc(f.name)}" oninput="agentFields[${i}].name=this.value"></td>
-  <td style="width:80px"><select onchange="agentFields[${i}].type=this.value">${["str","int","float","bool"].map(x=>`<option ${x===f.type?'selected':''}>${x}</option>`).join("")}</select></td>
-  <td style="width:34px"><button class="rowbtn" onclick="agentFields.splice(${i},1);agRenderFields()">✕</button></td></tr>`).join("")}
-function agAddField(){agentFields.push({name:"field",type:"str",description:""});agRenderFields()}
-async function agRun(){const out=document.getElementById("ag_out");out.innerHTML=`<div class="empty">running the model…</div>`;
-  const body={provider:document.getElementById("ag_prov").value,prompt:document.getElementById("ag_prompt").value,fields:agentFields,
-    obligations:document.getElementById("ag_ob").value.split(",").map(s=>s.trim()).filter(Boolean)};
-  let d;try{d=await(await fetch("/api/agent",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})).json()}catch(e){out.innerHTML=`<div class="empty">error: ${e}</div>`;return}
+async function rRun(){const out=document.getElementById("r_out");out.innerHTML=`<div class="empty">running the agent…</div>`;
+  const spec=specForBackend(document.getElementById("r_input").value);
+  let d;try{d=await(await fetch("/api/run",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(spec)})).json()}catch(e){out.innerHTML=`<div class="empty">error: ${e}</div>`;return}
   if(d.error){out.innerHTML=`<div class="metric"><div class="k">error</div><div style="color:var(--amber);margin-top:6px">${esc(d.error)}</div></div>`;return}
-  const vClass=d.verified===true?'ok':d.verified===false?'bad':'muted';const vTxt=d.verified===true?'✓ Z3 VERIFIED':d.verified===false?'✕ Z3 REJECTED':'no obligations';
-  out.innerHTML=`<div class="metric"><div class="k">extracted by ${esc(d.provider)} · ${esc(d.model)}</div><pre style="margin-top:10px">${esc(JSON.stringify(d.extracted,null,2))}</pre></div>
-    <div class="metric"><div class="k">verification</div><div style="margin-top:8px"><span class="v ${vClass}">${vTxt}</span></div>
-    ${d.failed&&d.failed.length?`<div class="cex" style="margin-top:10px">failed: ${d.failed.map(esc).join(", ")}</div>`:''}</div>
-    <div class="hint">The model's output was checked against your obligations with real Z3 — a value that can't be proven is rejected, not trusted.</div>`}
+  let h=`<div class="k mono" style="color:var(--muted);margin-bottom:10px">EXECUTION TRACE · ${d.steps} step(s)</div>`;
+  d.trace.forEach(s=>{if(s.error){h+=`<div class="step"><div class="sh"><span class="nm">${esc(s.node)}</span><span class="v bad">ERROR</span></div><div class="cex" style="margin-top:8px">${esc(s.error)}</div></div>`;return}
+    const vcls=s.verified===true?'ok':s.verified===false?'bad':'muted';const vtx=s.verified===true?'✓ PROVEN':s.verified===false?'✕ REJECTED':'—';
+    h+=`<div class="step"><div class="sh"><span class="nm">${esc(s.node)} <span class="arrow">→ ${esc(s.next||'END')}</span></span>
+      <span class="v ${vcls}">${vtx}</span></div>
+      ${Object.keys(s.extracted||{}).length?`<pre style="margin-top:9px">${esc(JSON.stringify(s.extracted,null,2))}</pre>`:''}
+      ${s.abstained?`<div class="cex" style="margin-top:6px">abstained → escalated to human</div>`:''}
+      ${s.iterations&&s.iterations>1?`<div class="hint" style="margin-top:4px">verified after ${s.iterations} attempts (Z3 rejected earlier tries)</div>`:''}</div>`});
+  if(d.contract){const t=d.contract.taint?.verdict;h+=`<div class="metric" style="margin-top:6px"><div class="k">emitted audit contract</div>
+    <div style="margin-top:8px"><span class="v ${t==='PROVEN'?'ok':'bad'}">taint ${t}</span> · hash ${esc((d.contract.meta?.content_hash||'').slice(0,12))}
+    <button class="btn sm" style="float:right" onclick='dl(${JSON.stringify(JSON.stringify(d.contract))})'>download</button></div></div>`}
+  out.innerHTML=h}
+function dl(s){const b=new Blob([JSON.parse(s)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="aura_contract.json";a.click()}
 
-/* ══════════ MODULE: PROVE (Z3 point-check) ══════════ */
+/* ══════════ SETTINGS ══════════ */
+async function Settings(){
+  const provs=await(await fetch("/api/providers")).json();const flows=await(await fetch("/api/flows")).json();
+  document.getElementById("ws").innerHTML=`<div class="cols">
+    <div class="form">
+      <div class="fld"><label>Agent name</label><input value="${esc(AG.name)}" oninput="AG.name=this.value"></div>
+      <div class="fld"><label>Default provider</label><select onchange="AG.provider=this.value">${provs.map(p=>`<option value="${p.name}" ${p.name===AG.provider?'selected':''}>${p.name} (${p.model})${p.available?'':' — needs '+p.needs}</option>`).join("")}</select></div>
+      <div class="two"><button class="btn primary" onclick="sSave()">Save agent</button><button class="btn ghost" onclick="Settings()">Refresh</button></div>
+      <div class="hint" style="margin-top:12px">Agents are saved as JSON in <span class="mono">~/.aura_studio/flows</span> and can be loaded back or run from code with the library.</div>
+    </div>
+    <div class="out">
+      <div class="metric"><div class="k">providers (keys from your environment)</div>
+        ${provs.map(p=>`<div style="display:flex;justify-content:space-between;margin-top:8px"><span>${p.name} <span class="mono" style="color:var(--muted);font-size:11px">${p.model}</span></span><span class="v ${p.available?'ok':'muted'}">${p.available?'ready':'no key'}</span></div>`).join("")}</div>
+      <div class="metric"><div class="k">saved agents</div>${flows.length?flows.map(f=>`<div style="display:flex;justify-content:space-between;margin-top:8px"><span class="mono">${esc(f)}</span><button class="btn sm" onclick="sLoad('${esc(f)}')">load</button></div>`).join(""):'<div class="hint" style="margin-top:6px">none yet — build an agent and Save</div>'}</div>
+    </div></div>`;
+}
+async function sSave(){const flow={name:AG.name,provider:AG.provider,nodes:AG.nodes,edges:AG.edges,entry:AG.entry};
+  const r=await(await fetch("/api/flows/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:AG.name,flow})})).json();
+  if(r.ok){AG.name=r.name;Settings()}}
+async function sLoad(name){const f=await(await fetch("/api/flows/"+encodeURIComponent(name))).json();
+  if(f.error)return;AG.name=f.name||name;AG.provider=f.provider||"ollama";AG.nodes=f.nodes||[];AG.edges=f.edges||[];AG.entry=f.entry||AG.nodes[0]?.id;AG.sel=AG.nodes[0]?.id;go('build')}
+
+/* ══════════ PROVE ══════════ */
 let proveRows=[{k:"area",v:"100"},{k:"rate",v:"3"},{k:"total",v:"999"}];
-function Prove(){
-  document.getElementById("ws").innerHTML=`<div class="cols">
-    <div class="form">
-      <div class="fld"><label>Data (as an agent would extract it)</label><table class="mini" id="pr_rows"></table><button class="addrow" onclick="prAdd()">+ field</button></div>
-      <div class="fld"><label>Z3 obligations (comma-sep)</label><input id="pr_ob" class="mono" value="total == area * rate, area > 0"></div>
-      <div class="hint">The same fail-closed AST→Z3 check that gates every extraction in the loop. It also proves the obligation set isn't self-contradictory (e.g. <span class="mono">x > 5, x < 3</span>).</div>
-    </div>
-    <div class="out" id="pr_out"><div class="empty">Enter data + obligations to prove or refute with Z3.</div></div>
-  </div>`;
-  document.getElementById("wsactions").innerHTML=`<button class="btn primary" onclick="prRun()">✓ Prove with Z3</button>`;
-  prRender();
-}
-function prRender(){document.getElementById("pr_rows").innerHTML=proveRows.map((r,i)=>`<tr>
-  <td><input value="${esc(r.k)}" oninput="proveRows[${i}].k=this.value"></td>
-  <td><input class="mono" value="${esc(r.v)}" oninput="proveRows[${i}].v=this.value"></td>
-  <td style="width:34px"><button class="rowbtn" onclick="proveRows.splice(${i},1);prRender()">✕</button></td></tr>`).join("")}
-function prAdd(){proveRows.push({k:"field",v:"0"});prRender()}
-function coerce(v){const t=v.trim();if(t==="true")return true;if(t==="false")return false;
-  if(/^-?\d+$/.test(t))return parseInt(t);if(/^-?\d*\.\d+$/.test(t))return parseFloat(t);return v}
-async function prRun(){const data={};proveRows.forEach(r=>{if(r.k.trim())data[r.k.trim()]=coerce(r.v)});
-  const obs=document.getElementById("pr_ob").value.split(",").map(s=>s.trim()).filter(Boolean);const out=document.getElementById("pr_out");
+function Prove(){document.getElementById("ws").innerHTML=`<div class="cols"><div class="form">
+  <div class="fld"><label>Data (as an agent would extract it)</label><table class="mini" id="pr_rows"></table><button class="addrow" onclick="prAdd()">+ field</button></div>
+  <div class="fld"><label>Z3 obligations (comma-sep)</label><input id="pr_ob" class="mono" value="total == area * rate, area > 0"></div>
+  <div class="hint">The same fail-closed AST→Z3 check that gates every extraction. Also proves the obligation set isn't self-contradictory.</div></div>
+  <div class="out" id="pr_out"><div class="empty">Enter data + obligations to prove or refute with Z3.</div></div></div>`;
+  document.getElementById("wsactions").innerHTML=`<button class="btn primary" onclick="prRun()">✓ Prove with Z3</button>`;prR()}
+function prR(){document.getElementById("pr_rows").innerHTML=proveRows.map((r,i)=>`<tr><td><input value="${esc(r.k)}" oninput="proveRows[${i}].k=this.value"></td><td><input class="mono" value="${esc(r.v)}" oninput="proveRows[${i}].v=this.value"></td><td style="width:30px"><button class="rowbtn" onclick="proveRows.splice(${i},1);prR()">✕</button></td></tr>`).join("")}
+function prAdd(){proveRows.push({k:"field",v:"0"});prR()}
+function coerce(v){const t=(v||"").trim();if(t==="true")return true;if(t==="false")return false;if(/^-?\d+$/.test(t))return parseInt(t);if(/^-?\d*\.\d+$/.test(t))return parseFloat(t);return v}
+async function prRun(){const data={};proveRows.forEach(r=>{if(r.k.trim())data[r.k.trim()]=coerce(r.v)});const obs=document.getElementById("pr_ob").value.split(",").map(s=>s.trim()).filter(Boolean);const out=document.getElementById("pr_out");
   let d;try{d=await(await fetch("/api/prove",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({data,obligations:obs})})).json()}catch(e){out.innerHTML="error";return}
-  const vc=d.verified?'ok':'bad';
-  out.innerHTML=`<div class="metric"><div class="k">Z3 verdict for the data</div><div style="margin-top:8px"><span class="v ${vc}">${d.verified?'✓ PROVEN':'✕ REFUTED'}</span></div>
-      ${d.failed&&d.failed.length?`<div class="cex" style="margin-top:10px">violated: ${d.failed.map(esc).join(", ")}</div>`:''}
-      ${d.unproven&&d.unproven.length?`<div class="cex" style="margin-top:10px">unproven (uncompilable/unbound): ${d.unproven.map(esc).join(", ")}</div>`:''}</div>
-    <div class="metric"><div class="k">obligation set consistency (symbolic Z3)</div><div style="margin-top:8px"><span class="v ${d.consistent?'ok':'bad'}">${d.consistent?'✓ SATISFIABLE':'✕ CONTRADICTORY'}</span></div>
-      ${d.reason?`<div class="hint" style="margin-top:8px">${esc(d.reason)}</div>`:(d.witness?`<div class="hint" style="margin-top:8px">a valid assignment exists, e.g. ${esc(JSON.stringify(d.witness))}</div>`:'')}</div>
-    <div class="hint">Point-check verifies these concrete values; the consistency check proves the spec is satisfiable for <em>some</em> values (variables range freely). A contradictory spec can never hold — caught before you ship.</div>`}
+  out.innerHTML=`<div class="metric"><div class="k">Z3 verdict for the data</div><div style="margin-top:8px"><span class="v ${d.verified?'ok':'bad'}">${d.verified?'✓ PROVEN':'✕ REFUTED'}</span></div>${d.failed&&d.failed.length?`<div class="cex" style="margin-top:10px">violated: ${d.failed.map(esc).join(", ")}</div>`:''}</div>
+    <div class="metric"><div class="k">obligation-set consistency (symbolic)</div><div style="margin-top:8px"><span class="v ${d.consistent?'ok':'bad'}">${d.consistent?'✓ SATISFIABLE':'✕ CONTRADICTORY'}</span></div>${d.reason?`<div class="hint" style="margin-top:8px">${esc(d.reason)}</div>`:''}</div>`}
 
-/* ══════════ MODULE: IMPORT DATA (bulk verify) ══════════ */
-function DataImport(){
-  document.getElementById("ws").innerHTML=`<div class="cols">
-    <div class="form">
-      <div class="fld"><label>Your dataset — paste CSV or JSON, or upload a file</label>
-        <input type="file" id="dt_file" accept=".csv,.json" style="margin-bottom:10px" onchange="dtFile(event)">
-        <textarea id="dt_data" style="min-height:200px" placeholder="area,rate,total&#10;100,3,300&#10;50,4,205   (bad row)"></textarea></div>
-      <div class="fld"><label>Z3 obligations to check every row</label><input id="dt_ob" class="mono" value="total == area * rate"></div>
-      <button class="btn ghost" onclick="dtSample()">Load a sample dataset</button>
-      <div class="hint" style="margin-top:10px">Every row is checked with real Z3 — the same engine that gates an agent's output. Verify a real dataset (invoices, extractions, records) and find the inconsistent rows.</div>
-    </div>
-    <div class="out" id="dt_out"><div class="empty">Import a dataset to verify every row against your obligations.</div></div>
-  </div>`;
-  document.getElementById("wsactions").innerHTML=`<button class="btn primary" onclick="dtRun()">Verify dataset</button>`;
-}
-function dtFile(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{document.getElementById("dt_data").value=r.result};r.readAsText(f)}
-function dtSample(){document.getElementById("dt_data").value="area,rate,total\n100,3,300\n50,4,200\n20,5,100\n8,7,55\n12,9,108\n30,6,181\n15,15,225";document.getElementById("dt_ob").value="total == area * rate"}
-function parseData(txt){txt=txt.trim();if(!txt)return[];
-  if(txt[0]==="["||txt[0]==="{"){try{const j=JSON.parse(txt);return Array.isArray(j)?j:[j]}catch(e){}}
-  const lines=txt.split(/\r?\n/).filter(l=>l.trim());if(lines.length<2)return[];
-  const hdr=lines[0].split(",").map(s=>s.trim());return lines.slice(1).map(l=>{const c=l.split(",");const o={};hdr.forEach((h,i)=>o[h]=coerce((c[i]||"").trim()));return o})}
-async function dtRun(){const recs=parseData(document.getElementById("dt_data").value);const obs=document.getElementById("dt_ob").value.split(",").map(s=>s.trim()).filter(Boolean);
-  const out=document.getElementById("dt_out");if(!recs.length){out.innerHTML=`<div class="empty">couldn't parse any rows — check the CSV/JSON</div>`;return}
-  out.innerHTML=`<div class="empty">verifying ${recs.length} rows with Z3…</div>`;
+/* ══════════ IMPORT DATA ══════════ */
+function DataImport(){document.getElementById("ws").innerHTML=`<div class="cols"><div class="form">
+  <div class="fld"><label>Dataset — paste CSV/JSON or upload</label><input type="file" id="dt_file" accept=".csv,.json" style="margin-bottom:10px" onchange="dtFile(event)"><textarea id="dt_data" style="min-height:200px" placeholder="area,rate,total&#10;100,3,300"></textarea></div>
+  <div class="fld"><label>Z3 obligations checked on every row</label><input id="dt_ob" class="mono" value="total == area * rate"></div>
+  <button class="btn ghost" onclick="dtSample()">Load a sample dataset</button></div>
+  <div class="out" id="dt_out"><div class="empty">Import a dataset to bulk-verify every row with Z3.</div></div></div>`;
+  document.getElementById("wsactions").innerHTML=`<button class="btn primary" onclick="dtRun()">Verify dataset</button>`}
+function dtFile(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>document.getElementById("dt_data").value=r.result;r.readAsText(f)}
+function dtSample(){document.getElementById("dt_data").value="area,rate,total\n100,3,300\n50,4,200\n20,5,100\n8,7,55\n12,9,108";document.getElementById("dt_ob").value="total == area * rate"}
+function parseData(txt){txt=(txt||"").trim();if(!txt)return[];if(txt[0]==="["||txt[0]==="{"){try{const j=JSON.parse(txt);return Array.isArray(j)?j:[j]}catch(e){}}
+  const lines=txt.split(/\r?\n/).filter(l=>l.trim());if(lines.length<2)return[];const hdr=lines[0].split(",").map(s=>s.trim());return lines.slice(1).map(l=>{const c=l.split(",");const o={};hdr.forEach((h,i)=>o[h]=coerce((c[i]||"").trim()));return o})}
+async function dtRun(){const recs=parseData(document.getElementById("dt_data").value);const obs=document.getElementById("dt_ob").value.split(",").map(s=>s.trim()).filter(Boolean);const out=document.getElementById("dt_out");
+  if(!recs.length){out.innerHTML=`<div class="empty">couldn't parse rows</div>`;return}out.innerHTML=`<div class="empty">verifying ${recs.length} rows…</div>`;
   let d;try{d=await(await fetch("/api/verify_dataset",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({records:recs,obligations:obs})})).json()}catch(e){out.innerHTML="error";return}
-  const ok=d.failed===0;
-  let h=`<div class="metric"><div class="k">verified ${d.total} rows · ${d.obligations} obligation(s) · ~${d.rate}/sec</div>
-    <div class="big" style="margin-top:8px"><span style="color:var(--green)">${d.passed}</span> <span style="color:var(--muted);font-size:20px">/ ${d.total} consistent</span></div>
-    <div style="margin-top:8px"><span class="v ${ok?'ok':'bad'}">${ok?'✓ all rows PROVEN':'✕ '+d.failed+' rows violate the invariant'}</span></div></div>`;
-  if(d.violations.length){h+=`<div class="metric"><div class="k">violating rows (Z3 counterexamples)</div><table class="mini" style="margin-top:8px">${d.violations.map(v=>`<tr><td class="mono" style="color:var(--amber)">row ${v.row}</td><td class="mono" style="font-size:11px;color:var(--soft)">${esc(JSON.stringify(v.record))}</td></tr>`).join("")}</table></div>`}
+  const ok=d.failed===0;let h=`<div class="metric"><div class="k">verified ${d.total} rows · ~${d.rate}/sec</div><div class="big" style="margin-top:8px"><span style="color:var(--green)">${d.passed}</span> <span style="color:var(--muted);font-size:20px">/ ${d.total}</span></div><div style="margin-top:8px"><span class="v ${ok?'ok':'bad'}">${ok?'✓ all rows PROVEN':'✕ '+d.failed+' rows violate'}</span></div></div>`;
+  if(d.violations.length)h+=`<div class="metric"><div class="k">violating rows</div><table class="mini" style="margin-top:8px">${d.violations.map(v=>`<tr><td class="mono" style="color:var(--amber)">row ${v.row}</td><td class="mono" style="font-size:11px;color:var(--soft)">${esc(JSON.stringify(v.record))}</td></tr>`).join("")}</table></div>`;
   out.innerHTML=h}
 
-/* ══════════ MODULE: MONITOR (live feed from your agent) ══════════ */
-const SNIPPET=`from aura_state.hooks import Monitor, verified
-
-mon = Monitor()   # points at this studio (localhost:8155)
-
-# stream any output, verified with Z3:
-mon.record({"refund_amount": 180, "order_total": 200},
-           ["refund_amount <= order_total"], node="RefundAgent")
-
-# or decorate your extraction / CrewAI task / LangGraph node:
-@verified(["total == area * rate"], monitor=mon, strict=True)
-def extract_quote(text) -> dict:
-    ...        # your LLM call
-    return {"area": 100, "rate": 3, "total": 300}`;
-function Monitor(){
-  document.getElementById("ws").innerHTML=`<div class="cols">
-    <div class="form">
-      <div class="fld"><label>Connect your agent (any code · CrewAI · LangGraph)</label>
-        <pre style="white-space:pre-wrap">${esc(SNIPPET)}</pre></div>
-      <div class="hint">Your agent runs wherever it already runs. The hook verifies each output with Z3 and streams it here — a live, verified view of your real system. Verification still happens even if the studio is closed.</div>
-    </div>
-    <div class="out" style="padding:0">
-      <div style="padding:16px 18px;border-bottom:1px solid var(--edge);display:flex;justify-content:space-between;align-items:center">
-        <div class="k mono" style="font-size:10px;letter-spacing:.08em;color:var(--muted)">LIVE FEED · POST /api/ingest</div>
-        <button class="btn ghost" style="padding:5px 10px;font-size:12px" onclick="monClear()">clear</button></div>
-      <div id="mon_feed"><div class="empty">Waiting for verified events from your agent…<br><span class="mono" style="font-size:11px">run the snippet on the left</span></div></div>
-    </div>
-  </div>`;
-  document.getElementById("wsactions").innerHTML=`<span class="mono" style="font-size:11px;color:var(--muted)">● live</span>`;
-  monPoll();feedTimer=setInterval(monPoll,2000);
-}
-async function monPoll(){let feed;try{feed=await(await fetch("/api/feed")).json()}catch(e){return}
-  const F=document.getElementById("mon_feed");if(!F)return;
-  if(!feed.length){F.innerHTML=`<div class="empty">Waiting for verified events from your agent…<br><span class="mono" style="font-size:11px">run the snippet on the left</span></div>`;return}
+/* ══════════ MONITOR ══════════ */
+const SNIPPET=`from aura_state.hooks import Monitor, verified\n\nmon = Monitor()   # points at this studio\n\nmon.record({"refund_amount": 180, "order_total": 200},\n           ["refund_amount <= order_total"], node="RefundAgent")\n\n@verified(["total == area * rate"], monitor=mon, strict=True)\ndef extract_quote(text) -> dict:\n    ...        # your LLM call / CrewAI task / LangGraph node\n    return {"area": 100, "rate": 3, "total": 300}`;
+function Monitor(){document.getElementById("ws").innerHTML=`<div class="cols"><div class="form">
+  <div class="fld"><label>Connect your agent (any code · CrewAI · LangGraph)</label><pre style="white-space:pre-wrap">${esc(SNIPPET)}</pre></div>
+  <div class="hint">Your agent runs where it already runs. The hook verifies each output with Z3 and streams it here.</div></div>
+  <div class="out" style="padding:0"><div style="padding:15px 18px;border-bottom:1px solid var(--edge);display:flex;justify-content:space-between;align-items:center"><div class="k mono" style="color:var(--muted)">LIVE FEED · POST /api/ingest</div><button class="btn sm ghost" onclick="monClear()">clear</button></div><div id="mon_feed"><div class="empty">Waiting for verified events…</div></div></div></div>`;
+  document.getElementById("wsactions").innerHTML=`<span class="mono" style="font-size:11px;color:var(--muted)">● live</span>`;monPoll();feedTimer=setInterval(monPoll,2000)}
+async function monPoll(){let feed;try{feed=await(await fetch("/api/feed")).json()}catch(e){return}const F=document.getElementById("mon_feed");if(!F)return;
+  if(!feed.length){F.innerHTML=`<div class="empty">Waiting for verified events…<br><span class="mono" style="font-size:11px">run the snippet on the left</span></div>`;return}
   F.innerHTML=feed.map(e=>{const ok=e.verified;const cls=ok===true?'ok':ok===false?'bad':'muted';const tag=ok===true?'✓ PROVEN':ok===false?'✕ REJECTED':'—';
-    return `<div class="evrow" style="border-bottom:1px solid var(--edge)"><div style="display:flex;justify-content:space-between;align-items:center">
-      <div><span style="font-weight:600">${esc(e.node)}</span> <span class="mono" style="font-size:11px;color:var(--muted)">${esc(e.ts)}</span></div>
-      <span class="v ${cls}">${tag}</span></div>
-      <div class="mono" style="font-size:11.5px;color:var(--soft);margin-top:6px">${esc(JSON.stringify(e.data))}</div>
-      ${e.failed&&e.failed.length?`<div class="cex" style="margin-top:6px">failed: ${e.failed.map(esc).join(", ")}</div>`:''}</div>`}).join("")}
+    return `<div class="feedrow"><div style="display:flex;justify-content:space-between;align-items:center"><div><span style="font-weight:600">${esc(e.node)}</span> <span class="mono" style="font-size:11px;color:var(--muted)">${esc(e.ts)}</span></div><span class="v ${cls}">${tag}</span></div><div class="mono" style="font-size:11.5px;color:var(--soft);margin-top:6px">${esc(JSON.stringify(e.data))}</div>${e.failed&&e.failed.length?`<div class="cex" style="margin-top:6px">failed: ${e.failed.map(esc).join(", ")}</div>`:''}</div>`}).join("")}
 async function monClear(){await fetch("/api/feed/clear",{method:"POST"});monPoll()}
 
-/* ══════════ MODULE: UNCERTAINTY ══════════ */
+/* ══════════ UNCERTAINTY ══════════ */
 let cfMode="interval";
-function Uncertainty(){
-  document.getElementById("ws").innerHTML=`<div class="cols">
-    <div class="form">
-      <div class="fld"><label>Estimator</label><div class="caps" style="grid-template-columns:1fr 1fr">
-        <button class="${cfMode==='interval'?'on':''}" onclick="cfSet('interval')">Repeated samples</button>
-        <button class="${cfMode==='pasc'?'on':''}" onclick="cfSet('pasc')">Pipeline (PASC)</button></div></div>
-      <div id="cf_inputs"></div>
-      <div class="fld"><label>Confidence</label><select id="cf_conf"><option>0.9</option><option>0.95</option><option>0.8</option></select></div>
-      <div class="hint" id="cf_hint"></div>
-    </div>
-    <div class="out" id="cf_out"><div class="empty">A calibrated result appears here.</div></div>
-  </div>`;
+function Uncertainty(){document.getElementById("ws").innerHTML=`<div class="cols"><div class="form">
+  <div class="fld"><label>Estimator</label><div class="two"><button class="btn ${cfMode==='interval'?'primary':'ghost'}" onclick="cfMode='interval';Uncertainty()">Repeated samples</button><button class="btn ${cfMode==='pasc'?'primary':'ghost'}" onclick="cfMode='pasc';Uncertainty()">Pipeline (PASC)</button></div></div>
+  <div id="cf_in"></div><div class="fld"><label>Confidence</label><select id="cf_conf"><option>0.9</option><option>0.95</option><option>0.8</option></select></div>
+  <div class="hint" id="cf_hint"></div></div><div class="out" id="cf_out"><div class="empty">A calibrated result appears here.</div></div></div>`;
   document.getElementById("wsactions").innerHTML=`<button class="btn primary" onclick="cfRun()">Compute</button>`;
-  cfInputs();
-}
-function cfSet(m){cfMode=m;Uncertainty()}
-function cfInputs(){
-  const I=document.getElementById("cf_inputs");
-  if(cfMode==="interval"){
-    I.innerHTML=`<div class="fld"><label>Repeated measurements / samples (comma-sep)</label><textarea id="cf_vals">450000, 452000, 448000, 451000, 449000, 450500, 447500, 452500, 449500, 450000, 451500, 448500, 450200, 449800, 451000, 448000, 452000, 450000, 449000, 451000</textarea></div>`;
-    document.getElementById("cf_hint").innerHTML="Split/jackknife+ conformal — distribution-free. A tight interval means the model is self-consistent across runs.";
-  }else{
-    I.innerHTML=`<div class="fld"><label>Pipeline predictions (comma-sep)</label><textarea id="cf_pred">10.2, 9.7, 11.4, 8.9, 10.1, 12.0, 9.3, 10.8, 11.1, 9.9, 10.4, 8.7, 11.6, 10.0, 9.5, 10.9, 11.2, 9.1, 10.3, 10.7</textarea></div>
-    <div class="fld"><label>Ground-truth outcomes (comma-sep)</label><textarea id="cf_true">10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0</textarea></div>`;
-    document.getElementById("cf_hint").innerHTML="PASC calibrates the <b>end-to-end</b> pipeline output — errors compound across steps, so per-step coverage under-covers the final answer.";
-  }
-}
-async function cfRun(){const conf=parseFloat(document.getElementById("cf_conf").value);const out=document.getElementById("cf_out");
-  let body;
-  if(cfMode==="interval"){const vals=document.getElementById("cf_vals").value.split(",").map(s=>parseFloat(s.trim())).filter(x=>!isNaN(x));body={values:vals,confidence:conf}}
-  else{const pred=document.getElementById("cf_pred").value.split(",").map(s=>parseFloat(s.trim())).filter(x=>!isNaN(x));
-       const tru=document.getElementById("cf_true").value.split(",").map(s=>parseFloat(s.trim())).filter(x=>!isNaN(x));body={predictions:pred,truths:tru,confidence:conf}}
+  const I=document.getElementById("cf_in");
+  if(cfMode==="interval"){I.innerHTML=`<div class="fld"><label>Samples (comma-sep)</label><textarea id="cf_vals">450000, 452000, 448000, 451000, 449000, 450500, 447500, 452500, 449500, 450000, 451500, 448500, 450200, 449800, 451000, 448000, 452000, 450000, 449000, 451000</textarea></div>`;document.getElementById("cf_hint").innerHTML="Split/jackknife+ conformal — distribution-free."}
+  else{I.innerHTML=`<div class="fld"><label>Pipeline predictions</label><textarea id="cf_pred">10.2, 9.7, 11.4, 8.9, 10.1, 12.0, 9.3, 10.8, 11.1, 9.9, 10.4, 8.7, 11.6, 10.0, 9.5, 10.9, 11.2, 9.1, 10.3, 10.7</textarea></div><div class="fld"><label>Ground truth</label><textarea id="cf_true">10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0</textarea></div>`;document.getElementById("cf_hint").innerHTML="PASC calibrates the <b>end-to-end</b> output — per-step coverage under-covers the final answer."}}
+async function cfRun(){const conf=parseFloat(document.getElementById("cf_conf").value);const out=document.getElementById("cf_out");let body;
+  if(cfMode==="interval"){body={values:document.getElementById("cf_vals").value.split(",").map(s=>parseFloat(s)).filter(x=>!isNaN(x)),confidence:conf}}
+  else{body={predictions:document.getElementById("cf_pred").value.split(",").map(s=>parseFloat(s)).filter(x=>!isNaN(x)),truths:document.getElementById("cf_true").value.split(",").map(s=>parseFloat(s)).filter(x=>!isNaN(x)),confidence:conf}}
   let d;try{d=await(await fetch("/api/conformal",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})).json()}catch(e){out.innerHTML="error";return}
-  if(d.mode==="pasc"){out.innerHTML=`<div class="metric"><div class="k">end-to-end coverage (PASC)</div><div class="big" style="margin-top:8px">${(d.coverage*100).toFixed(1)}%</div>
-      <div style="margin-top:8px"><span class="v ${d.calibrated?'ok':'bad'}">${d.calibrated?'CALIBRATED':'UNCALIBRATED — too few runs'}</span> · target ${(conf*100)}%</div></div>
-    <div class="metric"><div class="k">interval half-width</div><div class="big" style="font-size:24px;margin-top:6px">±${d.q_hat==null?'—':fmt(d.q_hat)}</div>
-      <div class="hint" style="margin-top:8px">covers the composed pipeline output, not just one step</div></div>`;return}
-  const cal=d.calibrated;
-  out.innerHTML=`<div class="metric"><div class="k">${(conf*100)}% prediction interval</div>
-      <div class="big" style="margin-top:8px">${d.lower==null?'—':fmt(d.lower)} – ${d.upper==null?'—':fmt(d.upper)}</div>
-      <div style="margin-top:8px"><span class="v ${cal?'ok':'bad'}">${cal?'CALIBRATED':'UNCALIBRATED — too few samples'}</span></div></div>
-    <div class="metric"><div class="k">point estimate</div><div class="big" style="font-size:24px;margin-top:6px">${d.point==null?'—':fmt(d.point)}</div>
-      <div class="hint" style="margin-top:8px">${d.n} samples · ${cal?'meets the '+(conf*100)+'% coverage guarantee':'below the minimum sample gate; no nominal coverage claimed (fail-closed)'}</div></div>`}
+  if(d.mode==="pasc"){out.innerHTML=`<div class="metric"><div class="k">end-to-end coverage (PASC)</div><div class="big" style="margin-top:8px">${(d.coverage*100).toFixed(1)}%</div><div style="margin-top:8px"><span class="v ${d.calibrated?'ok':'bad'}">${d.calibrated?'CALIBRATED':'UNCALIBRATED'}</span> · target ${(conf*100)}%</div></div><div class="metric"><div class="k">interval half-width</div><div class="big" style="font-size:22px;margin-top:6px">±${d.q_hat==null?'—':fmt(d.q_hat)}</div></div>`;return}
+  out.innerHTML=`<div class="metric"><div class="k">${(conf*100)}% prediction interval</div><div class="big" style="margin-top:8px">${d.lower==null?'—':fmt(d.lower)} – ${d.upper==null?'—':fmt(d.upper)}</div><div style="margin-top:8px"><span class="v ${d.calibrated?'ok':'bad'}">${d.calibrated?'CALIBRATED':'UNCALIBRATED — too few'}</span></div></div><div class="metric"><div class="k">point estimate</div><div class="big" style="font-size:22px;margin-top:6px">${d.point==null?'—':fmt(d.point)}</div></div>`}
 function fmt(x){return (Math.abs(x)>=1000)?x.toLocaleString(undefined,{maximumFractionDigits:0}):x.toFixed(2)}
 
-/* ══════════ MODULE: RISK ══════════ */
-function Risk(){
-  document.getElementById("ws").innerHTML=`<div class="cols">
-    <div class="form">
-      <div class="fld"><label>Confidence scores (comma-sep, 0–1)</label><textarea id="rk_s"></textarea></div>
-      <div class="fld"><label>Was acting correct? (1/0, comma-sep)</label><textarea id="rk_c"></textarea></div>
-      <div class="fld" style="display:flex;gap:12px">
-        <div style="flex:1"><label>Risk budget ε</label><input id="rk_eps" value="0.05"></div>
-        <div style="flex:1"><label>Test a decision (score)</label><input id="rk_test" value="0.4"></div></div>
-      <button class="btn ghost" onclick="rkSample()">Generate sample labeled data</button>
-      <div class="hint" style="margin-top:10px">Conformal Risk Control calibrates a threshold so the false-action rate is provably ≤ ε. Below it, the agent abstains → escalate to a human.</div>
-    </div>
-    <div class="out" id="rk_out"><div class="empty">Calibrate on labeled data to get a risk-controlled gate.</div></div>
-  </div>`;
-  document.getElementById("wsactions").innerHTML=`<button class="btn primary" onclick="rkRun()">Calibrate gate</button>`;
-  rkSample();
-}
-function rkSample(){let s=[],c=[];let seed=7;const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff};
-  for(let i=0;i<300;i++){const x=rnd();s.push(+x.toFixed(3));c.push(rnd()<x?1:0)}
-  document.getElementById("rk_s").value=s.join(", ");document.getElementById("rk_c").value=c.join(", ")}
-async function rkRun(){const s=document.getElementById("rk_s").value.split(",").map(x=>parseFloat(x)).filter(x=>!isNaN(x));
-  const c=document.getElementById("rk_c").value.split(",").map(x=>x.trim()==="1"||x.trim().toLowerCase()==="true");
-  const eps=parseFloat(document.getElementById("rk_eps").value);const test=parseFloat(document.getElementById("rk_test").value);
-  const out=document.getElementById("rk_out");
+/* ══════════ RISK ══════════ */
+function Risk(){document.getElementById("ws").innerHTML=`<div class="cols"><div class="form">
+  <div class="fld"><label>Confidence scores (0–1, comma-sep)</label><textarea id="rk_s"></textarea></div>
+  <div class="fld"><label>Was acting correct? (1/0)</label><textarea id="rk_c"></textarea></div>
+  <div class="two"><div class="fld"><label>Risk budget ε</label><input id="rk_eps" value="0.05"></div><div class="fld"><label>Test a score</label><input id="rk_test" value="0.4"></div></div>
+  <button class="btn ghost" onclick="rkSample()">Generate sample data</button>
+  <div class="hint" style="margin-top:10px">Conformal Risk Control: threshold so the false-action rate is provably ≤ ε; below it, abstain → escalate.</div></div>
+  <div class="out" id="rk_out"><div class="empty">Calibrate on labeled data to get a risk-controlled gate.</div></div></div>`;
+  document.getElementById("wsactions").innerHTML=`<button class="btn primary" onclick="rkRun()">Calibrate gate</button>`;rkSample()}
+function rkSample(){let s=[],c=[],seed=7;const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff};for(let i=0;i<300;i++){const x=rnd();s.push(+x.toFixed(3));c.push(rnd()<x?1:0)}document.getElementById("rk_s").value=s.join(", ");document.getElementById("rk_c").value=c.join(", ")}
+async function rkRun(){const s=document.getElementById("rk_s").value.split(",").map(x=>parseFloat(x)).filter(x=>!isNaN(x));const c=document.getElementById("rk_c").value.split(",").map(x=>x.trim()==="1"||x.trim().toLowerCase()==="true");const eps=parseFloat(document.getElementById("rk_eps").value);const test=parseFloat(document.getElementById("rk_test").value);const out=document.getElementById("rk_out");
   let d;try{d=await(await fetch("/api/risk",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({scores:s,correct:c.slice(0,s.length),epsilon:eps,test_score:isNaN(test)?null:test})})).json()}catch(e){out.innerHTML="error";return}
   const within=d.realized_false_action_rate<=eps+0.03;
-  out.innerHTML=`<div class="metric"><div class="k">acting threshold (act iff score ≥)</div><div class="big" style="margin-top:6px">${d.threshold==null?'abstain always':d.threshold.toFixed(3)}</div></div>
-    <div class="metric"><div class="k">realized false-action rate</div><div class="big" style="margin-top:6px">${(d.realized_false_action_rate*100).toFixed(1)}%</div>
-      <div style="margin-top:8px"><span class="v ${within?'ok':'bad'}">${within?'✓ within budget ε='+eps:'above budget'}</span> · acted on ${d.acted}/${d.n}</div></div>
-    ${d.decision?`<div class="metric"><div class="k">decision for score ${d.test_score}</div><div style="margin-top:8px"><span class="v ${d.decision==='act'?'ok':'bad'}">${d.decision==='act'?'▶ ACT':'⏸ ABSTAIN → escalate to human'}</span></div></div>`:''}`}
+  out.innerHTML=`<div class="metric"><div class="k">acting threshold (act iff ≥)</div><div class="big" style="margin-top:6px">${d.threshold==null?'abstain all':d.threshold.toFixed(3)}</div></div><div class="metric"><div class="k">realized false-action rate</div><div class="big" style="margin-top:6px">${(d.realized_false_action_rate*100).toFixed(1)}%</div><div style="margin-top:8px"><span class="v ${within?'ok':'bad'}">${within?'✓ within ε='+eps:'above budget'}</span> · acted ${d.acted}/${d.n}</div></div>${d.decision?`<div class="metric"><div class="k">decision for score ${d.test_score}</div><div style="margin-top:8px"><span class="v ${d.decision==='act'?'ok':'bad'}">${d.decision==='act'?'▶ ACT':'⏸ ABSTAIN → escalate'}</span></div></div>`:''}`}
 
 /* boot */
-renderNav();go("verify");
-window.addEventListener("resize",()=>{if(current==="verify")vcanvas()});
+preset();renderNav();go("build");
+window.addEventListener("resize",()=>{if(current==="build")bCanvas()});
 </script>
 </body>
 </html>
