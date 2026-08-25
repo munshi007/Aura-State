@@ -2,6 +2,12 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.5.0]
+
+### Added
+- Hooks SDK (`aura_state.hooks`) -- verify your agent's output in your own code and stream it to a running studio: `Monitor` client, `@verified(...)` decorator (fail-closed with `strict=True`), and a `verify()` helper. Works with any framework (CrewAI, LangGraph, plain functions).
+- Studio: **Monitor** module (live feed of your real agent's verified outputs via `/api/ingest`), **Import data** module (bulk-verify a CSV/JSON dataset against obligations), and a nav grouped by Design & verify / Runtime / Calibration.
+
 ## [0.4.0]
 
 ### Added

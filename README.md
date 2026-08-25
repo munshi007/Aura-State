@@ -18,7 +18,7 @@
   <img alt="CI" src="https://github.com/munshi007/Aura-State/actions/workflows/ci.yml/badge.svg">
   <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-3d3aa8.svg">
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
-  <img alt="tests" src="https://img.shields.io/badge/tests-140%20passing-1c8a5b.svg">
+  <img alt="tests" src="https://img.shields.io/badge/tests-146%20passing-1c8a5b.svg">
 </p>
 
 ```bash
@@ -62,17 +62,45 @@ pip install "aura-state[ui]"
 aura-state ui          # opens http://127.0.0.1:8155 in your browser
 ```
 
-A four-module workbench covering the whole library:
+A workbench covering the whole library — and it plugs into the agent you already
+have (see *Connect your agent* below), so it's not a sandbox you type into:
 
 | Module | What you do | Runs |
 |---|---|---|
-| **Verify design** | build an agent graph, label capabilities, add Z3 obligations → get PROVEN/VIOLATED + counterexamples + a downloadable contract; **Repair** fixes the graph | Z3 · CTL · taint · contract |
+| **Verify design** | build an agent graph, add Z3 obligations & capability labels → PROVEN/VIOLATED + counterexamples + a contract; **Repair** fixes the graph | Z3 · CTL · taint · contract |
+| **Prove data** | Z3 point-check on any data + symbolic spec-consistency | Z3 SMT |
+| **Import data** | upload a CSV/JSON dataset → bulk-verify every row against your obligations | Z3 at scale |
 | **Live agent** | run a **real** model (local Ollama, or OpenAI/Gemini/DeepSeek with your key) and prove its output | any provider + Z3 |
-| **Uncertainty** | calibrated prediction intervals on your samples | conformal · PASC |
+| **Monitor** | a live feed of your **real agent's** outputs, verified as they happen | Z3 · SDK |
+| **Uncertainty** | conformal intervals + PASC (end-to-end pipeline coverage) | conformal · PASC |
 | **Risk control** | calibrate an act/abstain gate with a provable false-action bound | Conformal Risk Control |
 
 Every check is the actual framework verifier — no browser mockups. Keys are read
 from your environment; a local Ollama model needs no key at all.
+
+### Connect your agent (any code · CrewAI · LangGraph)
+
+You don't rebuild your agent in the studio — you verify it where it already runs,
+and stream the results in. A tiny SDK does both:
+
+```python
+from aura_state.hooks import Monitor, verified
+
+mon = Monitor()   # points at a local `aura-state ui`
+
+# verify + stream any output:
+mon.record({"refund_amount": 180, "order_total": 200},
+           ["refund_amount <= order_total"], node="RefundAgent")
+
+# or decorate your extraction / CrewAI task / LangGraph node (fail-closed):
+@verified(["total == area * rate"], monitor=mon, strict=True)
+def extract_quote(text) -> dict:
+    ...        # your LLM call
+    return {"area": 100, "rate": 3, "total": 300}
+```
+
+Verification runs in your code even if the studio is closed; when it's open, the
+**Monitor** shows every output proven or rejected, live.
 
 <p align="center">
   <img src="assets/studio-violated.png" alt="Aura Studio catching an untrusted-to-sink dataflow — the violating path glows amber" width="900">
@@ -81,6 +109,10 @@ from your environment; a local Ollama model needs no key at all.
 <p align="center">
   <img src="assets/studio-agent.png" alt="Aura Studio Live Agent — a real Ollama model's output verified with Z3" width="900">
   <br><em>Live agent — a real local model runs and its output is proven with Z3</em>
+</p>
+<p align="center">
+  <img src="assets/studio-monitor.png" alt="Aura Studio Monitor — your real agent's outputs streamed in via the SDK and verified live" width="900">
+  <br><em>Monitor — your real agent (via the SDK hook) streams outputs in, proven or rejected live</em>
 </p>
 
 ## What this is
@@ -375,7 +407,7 @@ Python 3.10+ required. Dependencies: `pydantic`, `instructor`, `openai`, `networ
 
 ```bash
 python -m pytest tests/ -v
-# 140 tests passing
+# 146 tests passing
 ```
 
 ## Works with any LLM provider

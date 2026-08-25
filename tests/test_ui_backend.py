@@ -71,3 +71,21 @@ def test_prove_endpoint():
     assert r["verified"] is False and "total == area * rate" in r["failed"]
     r2 = client.post("/api/prove", json={"data": {"x": 1}, "obligations": ["x > 5", "x < 3"]}).json()
     assert r2["consistent"] is False
+
+
+def test_ingest_and_feed():
+    client.post("/api/feed/clear")
+    r = client.post("/api/ingest", json={"node": "A", "data": {"a": 2, "b": 3, "t": 6},
+                                         "obligations": ["t == a*b"]}).json()
+    assert r["verified"] is True
+    client.post("/api/ingest", json={"node": "A", "data": {"a": 2, "b": 3, "t": 99},
+                                     "obligations": ["t == a*b"]})
+    feed = client.get("/api/feed").json()
+    assert len(feed) == 2 and feed[0]["node"] == "A"
+
+
+def test_verify_dataset():
+    recs = [{"a": 2, "b": 3, "t": 6}, {"a": 4, "b": 5, "t": 20}, {"a": 2, "b": 2, "t": 5}]
+    r = client.post("/api/verify_dataset", json={"records": recs, "obligations": ["t == a*b"]}).json()
+    assert r["total"] == 3 and r["passed"] == 2 and r["failed"] == 1
+    assert r["violations"][0]["row"] == 2

@@ -134,25 +134,28 @@ table.mini td{padding:4px}table.mini input,table.mini select{width:100%}
 const NS="http://www.w3.org/2000/svg";
 function ic(p){return `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`}
 const MODULES=[
-  {id:"verify",name:"Verify design",sub:"Z3 · CTL · taint · contract",icon:'<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>'},
-  {id:"prove",name:"Prove data",sub:"Z3 point-check + consistency",icon:'<path d="M14 3v5h5"/><path d="M6 3h8l5 5v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M9 14l2 2 4-4"/>'},
-  {id:"agent",name:"Live agent",sub:"run + verify a real model",icon:'<path d="M12 2a3 3 0 0 1 3 3v2a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M5 22v-1a7 7 0 0 1 14 0v1"/>'},
-  {id:"uncertainty",name:"Uncertainty",sub:"conformal · PASC",icon:'<path d="M3 12h4l3 8 4-16 3 8h4"/>'},
-  {id:"risk",name:"Risk control",sub:"abstention · escalate",icon:'<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/>'},
+  {id:"verify",group:"Design & verify",name:"Verify design",sub:"Z3 · CTL · taint · contract",icon:'<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>'},
+  {id:"prove",group:"Design & verify",name:"Prove data",sub:"Z3 point-check + consistency",icon:'<path d="M14 3v5h5"/><path d="M6 3h8l5 5v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M9 14l2 2 4-4"/>'},
+  {id:"data",group:"Design & verify",name:"Import data",sub:"bulk-verify a dataset",icon:'<path d="M12 3v11"/><path d="M8 7l4-4 4 4"/><path d="M4 21h16"/>'},
+  {id:"agent",group:"Runtime",name:"Live agent",sub:"run + verify a real model",icon:'<path d="M12 2a3 3 0 0 1 3 3v2a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M5 22v-1a7 7 0 0 1 14 0v1"/>'},
+  {id:"monitor",group:"Runtime",name:"Monitor",sub:"live feed from your agent",icon:'<path d="M2 12h4l2-6 4 12 3-9 2 3h5"/>'},
+  {id:"uncertainty",group:"Calibration",name:"Uncertainty",sub:"conformal · PASC",icon:'<path d="M3 12h4l3 8 4-16 3 8h4"/>'},
+  {id:"risk",group:"Calibration",name:"Risk control",sub:"abstention · escalate",icon:'<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/>'},
 ];
-let current="verify";
+let current="verify",feedTimer=null;
 function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
 
 function renderNav(){
   const n=document.getElementById("nav");
-  n.innerHTML=`<div class="navsec">Workbench</div>`+MODULES.map(m=>
-    `<div class="navitem ${m.id===current?'on':''}" onclick="go('${m.id}')">${ic(m.icon)}<span>${m.name}</span></div>`).join("");
+  const groups=[...new Set(MODULES.map(m=>m.group))];
+  n.innerHTML=groups.map(g=>`<div class="navsec">${g}</div>`+MODULES.filter(m=>m.group===g).map(m=>
+    `<div class="navitem ${m.id===current?'on':''}" onclick="go('${m.id}')">${ic(m.icon)}<span>${m.name}</span></div>`).join("")).join("");
 }
-function go(id){current=id;renderNav();
+function go(id){if(feedTimer){clearInterval(feedTimer);feedTimer=null}current=id;renderNav();
   const m=MODULES.find(x=>x.id===id);
   document.getElementById("wstitle").innerHTML=`${m.name} <span class="sub">${m.sub}</span>`;
   document.getElementById("wsactions").innerHTML="";
-  ({verify:Verify,prove:Prove,agent:Agent,uncertainty:Uncertainty,risk:Risk})[id]();
+  ({verify:Verify,prove:Prove,data:DataImport,agent:Agent,monitor:Monitor,uncertainty:Uncertainty,risk:Risk})[id]();
 }
 
 /* ══════════ MODULE: VERIFY (graph) ══════════ */
@@ -307,6 +310,80 @@ async function prRun(){const data={};proveRows.forEach(r=>{if(r.k.trim())data[r.
     <div class="metric"><div class="k">obligation set consistency (symbolic Z3)</div><div style="margin-top:8px"><span class="v ${d.consistent?'ok':'bad'}">${d.consistent?'✓ SATISFIABLE':'✕ CONTRADICTORY'}</span></div>
       ${d.reason?`<div class="hint" style="margin-top:8px">${esc(d.reason)}</div>`:(d.witness?`<div class="hint" style="margin-top:8px">a valid assignment exists, e.g. ${esc(JSON.stringify(d.witness))}</div>`:'')}</div>
     <div class="hint">Point-check verifies these concrete values; the consistency check proves the spec is satisfiable for <em>some</em> values (variables range freely). A contradictory spec can never hold — caught before you ship.</div>`}
+
+/* ══════════ MODULE: IMPORT DATA (bulk verify) ══════════ */
+function DataImport(){
+  document.getElementById("ws").innerHTML=`<div class="cols">
+    <div class="form">
+      <div class="fld"><label>Your dataset — paste CSV or JSON, or upload a file</label>
+        <input type="file" id="dt_file" accept=".csv,.json" style="margin-bottom:10px" onchange="dtFile(event)">
+        <textarea id="dt_data" style="min-height:200px" placeholder="area,rate,total&#10;100,3,300&#10;50,4,205   (bad row)"></textarea></div>
+      <div class="fld"><label>Z3 obligations to check every row</label><input id="dt_ob" class="mono" value="total == area * rate"></div>
+      <button class="btn ghost" onclick="dtSample()">Load a sample dataset</button>
+      <div class="hint" style="margin-top:10px">Every row is checked with real Z3 — the same engine that gates an agent's output. Verify a real dataset (invoices, extractions, records) and find the inconsistent rows.</div>
+    </div>
+    <div class="out" id="dt_out"><div class="empty">Import a dataset to verify every row against your obligations.</div></div>
+  </div>`;
+  document.getElementById("wsactions").innerHTML=`<button class="btn primary" onclick="dtRun()">Verify dataset</button>`;
+}
+function dtFile(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{document.getElementById("dt_data").value=r.result};r.readAsText(f)}
+function dtSample(){document.getElementById("dt_data").value="area,rate,total\n100,3,300\n50,4,200\n20,5,100\n8,7,55\n12,9,108\n30,6,181\n15,15,225";document.getElementById("dt_ob").value="total == area * rate"}
+function parseData(txt){txt=txt.trim();if(!txt)return[];
+  if(txt[0]==="["||txt[0]==="{"){try{const j=JSON.parse(txt);return Array.isArray(j)?j:[j]}catch(e){}}
+  const lines=txt.split(/\r?\n/).filter(l=>l.trim());if(lines.length<2)return[];
+  const hdr=lines[0].split(",").map(s=>s.trim());return lines.slice(1).map(l=>{const c=l.split(",");const o={};hdr.forEach((h,i)=>o[h]=coerce((c[i]||"").trim()));return o})}
+async function dtRun(){const recs=parseData(document.getElementById("dt_data").value);const obs=document.getElementById("dt_ob").value.split(",").map(s=>s.trim()).filter(Boolean);
+  const out=document.getElementById("dt_out");if(!recs.length){out.innerHTML=`<div class="empty">couldn't parse any rows — check the CSV/JSON</div>`;return}
+  out.innerHTML=`<div class="empty">verifying ${recs.length} rows with Z3…</div>`;
+  let d;try{d=await(await fetch("/api/verify_dataset",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({records:recs,obligations:obs})})).json()}catch(e){out.innerHTML="error";return}
+  const ok=d.failed===0;
+  let h=`<div class="metric"><div class="k">verified ${d.total} rows · ${d.obligations} obligation(s) · ~${d.rate}/sec</div>
+    <div class="big" style="margin-top:8px"><span style="color:var(--green)">${d.passed}</span> <span style="color:var(--muted);font-size:20px">/ ${d.total} consistent</span></div>
+    <div style="margin-top:8px"><span class="v ${ok?'ok':'bad'}">${ok?'✓ all rows PROVEN':'✕ '+d.failed+' rows violate the invariant'}</span></div></div>`;
+  if(d.violations.length){h+=`<div class="metric"><div class="k">violating rows (Z3 counterexamples)</div><table class="mini" style="margin-top:8px">${d.violations.map(v=>`<tr><td class="mono" style="color:var(--amber)">row ${v.row}</td><td class="mono" style="font-size:11px;color:var(--soft)">${esc(JSON.stringify(v.record))}</td></tr>`).join("")}</table></div>`}
+  out.innerHTML=h}
+
+/* ══════════ MODULE: MONITOR (live feed from your agent) ══════════ */
+const SNIPPET=`from aura_state.hooks import Monitor, verified
+
+mon = Monitor()   # points at this studio (localhost:8155)
+
+# stream any output, verified with Z3:
+mon.record({"refund_amount": 180, "order_total": 200},
+           ["refund_amount <= order_total"], node="RefundAgent")
+
+# or decorate your extraction / CrewAI task / LangGraph node:
+@verified(["total == area * rate"], monitor=mon, strict=True)
+def extract_quote(text) -> dict:
+    ...        # your LLM call
+    return {"area": 100, "rate": 3, "total": 300}`;
+function Monitor(){
+  document.getElementById("ws").innerHTML=`<div class="cols">
+    <div class="form">
+      <div class="fld"><label>Connect your agent (any code · CrewAI · LangGraph)</label>
+        <pre style="white-space:pre-wrap">${esc(SNIPPET)}</pre></div>
+      <div class="hint">Your agent runs wherever it already runs. The hook verifies each output with Z3 and streams it here — a live, verified view of your real system. Verification still happens even if the studio is closed.</div>
+    </div>
+    <div class="out" style="padding:0">
+      <div style="padding:16px 18px;border-bottom:1px solid var(--edge);display:flex;justify-content:space-between;align-items:center">
+        <div class="k mono" style="font-size:10px;letter-spacing:.08em;color:var(--muted)">LIVE FEED · POST /api/ingest</div>
+        <button class="btn ghost" style="padding:5px 10px;font-size:12px" onclick="monClear()">clear</button></div>
+      <div id="mon_feed"><div class="empty">Waiting for verified events from your agent…<br><span class="mono" style="font-size:11px">run the snippet on the left</span></div></div>
+    </div>
+  </div>`;
+  document.getElementById("wsactions").innerHTML=`<span class="mono" style="font-size:11px;color:var(--muted)">● live</span>`;
+  monPoll();feedTimer=setInterval(monPoll,2000);
+}
+async function monPoll(){let feed;try{feed=await(await fetch("/api/feed")).json()}catch(e){return}
+  const F=document.getElementById("mon_feed");if(!F)return;
+  if(!feed.length){F.innerHTML=`<div class="empty">Waiting for verified events from your agent…<br><span class="mono" style="font-size:11px">run the snippet on the left</span></div>`;return}
+  F.innerHTML=feed.map(e=>{const ok=e.verified;const cls=ok===true?'ok':ok===false?'bad':'muted';const tag=ok===true?'✓ PROVEN':ok===false?'✕ REJECTED':'—';
+    return `<div class="evrow" style="border-bottom:1px solid var(--edge)"><div style="display:flex;justify-content:space-between;align-items:center">
+      <div><span style="font-weight:600">${esc(e.node)}</span> <span class="mono" style="font-size:11px;color:var(--muted)">${esc(e.ts)}</span></div>
+      <span class="v ${cls}">${tag}</span></div>
+      <div class="mono" style="font-size:11.5px;color:var(--soft);margin-top:6px">${esc(JSON.stringify(e.data))}</div>
+      ${e.failed&&e.failed.length?`<div class="cex" style="margin-top:6px">failed: ${e.failed.map(esc).join(", ")}</div>`:''}</div>`}).join("")}
+async function monClear(){await fetch("/api/feed/clear",{method:"POST"});monPoll()}
 
 /* ══════════ MODULE: UNCERTAINTY ══════════ */
 let cfMode="interval";

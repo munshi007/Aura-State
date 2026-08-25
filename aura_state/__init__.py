@@ -42,6 +42,7 @@ from .verification.taint import (
     analyze_field_taint, FieldTaintResult, FieldTaintViolation,
 )
 from .verification.risk_control import RiskController, learn_then_test
+from .hooks import Monitor, verified, verify, VerificationError
 from .core.replan import (
     counterexample_guided_repair, default_repair,
     ctl_to_repair, z3_to_repair, taint_to_repair,
@@ -114,6 +115,11 @@ __all__ = [
     # Risk-controlled abstention
     "RiskController",
     "learn_then_test",
+    # Hooks / SDK (verify your agent in your own code, stream to the studio)
+    "Monitor",
+    "verified",
+    "verify",
+    "VerificationError",
     # Counterexample-guided replanning
     "counterexample_guided_repair",
     "default_repair",

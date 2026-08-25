@@ -238,6 +238,61 @@ def create_app() -> "FastAPI":
             out["test_score"] = req.test_score
         return out
 
+    # ── Monitor: your real agent streams verified outputs here (SDK -> studio) ──
+    feed: List[Dict[str, Any]] = []
+
+    class IngestReq(BaseModel):
+        node: str = "extraction"
+        source: Optional[str] = None
+        data: Dict[str, Any] = {}
+        obligations: List[str] = []
+
+    @app.post("/api/ingest")
+    def ingest(req: IngestReq):
+        import datetime
+        r = prove_extraction(req.data, req.obligations) if req.obligations else None
+        ev = {"node": req.node, "source": req.source, "data": req.data,
+              "obligations": req.obligations,
+              "verified": (r.verified if r else None),
+              "failed": (r.failed_obligations if r else []),
+              "ts": datetime.datetime.now().strftime("%H:%M:%S")}
+        feed.append(ev)
+        del feed[:-300]
+        return {"verified": ev["verified"], "failed": ev["failed"]}
+
+    @app.get("/api/feed")
+    def get_feed():
+        return list(reversed(feed))[:120]
+
+    @app.post("/api/feed/clear")
+    def clear_feed():
+        feed.clear()
+        return {"ok": True}
+
+    # ── Data import: bulk-verify a real dataset against obligations ──
+    class DatasetReq(BaseModel):
+        records: List[Dict[str, Any]]
+        obligations: List[str]
+
+    @app.post("/api/verify_dataset")
+    def verify_dataset(req: DatasetReq):
+        import time
+        t0 = time.time()
+        passed = 0
+        violations: List[Dict[str, Any]] = []
+        for i, rec in enumerate(req.records):
+            r = prove_extraction(rec, req.obligations)
+            if r.verified:
+                passed += 1
+            elif len(violations) < 25:
+                violations.append({"row": i, "record": rec,
+                                   "failed": r.failed_obligations, "unproven": r.unproven_obligations})
+        dt = max(time.time() - t0, 1e-6)
+        return {"total": len(req.records), "passed": passed,
+                "failed": len(req.records) - passed, "violations": violations,
+                "obligations": len(req.obligations),
+                "rate": round(len(req.records) / dt)}
+
     # ── Prove module (Z3 point-check + spec consistency on any data) ──
     class ProveReq(BaseModel):
         data: Dict[str, Any] = {}
