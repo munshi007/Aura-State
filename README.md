@@ -22,8 +22,8 @@
 </p>
 
 <p align="center">
-  <img src="assets/demo-repair.gif" alt="Aura catches an injection path and auto-repairs it — VIOLATED to VERIFIED in one click" width="820">
-  <br><sub>Taint analysis finds an injection path to a payment tool → one-click auto-repair inserts a sanitizer → <b>VIOLATED → VERIFIED</b>.</sub>
+  <img src="assets/demo.gif" alt="End-to-end: verify an agent, taint flags a payment sink, one-click auto-repair, run trace, and a real SQL agent proven safe" width="860">
+  <br><sub>Verify → taint flags the payment sink → one-click <b>auto-repair</b> → run trace → a real <b>LangGraph SQL agent</b> proven read-only + injection-safe. &nbsp;·&nbsp; <a href="assets/demo.mp4">▶ watch the 1080p walkthrough</a></sub>
 </p>
 
 ```bash
