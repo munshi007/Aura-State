@@ -1,0 +1,4 @@
+{"name":"email-assistant","entry":"ReadEmail","edges":[["ReadEmail","Draft"],["Draft","Send"]],
+ "nodes":[{"id":"ReadEmail","kind":"extract","capability":"untrusted","obligations":[]},
+ {"id":"Draft","kind":"extract","capability":"plain","obligations":[]},
+ {"id":"Send","kind":"tool","tool_name":"email.send","side_effect":"external","obligations":[]}]}

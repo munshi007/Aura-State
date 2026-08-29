@@ -1,0 +1,6 @@
+{"name":"support-triage","entry":"Read","edges":[["Read","Triage"],["Triage","Route"],["Route","Page"],["Route","Queue"]],
+ "nodes":[{"id":"Read","kind":"extract","capability":"untrusted","obligations":[]},
+ {"id":"Triage","kind":"extract","capability":"plain","obligations":["urgency >= 1","urgency <= 5"]},
+ {"id":"Route","kind":"decision","capability":"plain","obligations":[]},
+ {"id":"Page","kind":"tool","tool_name":"pager.notify","side_effect":"external","obligations":[]},
+ {"id":"Queue","kind":"tool","tool_name":"queue.file","side_effect":"write","obligations":[]}]}

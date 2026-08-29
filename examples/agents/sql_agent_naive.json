@@ -1,0 +1,4 @@
+{"name":"sql-agent (naive)","entry":"Ask","edges":[["Ask","GenSQL"],["GenSQL","Execute"]],
+ "nodes":[{"id":"Ask","kind":"extract","capability":"untrusted","obligations":[]},
+ {"id":"GenSQL","kind":"extract","capability":"plain","obligations":[]},
+ {"id":"Execute","kind":"tool","tool_name":"db.query","side_effect":"external","obligations":[]}]}

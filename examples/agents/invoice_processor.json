@@ -1,0 +1,4 @@
+{"name":"invoice-processor","entry":"Parse","edges":[["Parse","Verify"],["Verify","Post"]],
+ "nodes":[{"id":"Parse","kind":"extract","capability":"untrusted","obligations":["total == subtotal + tax"]},
+ {"id":"Verify","kind":"sanitizer","capability":"sanitizer","obligations":[]},
+ {"id":"Post","kind":"tool","tool_name":"ledger.post","side_effect":"write","obligations":[]}]}

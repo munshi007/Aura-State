@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 from z3 import (
-    Solver, Int, Real, Bool, sat,
+    Solver, Int, Real, Bool, BoolVal, is_true, sat,
     And as Z3And, Or as Z3Or, Not as Z3Not,
     BoolRef,
 )
@@ -141,7 +141,10 @@ def _compile_node(node: ast.AST, z3_vars: Dict[str, Any]) -> Any:
         raise ObligationError(f"unknown or non-numeric variable '{node.id}'")
 
     if isinstance(node, ast.Constant):
-        if isinstance(node.value, bool) or isinstance(node.value, (int, float)):
+        # bool must be checked before int/float (bool is a subclass of int).
+        if isinstance(node.value, bool):
+            return BoolVal(node.value)
+        if isinstance(node.value, (int, float)):
             return node.value
         raise ObligationError(f"unsupported constant: {node.value!r}")
 
@@ -283,6 +286,31 @@ def _collect_vars(obligation: str) -> set:
     return {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)}
 
 
+def _bool_names(obligations: List[str]) -> set:
+    """Names that must be declared as Z3 Bool (not Real).
+
+    Without data types (the symbolic-SAT path), a variable is boolean when it's
+    compared to a bool literal (``read_only == True``), negated (``not flag``),
+    or used as a bare operand of and/or. Everything else stays numeric (Real).
+    """
+    out: set = set()
+    for o in obligations:
+        try:
+            tree = ast.parse(o, mode="eval")
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Compare):
+                operands = [node.left, *node.comparators]
+                if any(isinstance(x, ast.Constant) and isinstance(x.value, bool) for x in operands):
+                    out |= {x.id for x in operands if isinstance(x, ast.Name)}
+            elif isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not) and isinstance(node.operand, ast.Name):
+                out.add(node.operand.id)
+            elif isinstance(node, ast.BoolOp):
+                out |= {v.id for v in node.values if isinstance(v, ast.Name)}
+    return out
+
+
 def field_bounds_from_model(model) -> Dict[str, Dict[str, float]]:
     """Extract numeric bounds ({'ge','gt','le','lt'}) from a Pydantic model's
     field constraints, via its JSON schema. Feeds the hypotheses below so the
@@ -328,9 +356,12 @@ def prove_obligations_satisfiable(
     if not names:
         return SatResult(satisfiable=True)
 
-    z3_vars = {n: Real(n) for n in names}
+    bool_names = _bool_names(obligations)
+    z3_vars = {n: (Bool(n) if n in bool_names else Real(n)) for n in names}
     solver = Solver()
     for name, b in bounds.items():
+        if name in bool_names:
+            continue  # numeric bounds don't apply to boolean vars
         v = z3_vars[name]
         if "ge" in b:
             solver.add(v >= b["ge"])
@@ -352,7 +383,8 @@ def prove_obligations_satisfiable(
             reason="obligations are unsatisfiable within the declared bounds",
         )
     model = solver.model()
-    witness: Dict[str, float] = {}
+    witness: Dict[str, Any] = {}
     for name, v in z3_vars.items():
-        witness[name] = float(model.eval(v, model_completion=True).as_fraction())
+        val = model.eval(v, model_completion=True)
+        witness[name] = bool(is_true(val)) if name in bool_names else float(val.as_fraction())
     return SatResult(satisfiable=True, witness=witness)

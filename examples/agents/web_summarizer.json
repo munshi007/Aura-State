@@ -1,0 +1,4 @@
+{"name":"web-summarizer","entry":"Fetch","edges":[["Fetch","Extract"],["Extract","Store"]],
+ "nodes":[{"id":"Fetch","kind":"extract","capability":"untrusted","obligations":[]},
+ {"id":"Extract","kind":"extract","capability":"plain","obligations":[]},
+ {"id":"Store","kind":"tool","tool_name":"db.write","side_effect":"write","obligations":[]}]}

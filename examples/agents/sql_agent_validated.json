@@ -1,0 +1,6 @@
+{"name":"sql-agent (validated)","entry":"Ask","edges":[["Ask","GenSQL"],["GenSQL","Validate"],["Validate","Execute"],["Execute","Reply"]],
+ "nodes":[{"id":"Ask","kind":"extract","capability":"untrusted","obligations":[]},
+ {"id":"GenSQL","kind":"extract","capability":"plain","obligations":["read_only == True"]},
+ {"id":"Validate","kind":"sanitizer","capability":"sanitizer","obligations":[]},
+ {"id":"Execute","kind":"tool","tool_name":"db.query","side_effect":"external","obligations":[]},
+ {"id":"Reply","kind":"tool","tool_name":"chat.reply","side_effect":"read","obligations":[]}]}

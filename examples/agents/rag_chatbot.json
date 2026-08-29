@@ -1,0 +1,5 @@
+{"name":"rag-chatbot","entry":"Ask","edges":[["Ask","Retrieve"],["Retrieve","Answer"],["Answer","Reply"]],
+ "nodes":[{"id":"Ask","kind":"extract","capability":"untrusted","obligations":[]},
+ {"id":"Retrieve","kind":"tool","tool_name":"vectordb.search","side_effect":"read","obligations":[]},
+ {"id":"Answer","kind":"extract","capability":"plain","obligations":[]},
+ {"id":"Reply","kind":"tool","tool_name":"chat.reply","side_effect":"external","obligations":[]}]}

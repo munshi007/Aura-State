@@ -1,0 +1,17 @@
+name: "Aura agent check"
+description: "Statically verify AI agent designs — fail the build on prompt-injection paths, unproven obligations, or leaked secrets."
+branding:
+  icon: "shield"
+  color: "green"
+inputs:
+  paths:
+    description: "Space-separated flow files or globs to check (studio .json exports or .py agents)."
+    required: false
+    default: "agents/*.json"
+runs:
+  using: "composite"
+  steps:
+    - shell: bash
+      run: |
+        python -m pip install --quiet aura-state
+        aura-state check ${{ inputs.paths }}

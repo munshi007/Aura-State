@@ -68,3 +68,27 @@ def test_contract_flags_inconsistent_obligations_fixes_0002():
     good = next(n for n in c.nodes if n.name == "Good")
     assert bad.obligations_consistent is False    # self-contradictory -> flagged
     assert good.obligations_consistent is True
+
+
+def test_boolean_obligations_symbolic_and_pointwise():
+    """Boolean obligations (e.g. read_only == True) must compile — surfaced by
+    modelling the LangGraph SQL agent, whose GenSQL node proves read_only.
+
+    Before this fix prove_obligations_satisfiable declared every var as Real, so
+    `read_only == True` crashed Z3 with a parser error.
+    """
+    from aura_state.verification.proof_engine import (
+        prove_obligations_satisfiable, prove_extraction,
+    )
+    # symbolic SAT: a bool obligation is satisfiable; its negation-pair is not
+    assert prove_obligations_satisfiable(["read_only == True"]).satisfiable is True
+    assert prove_obligations_satisfiable(
+        ["read_only == True", "read_only == False"]
+    ).satisfiable is False
+    # bool + numeric mixed in one set still solves
+    assert prove_obligations_satisfiable(
+        ["amount >= 0", "amount <= 500", "read_only == True"]
+    ).satisfiable is True
+    # point check fails CLOSED on the adversarial (read_only False) input
+    assert prove_extraction({"read_only": True}, ["read_only == True"]).verified is True
+    assert prove_extraction({"read_only": False}, ["read_only == True"]).verified is False

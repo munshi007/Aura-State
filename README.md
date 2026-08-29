@@ -7,10 +7,10 @@
 
 <h1 align="center">Aura-State</h1>
 
-<p align="center"><b>Build LLM agents you can actually prove things about.</b></p>
+<p align="center"><b>Prove your AI agent can't be prompt-injected — before you ship it.</b></p>
 
 <p align="center">
-  Verification that runs <i>in the loop</i>, not the sidebar — Z3 proofs, CTL model checking, and conformal risk control gate every step. A value that can't be proven is never accepted.
+  A type-checker for LLM agents. Static analysis + formal proofs — Z3, CTL model checking, taint dataflow, conformal risk — over your agent's design. Catches injection paths, unsafe tool calls, hallucinated outputs, and leaked secrets. Runs locally, in CI, no API key.
 </p>
 
 <p align="center">
@@ -18,12 +18,42 @@
   <img alt="CI" src="https://github.com/munshi007/Aura-State/actions/workflows/ci.yml/badge.svg">
   <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-3d3aa8.svg">
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
-  <img alt="tests" src="https://img.shields.io/badge/tests-149%20passing-1c8a5b.svg">
+  <img alt="tests" src="https://img.shields.io/badge/tests-170%20passing-1c8a5b.svg">
+</p>
+
+<p align="center">
+  <img src="assets/demo-repair.gif" alt="Aura catches an injection path and auto-repairs it — VIOLATED to VERIFIED in one click" width="820">
+  <br><sub>Taint analysis finds an injection path to a payment tool → one-click auto-repair inserts a sanitizer → <b>VIOLATED → VERIFIED</b>.</sub>
 </p>
 
 ```bash
 pip install aura-state
 ```
+
+## Catch a prompt-injection in one command
+
+Point it at your agent design. It fails the build if an untrusted input can reach a real tool call unsanitized:
+
+```console
+$ aura-state check my_agent.json
+
+  aura-state check · sql-agent (naive) · 3 nodes
+
+  ✗ taint [Execute]: untrusted data from 'Ask' can reach sink 'Execute' with no sanitizer — injection path
+  ✗ obligation [GenSQL]: 'read_only' not proven — the generated SQL may not be read-only
+
+  ✗ NOT PROVEN — 2 blocking findings          # exit code 1 → CI fails
+```
+
+Drop it into CI and every PR is checked:
+
+```yaml
+# .github/workflows/aura.yml
+- uses: your-org/aura-state@v0
+  with: { paths: "agents/*.json" }
+```
+
+> We statically analyzed **7 common agent patterns** (SQL agent, RAG chatbot, support triage, email assistant, web summarizer…). **5 of 7 had an unguarded path from untrusted input to a real tool call** — the classic prompt-injection risk. Run `python examples/audit.py` yourself. Each is fixable with one sanitizer — which Aura's **auto-repair** inserts in a click.
 
 ## See it in 10 seconds (no API key)
 
@@ -45,6 +75,8 @@ pip install -e .
 
 | Demo | What it proves |
 |---|---|
+| `aura-state check examples/agents/*.json` | statically audits 7 common agent designs — **5 have injection paths** |
+| `python examples/audit.py` | the audit table you can drop in a launch post |
 | `python examples/verified_loop_demo.py` | Z3 rejects a hallucinated extraction in the loop, retries, accepts |
 | `python examples/taint_proof_demo.py` | untrusted input provably can't reach a dangerous tool |
 | `python examples/risk_abstention_demo.py` | acts only within a calibrated risk budget, else escalates to a human |
@@ -62,23 +94,33 @@ pip install "aura-state[ui]"
 aura-state ui          # opens http://127.0.0.1:8155 in your browser
 ```
 
-A full agent IDE — **build an agent, run it end-to-end, and prove it**, all in one
-local console. Not a sandbox you type into: it configures the real library and
-plugs into the agent you already have (see *Connect your agent*).
+A full agent IDE — **design an agent, prove it, run it, watch it execute, and hand it off to code** — all in one local console. Not a sandbox you type into: every check is the actual framework verifier.
 
-| Module | What you do | Runs |
-|---|---|---|
-| **Build** | design a typed agent — click a node, configure *everything* (provider · model · system prompt · extraction schema · Z3 obligations · capability · consensus · confidence · transitions); Verify the design | full `Node` config → Z3 · CTL · taint |
-| **Run** | enter an input → the **real engine** executes the whole flow (extract → prove → route → next node) with a live per-step trace + the emitted audit contract | `engine.process()` · any provider |
-| **Prove data** | Z3 point-check on any data + symbolic spec-consistency | Z3 SMT |
-| **Import data** | upload a CSV/JSON dataset → bulk-verify every row | Z3 at scale |
-| **Monitor** | a live feed of your **real agent's** outputs, verified as they happen | Z3 · SDK |
-| **Uncertainty** | conformal intervals + PASC | conformal · PASC |
-| **Risk control** | calibrate an act/abstain gate with a provable false-action bound | Conformal Risk Control |
-| **Settings** | providers, save/load agents as JSON | — |
+An agent is a typed graph of **four node kinds** — you name them anything:
 
-Every check is the actual framework verifier — no browser mockups. Keys are read
-from your environment; a local Ollama model needs no key at all.
+- **Extract** — an LLM step producing structured output (Z3 obligations + conformal calibration prove it)
+- **Decision** — a verified branching rule (compiled to a whitelisted evaluator, never `eval`)
+- **Tool** — a *declared* external call (`db.write`, `http.get`, `payment.refund`, …). Aura proves its preconditions; it does **not** execute it — you bind the real tool in your code / aura-runtime
+- **Sanitizer** — a taint boundary that makes a downstream tool safe
+
+<p align="center">
+  <img src="assets/demo-sqlagent.gif" alt="The LangGraph SQL agent modeled in Aura and verified: read-only + injection-safe" width="820">
+  <br><sub>A real OSS agent — the <b>LangGraph SQL agent</b> — modeled in Aura and <b>proven read-only + injection-safe</b>.</sub>
+</p>
+
+| Module | What you do |
+|---|---|
+| **Build** | drag a typed graph; configure each node (model · prompt · schema · Z3 obligations · tool + side-effect · retry · consensus); **Verify** runs Z3 + CTL + taint; **Auto-repair** fixes a taint violation in one click |
+| **Run** | feed input (text · **URL fetch** · file); Extract/Decision nodes run for real, Tool nodes show a proven **boundary** with a mock return; watch the path **light up on the canvas** with a step scrubber and a plain-English "why" |
+| **Runs · Evals** | every run persisted for replay; test-case suites with assertions |
+| **Prove · Dataset** | Z3 point-check any record; bulk-verify a dataset |
+| **Monitor** | live feed of your **real agent's** outputs (via the SDK), verified as they happen, with pass-rate charts |
+| **Calibrate · Memory** | conformal intervals + risk-controlled abstention; context-pruning preview |
+| **Audit** | a **tamper-evident, hash-chained** log of every action, exportable for compliance |
+| **Versions · Certify** | snapshot + diff designs; export a signed **proof certificate** (SHA-256) or the whole agent as **runnable Python** |
+| **SDK** | copy-paste snippets to use the library in code — the studio is optional |
+
+Keys are read from your environment; a local Ollama model needs no key at all. Nothing leaves your laptop.
 
 ### Connect your agent (any code · CrewAI · LangGraph)
 
@@ -409,7 +451,7 @@ Python 3.10+ required. Dependencies: `pydantic`, `instructor`, `openai`, `networ
 
 ```bash
 python -m pytest tests/ -v
-# 149 tests passing
+# 170 tests passing
 ```
 
 ## Works with any LLM provider

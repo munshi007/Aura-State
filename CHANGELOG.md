@@ -2,6 +2,18 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.6.0]
+
+### Added
+- **`aura-state check`** — a CI linter for agent designs. Statically verifies a flow (Z3 obligation consistency, CTL reachability/completion, taint dataflow, secret/PII scan) and exits non-zero on any blocking finding. Single or multi-file, `--json` output. Plus a composite **GitHub Action** (`action.yml`). ("mypy for AI agents.")
+- **First-class Tool nodes** — a declared external call (name, side-effect: read/write/external, mock return). Aura proves the call's preconditions; it does not execute it. Run shows tool nodes as proven **boundaries** with a mock, not fake extractions. Export-to-Python emits them as `# bind your real tool` stubs.
+- **Studio: full agent IDE** — 13 modules: Build (with **one-click auto-repair** of taint violations, tool quick-picker, per-node provider), Run (**visual execution trace on the canvas** with a scrubber + per-step "why"; Text/URL-fetch/File input + seed memory), Runs, Evals, Prove, Dataset, Monitor (observability charts), Calibrate, Memory, Versions (+ diff), **Audit** (tamper-evident hash-chained log + SIEM export), SDK, plus a guided tour and a plain-English glossary/"why" on every verdict.
+- **Export** an agent as a runnable Python script, or a signed **proof certificate** (SHA-256).
+- Example agents (`examples/agents/`) + `examples/audit.py` — a reproducible audit finding **5 of 7 common agent patterns have an unguarded prompt-injection path**. Includes the **LangGraph SQL agent** modeled and proven read-only + injection-safe.
+
+### Fixed
+- **Boolean obligations** (e.g. `read_only == True`) crashed the Z3 symbolic-SAT path (every variable was typed as a Real). The prover now infers boolean variables. Surfaced by modelling a real OSS agent.
+
 ## [0.5.0]
 
 ### Added
