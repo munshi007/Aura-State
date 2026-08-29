@@ -27,7 +27,7 @@
 </p>
 
 ```bash
-pip install aura-state
+pip install aura-state          # or:  uv pip install aura-state  ·  uv add aura-state
 ```
 
 ## Catch a prompt-injection in one command
@@ -43,6 +43,12 @@ $ aura-state check my_agent.json
   ✗ obligation [GenSQL]: 'read_only' not proven — the generated SQL may not be read-only
 
   ✗ NOT PROVEN — 2 blocking findings          # exit code 1 → CI fails
+```
+
+Zero install — run it straight from PyPI with [uv](https://docs.astral.sh/uv/):
+
+```bash
+uvx aura-state check agents/*.json          # no venv, no install — perfect for CI
 ```
 
 Drop it into CI and every PR is checked:
@@ -90,8 +96,8 @@ Prefer a console to code? Launch a local web app that runs the **real** verifier
 on your own machine. One command, nothing leaves your laptop:
 
 ```bash
-pip install "aura-state[ui]"
-aura-state ui          # opens http://127.0.0.1:8155 in your browser
+pip install "aura-state[ui]" && aura-state ui     # opens http://127.0.0.1:8155
+# or zero-install:  uvx --from "aura-state[ui]" aura-state ui
 ```
 
 A full agent IDE — **design an agent, prove it, run it, watch it execute, and hand it off to code** — all in one local console. Not a sandbox you type into: every check is the actual framework verifier.
