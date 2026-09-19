@@ -1,0 +1,11 @@
+{
+  "_comment": "A `tools/list` export from an agent wired to three MCP servers (fetch + filesystem + slack). Get yours with: the MCP `tools/list` request, or your client's tool inspector. Then: aura-state check dev_assistant.tools.json",
+  "tools": [
+    {"name": "fetch", "description": "Fetch a URL and return its contents as markdown",
+     "annotations": {"readOnlyHint": true, "openWorldHint": true}},
+    {"name": "read_file", "description": "Read the complete contents of a file from the local filesystem",
+     "annotations": {"readOnlyHint": true, "openWorldHint": false}},
+    {"name": "slack_post_message", "description": "Post a message to a Slack channel",
+     "annotations": {"readOnlyHint": false, "destructiveHint": false, "openWorldHint": true}}
+  ]
+}

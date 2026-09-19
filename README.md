@@ -18,7 +18,7 @@
   <img alt="CI" src="https://github.com/munshi007/Aura-State/actions/workflows/ci.yml/badge.svg">
   <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-3d3aa8.svg">
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
-  <img alt="tests" src="https://img.shields.io/badge/tests-170%20passing-1c8a5b.svg">
+  <img alt="tests" src="https://img.shields.io/badge/tests-185%20passing-1c8a5b.svg">
 </p>
 
 <p align="center">
@@ -59,7 +59,38 @@ Drop it into CI and every PR is checked:
   with: { paths: "agents/*.json" }
 ```
 
-> We statically analyzed **7 common agent patterns** (SQL agent, RAG chatbot, support triage, email assistant, web summarizer…). **5 of 7 had an unguarded path from untrusted input to a real tool call** — the classic prompt-injection risk. Run `python examples/audit.py` yourself. Each is fixable with one sanitizer — which Aura's **auto-repair** inserts in a click.
+## Catch the *lethal trifecta* — before an attacker does
+
+The [lethal trifecta](https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/) is the scariest failure mode for a tool-using agent: the moment it can (1) read **private data**, (2) ingest **untrusted content**, and (3) **communicate externally** — all on one reachable path — a prompt injection hidden in that content can read your data and ship it out. Everyone warns about it. **Aura proves your agent can't close it**, statically, before you ship:
+
+```console
+$ aura-state check dev_assistant.tools.json   # ← your MCP tools/list export
+
+  ✗ trifecta [slack_post_message]: lethal trifecta closed — prompt injection at 'fetch'
+    (untrusted) can reach external sink 'slack_post_message' unsanitized while 'read_file'
+    brings private data into scope. Path: fetch → Agent → slack_post_message.
+    Break it with a sanitizer between 'fetch' and 'slack_post_message'.
+```
+
+**Point it straight at your MCP setup.** Export your agent's `tools/list` (or hand it your client config) and Aura models the worst case — the LLM can call any tool in any order — then decides whether `fetch` + `filesystem` + `slack` together form an exfiltration channel. It never connects to or runs a server.
+
+> We statically analyzed **9 common agent patterns** (SQL agent, RAG chatbot, support copilot, PR-triage bot, email assistant…). **5 of 9 had an unguarded injection path**, and **3 of 9 close the full lethal trifecta**. Run `python examples/audit.py` yourself. Each is fixable with one sanitizer — which Aura's **auto-repair** inserts in a click.
+
+## Gate regressions, not existing debt
+
+Absolute checks are noisy on a legacy agent. Give `check` a baseline and it fails **only on paths this change newly opened** — the line that gets Aura into every agent repo's CI:
+
+```console
+$ aura-state check agents/*.json --baseline main-baseline.json
+
+  ✗ taint [send_email] [NEW]: untrusted data from 'read_web' can reach sink 'send_email'…
+  ✗ REGRESSION — 1 new blocking finding this change      # exit 1 → PR fails
+```
+
+```bash
+aura-state check agents/*.json --json > main-baseline.json   # on main
+aura-state check agents/*.json --baseline main-baseline.json # on the PR
+```
 
 ## See it in 10 seconds (no API key)
 

@@ -1,0 +1,5 @@
+{"name":"pr-triage-bot","entry":"ReadIssue","edges":[["ReadIssue","ReadRepoConfig"],["ReadRepoConfig","Analyze"],["Analyze","Comment"]],
+ "nodes":[{"id":"ReadIssue","kind":"tool","tool_name":"github.issue.read","side_effect":"read","obligations":[]},
+ {"id":"ReadRepoConfig","kind":"tool","tool_name":"repo.secrets.read","side_effect":"read","obligations":[]},
+ {"id":"Analyze","kind":"extract","capability":"plain","obligations":[]},
+ {"id":"Comment","kind":"tool","tool_name":"github.comment.post","side_effect":"external","obligations":[]}]}

@@ -30,7 +30,11 @@ def _load_flow(path):
     import os
     if path.endswith(".json"):
         with open(path) as f:
-            return json.load(f)
+            obj = json.load(f)
+        from .loaders.mcp import is_mcp_config, flow_from_mcp
+        if is_mcp_config(obj):
+            return flow_from_mcp(obj, name=os.path.basename(path)[:-5])
+        return obj
     if path.endswith(".py"):
         import importlib.util
         spec = importlib.util.spec_from_file_location("aura_flow_under_check", path)
@@ -53,6 +57,23 @@ def _load_flow(path):
     raise ValueError(f"unsupported file type: {path} (use .json or .py)")
 
 
+def _finding_key(f):
+    """Identity of a finding for baseline comparison — the property that
+    regressed, independent of the exact counterexample path in the message."""
+    return (f.get("check"), f.get("node") or "", f.get("severity"))
+
+
+def _load_baseline(path):
+    """Load a prior `aura-state check --json` output into {agent -> {finding_key}}."""
+    import json
+    with open(path) as f:
+        data = json.load(f)
+    base = {}
+    for a in data.get("agents", []):
+        base[a.get("agent")] = {_finding_key(f) for f in a.get("findings", [])}
+    return base
+
+
 def _cmd_check(args):
     import json
     import logging
@@ -62,6 +83,14 @@ def _cmd_check(args):
     def c(code, s):
         return s if args.no_color or not sys.stdout.isatty() else f"\033[{code}m{s}\033[0m"
     marks = {"critical": c("31", "✗"), "high": c("31", "✗"), "medium": c("33", "▲"), "low": c("33", "▲")}
+
+    baseline = None
+    if args.baseline:
+        try:
+            baseline = _load_baseline(args.baseline)
+        except Exception as e:
+            print(f"aura-state check: could not read baseline {args.baseline}: {e}", file=sys.stderr)
+            return 2
 
     reports = []
     for path in args.paths:
@@ -78,29 +107,57 @@ def _cmd_check(args):
         print(json.dumps(out, indent=2))
         return 0 if out["verified"] else 1
 
-    failed = 0
+    failed = 0            # agents with blocking issues (absolute mode)
+    regressed = 0         # agents with NEW blocking findings vs the baseline
     for path, report in reports:
+        known = baseline.get(report.agent, set()) if baseline is not None else set()
         head = f"aura-state check · {report.agent} · {report.nodes} nodes"
         head += "" if len(reports) == 1 else f"  ({path})"
         print(f"\n  {head}\n")
         if not report.findings:
             print("  " + c("32", "✓ PROVEN") + " — no findings.")
+        new_blocking = 0
         for f in report.findings:
             loc = f" [{f.node}]" if f.node else ""
-            print(f"  {marks.get(f.severity, '•')} {c('2', f.check + loc)}: {f.message}")
-        if not report.verified:
-            failed += 1
-            blocking = sum(1 for f in report.findings if f.severity in ("critical", "high"))
-            print("\n  " + c("31", f"✗ NOT PROVEN — {blocking} blocking finding(s)"))
-        elif report.findings:
-            print("\n  " + c("33", f"⚠ {len(report.findings)} advisory finding(s)") + " — no blocking issues.")
+            is_new = baseline is not None and _finding_key(f.__dict__) not in known
+            tag = ""
+            if baseline is not None:
+                tag = c("31", " [NEW]") if is_new else c("2", " [known]")
+            if is_new and f.severity in ("critical", "high"):
+                new_blocking += 1
+            print(f"  {marks.get(f.severity, '•')} {c('2', f.check + loc)}{tag}: {f.message}")
+
+        blocking = sum(1 for f in report.findings if f.severity in ("critical", "high"))
+        if baseline is not None:
+            # Regression gate: only NEW blocking findings fail the build.
+            if new_blocking:
+                regressed += 1
+                print("\n  " + c("31", f"✗ REGRESSION — {new_blocking} new blocking finding(s) this change"))
+            elif blocking:
+                print("\n  " + c("33", f"⚠ {blocking} pre-existing blocking finding(s)") + " — no new regressions.")
+            elif report.findings:
+                print("\n  " + c("33", f"⚠ {len(report.findings)} advisory finding(s)") + " — no new regressions.")
+            else:
+                print("\n  " + c("32", "✓ no regressions"))
+        else:
+            if not report.verified:
+                failed += 1
+                print("\n  " + c("31", f"✗ NOT PROVEN — {blocking} blocking finding(s)"))
+            elif report.findings:
+                print("\n  " + c("33", f"⚠ {len(report.findings)} advisory finding(s)") + " — no blocking issues.")
 
     if len(reports) > 1:
-        ok = len(reports) - failed
         print("\n  " + "─" * 40)
-        print(f"  {c('32', str(ok)+' proven')}, {c('31', str(failed)+' failed')} of {len(reports)} agents.\n")
+        if baseline is not None:
+            print(f"  {c('31', str(regressed)+' regressed')} of {len(reports)} agents "
+                  f"(new blocking findings vs baseline).\n")
+        else:
+            ok = len(reports) - failed
+            print(f"  {c('32', str(ok)+' proven')}, {c('31', str(failed)+' failed')} of {len(reports)} agents.\n")
     else:
         print()
+    if baseline is not None:
+        return 1 if regressed else 0
     return 1 if failed else 0
 
 
@@ -123,6 +180,7 @@ def main(argv=None):
     p_c = sub.add_parser("check", help="statically verify agent designs (CI-friendly; exits non-zero if not proven)")
     p_c.add_argument("paths", nargs="+", help="flow .json files (studio export) or .py modules exposing flow/FLOW or build()")
     p_c.add_argument("--json", action="store_true", help="machine-readable JSON output")
+    p_c.add_argument("--baseline", metavar="FILE", help="a prior `check --json` output; fail only on NEW blocking findings (regression gate for PRs)")
     p_c.add_argument("--no-color", action="store_true", help="disable ANSI colors")
     p_c.set_defaults(func=_cmd_check)
 

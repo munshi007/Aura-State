@@ -57,6 +57,9 @@ export const verifyGraph = (nodes: any[], edges: string[][], entry?: string) =>
 export const runFlow = (nodes: any[], edges: string[][], entry: string, input: string, provider: string, name?: string, memory?: any) =>
   post("/api/run", { nodes, edges, entry, input, provider, name, memory: memory || {} });
 export const fetchUrl = (url: string) => post("/api/fetch_url", { url });
+// Import an MCP tool surface (tools/list result, client config, or bare list)
+// into an Aura flow — models the worst case (planner can call any tool).
+export const mcpImport = (config: any, name?: string) => post("/api/mcp/import", { config, name });
 
 export const callAgent = (body: any) => post("/api/agent", body);
 export const proveData = (data: any, obligations: string[]) => post("/api/prove", { data, obligations });

@@ -85,6 +85,7 @@ interface State {
   tourOpen: boolean;
   agentMenuOpen: boolean;
   newAgentOpen: boolean;
+  mcpOpen: boolean;
   diffOverlay: Record<string, "added" | "changed">;
   repairing: boolean;
   toast: string | null;
@@ -93,6 +94,7 @@ interface State {
   graphNodes: () => any[];
   loadTemplate: (key: string) => void;
   importAgent: (flow: any) => void;
+  importMcp: (text: string) => Promise<void>;
   newBlank: () => void;
   duplicateAgent: () => Promise<void>;
   renameAgent: (name: string) => Promise<void>;
@@ -152,6 +154,7 @@ export const useStore = create<State>((setState, getState) => ({
   tourOpen: false,
   agentMenuOpen: false,
   newAgentOpen: false,
+  mcpOpen: false,
   diffOverlay: {},
   repairing: false,
   toast: null,
@@ -204,6 +207,38 @@ export const useStore = create<State>((setState, getState) => ({
   importAgent: (f) => {
     if (!f || !f.nodes) return;
     setState({ agentName: f.name || "imported-agent", provider: f.provider || "ollama", nodes: f.nodes, edges: f.edges || [], entry: deriveEntry(f.nodes, f.edges || [], f.entry), invariants: f.invariants || [], selectedId: f.nodes[0]?.id ?? null, verify: null, statusByNode: {}, runTrace: null, diffOverlay: {}, module: "build", newAgentOpen: false, agentMenuOpen: false });
+  },
+  importMcp: async (text) => {
+    let cfg: any = text;
+    try { cfg = JSON.parse(text); } catch { /* backend also parses strings */ }
+    const flow = await api.mcpImport(cfg);
+    if (!flow || flow.error || !flow.nodes) {
+      setState({ toast: flow?.error || "Couldn't read that as MCP tools." });
+      return;
+    }
+    // The backend returns minimal nodes (id/kind/tool_name/side_effect/description);
+    // inflate to full canvas nodes and lay them out as a hub + a column of tools.
+    const tools = flow.nodes.filter((n: any) => n.id !== "Agent");
+    const nodes: AgentNode[] = flow.nodes.map((n: any) => {
+      const isTool = n.kind === "tool";
+      const idx = tools.findIndex((t: any) => t.id === n.id);
+      return {
+        id: n.id, kind: n.kind || "tool",
+        capability: isTool ? (n.side_effect === "read" ? "plain" : "sink") : (n.capability || "plain"),
+        system_prompt: n.description || n.id, model: "qwen2.5:0.5b", provider: "ollama",
+        temperature: 0, max_tokens: 256, fields: [], obligations: [], sandbox_rule: "",
+        consensus: 1, confidence: 0.9, retry: 1,
+        tool_name: n.tool_name, side_effect: n.side_effect,
+        x: n.id === "Agent" ? 90 : 420, y: n.id === "Agent" ? 200 : 60 + idx * 92,
+      } as AgentNode;
+    });
+    setState({
+      agentName: flow.name || "mcp-agent", provider: "ollama", nodes, edges: (flow.edges || []).map((e: string[]) => [...e]),
+      entry: deriveEntry(nodes, flow.edges || [], flow.entry), invariants: [], selectedId: "Agent",
+      verify: null, statusByNode: {}, runTrace: null, diffOverlay: {}, module: "build",
+      mcpOpen: false, agentMenuOpen: false, newAgentOpen: false,
+    });
+    await getState().runVerify();
   },
   newBlank: () => setState({
     agentName: "untitled-agent", provider: "ollama", nodes: [], edges: [], entry: "", invariants: [],
@@ -335,7 +370,14 @@ export const useStore = create<State>((setState, getState) => ({
     const s = getState();
     setState({ verifying: true });
     const spec = s.toSpec();
-    const graphNodes = s.nodes.map((n) => ({ id: n.id, capability: n.capability, obligations: n.obligations }));
+    // Send the richer node shape so the backend's trifecta check sees tool roles
+    // (kind / tool_name / side-effect), not just capability.
+    const graphNodes = s.nodes.map((n) => ({
+      id: n.id, capability: n.capability, obligations: n.obligations,
+      kind: n.kind, tool_name: n.tool_name, side_effect: n.side_effect,
+      data_class: (n as any).data_class, exfil: (n as any).exfil,
+      description: n.system_prompt,
+    }));
     try {
       const res = await api.verifyGraph(graphNodes, spec.edges, spec.entry);
       const status: Record<string, Status> = {};
@@ -348,6 +390,12 @@ export const useStore = create<State>((setState, getState) => ({
       (res.taint?.violations || []).forEach((v: any) => {
         const hit = s.nodes.find((n) => n.capability === "sink");
         if (hit) status[hit.id] = "violated";
+      });
+      // Trifecta: mark the three implicated nodes so the canvas shows the channel.
+      (res.trifecta?.findings || []).forEach((f: any) => {
+        [f.untrusted, f.private, f.exfil].forEach((id: string) => {
+          if (id && status[id] !== undefined) status[id] = "violated";
+        });
       });
       setState({ verify: res, statusByNode: status, verifying: false });
       const tv = res.taint?.verdict === "PROVEN" ? "proven" : "violated";

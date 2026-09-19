@@ -21,6 +21,7 @@ from .verification.temporal_verifier import (
     reachability, eventual_completion, find_dead_ends, PropertyResult,
 )
 from .verification.proof_engine import prove_obligations_satisfiable
+from .verification.trifecta import analyze_trifecta
 
 
 SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
@@ -146,6 +147,24 @@ def check_flow(flow: Dict[str, Any]) -> CheckReport:
                 findings.append(Finding("obligation", "high", n["id"],
                                         f"node '{n['id']}' obligations are contradictory: {res.reason or ''}".strip()))
 
+    # 4b. Lethal trifecta — private data + untrusted content + external comms on
+    #     one reachable execution (prompt injection can exfiltrate). The flagship
+    #     property: the injection leg reuses provenance/taint, the private leg is
+    #     the payload.
+    tri = analyze_trifecta(nodes, edges, flow.get("entry"))
+    for tf in tri.findings:
+        findings.append(Finding(
+            "trifecta", "critical", tf.exfil,
+            f"lethal trifecta closed — {tf.detail}. "
+            f"Path: {' → '.join(tf.path)}. "
+            f"Break it with a sanitizer between '{tf.untrusted}' and '{tf.exfil}', "
+            f"or remove one of the three capabilities."))
+    for uid in tri.unclassified:
+        findings.append(Finding(
+            "trifecta", "low", uid,
+            f"tool '{uid}' reads data but its trust class is unknown — "
+            f"tag it `data_class: private|untrusted|public` so the trifecta check is sound"))
+
     # 5. Agent-level invariants consistency.
     inv = list(flow.get("invariants", []))
     if inv and not prove_obligations_satisfiable(inv).satisfiable:
@@ -167,6 +186,7 @@ def check_flow(flow: Dict[str, Any]) -> CheckReport:
     verified = len(blocking) == 0
     summary = {
         "taint": "violated" if any(f.check == "taint" for f in findings) else "proven",
+        "trifecta": "closed" if not tri.verified else "broken",
         "reachability": "violated" if any(f.check == "reachability" for f in findings) else "proven",
         "obligations": "violated" if any(f.check == "obligation" for f in findings) else "proven",
         "policy": f"{sum(1 for f in findings if f.check == 'policy')} flagged",

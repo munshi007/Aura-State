@@ -2,6 +2,14 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.7.0]
+
+### Added
+- **Lethal-trifecta analysis** — the flagship. Statically decides whether an agent can close Simon Willison's *lethal trifecta* (private-data access + untrusted-content exposure + external communication on one reachable path → a prompt injection can exfiltrate). Reuses the taint/provenance engine for the injection leg and a role classifier for the private/exfil legs; reports the exact three nodes and the path. Surfaced in `aura-state check` as a critical finding and in `check_flow`'s summary. Tool roles are inferred from name/side-effect and are **override-able** per node (`data_class`, `exfil`); unclassifiable read-tools are surfaced as advisories, never dropped (fail-closed).
+- **MCP importer** — `aura-state check` now auto-detects an MCP tool surface (`tools/list` result, a client config with tool lists, or a bare tool array) and models the worst case: an LLM planner hub that can call any tool in any order. Answers "do `fetch` + `filesystem` + `slack` together form an exfiltration channel?" statically — it never connects to or runs a server. `aura_state.loaders.mcp.flow_from_mcp`.
+- **Regression gate** — `aura-state check --baseline <prior --json>` fails the build only on **NEW** blocking findings (marking each `[NEW]` / `[known]`), so a legacy agent's existing debt doesn't block PRs while any newly-opened injection/trifecta path does. The GitHub Action takes an optional `baseline` input.
+- Two new example agents (`support_copilot`, `pr_triage_bot`) that exhibit the full trifecta, and an MCP example (`examples/mcp/`). `examples/audit.py` now reports the trifecta count (3 of 9 patterns close it).
+
 ## [0.6.0]
 
 ### Added

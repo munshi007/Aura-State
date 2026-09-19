@@ -6,7 +6,7 @@ import { Run, Prove, Data, Monitor, Calibrate, Settings, Sdk, Memory } from "./m
 import { Runs, Evals, Versions, Audit } from "./modules/Governance";
 import Palette from "./Palette";
 import Tour from "./Tour";
-import { AgentMenu, NewAgentModal } from "./AgentMenu";
+import { AgentMenu, NewAgentModal, McpModal } from "./AgentMenu";
 
 const RAIL: { id: Module; icon: string; label: string }[] = [
   { id: "build", icon: "build", label: "Build" },
@@ -152,6 +152,7 @@ export default function App() {
       {paletteOpen && <Palette />}
       {tourOpen && <Tour />}
       <NewAgentModal />
+      <McpModal />
       <Toast />
     </div>
   );

@@ -61,6 +61,13 @@ class NodeSpec(BaseModel):
     id: str
     capability: str = "plain"          # plain | untrusted | sink | sanitizer
     obligations: List[str] = []
+    # richer fields (optional) so the trifecta check sees tool roles
+    kind: Optional[str] = None         # extract | decision | tool | sanitizer
+    tool_name: Optional[str] = None
+    side_effect: Optional[str] = None  # read | write | external
+    data_class: Optional[str] = None   # private | untrusted | public (override)
+    exfil: Optional[bool] = None       # override: this node communicates externally
+    description: Optional[str] = None
 
 
 class GraphSpec(BaseModel):
@@ -142,6 +149,21 @@ def create_app() -> "FastAPI":
                     "reason": res.reason,
                 })
 
+        # 3b. Lethal trifecta — private + untrusted + external comms on one path.
+        from ..verification.trifecta import analyze_trifecta
+        tri_nodes = [n.model_dump(exclude_none=True) for n in spec.nodes]
+        tri = analyze_trifecta(tri_nodes, [list(e) for e in spec.edges], spec.entry)
+        trifecta_out = {
+            "verdict": "PROVEN" if tri.verified else "CLOSED",
+            "findings": [
+                {"untrusted": f.untrusted, "private": f.private, "exfil": f.exfil,
+                 "path": f.path, "shares_path": f.shares_path, "detail": f.detail}
+                for f in tri.findings
+            ],
+            "unclassified": tri.unclassified,
+            "roles": tri.roles,
+        }
+
         # 4. The compiled contract (real design->spec compiler).
         contract = engine.compile_contract(properties=props)
 
@@ -149,8 +171,32 @@ def create_app() -> "FastAPI":
             "taint": taint_out,
             "ctl": ctl_out,
             "obligations": obligations_out,
+            "trifecta": trifecta_out,
             "contract": contract.model_dump(),
         })
+
+    class McpImportReq(BaseModel):
+        config: Any
+        name: Optional[str] = None
+
+    @app.post("/api/mcp/import")
+    def mcp_import(req: McpImportReq):
+        """Turn a pasted MCP tool surface (tools/list result, client config, or
+        bare tool list) into an Aura flow the studio can load and verify."""
+        from ..loaders.mcp import is_mcp_config, flow_from_mcp
+        cfg = req.config
+        if isinstance(cfg, str):
+            import json as _json
+            try:
+                cfg = _json.loads(cfg)
+            except Exception as e:
+                return JSONResponse({"error": f"not valid JSON: {str(e)[:120]}"}, status_code=400)
+        if not is_mcp_config(cfg):
+            return JSONResponse(
+                {"error": "doesn't look like MCP tools — expected a tools/list result, "
+                          "an mcpServers config with tools, or a list of {name, description}"},
+                status_code=400)
+        return flow_from_mcp(cfg, name=req.name or "mcp-agent")
 
     # ── Live Agent module ──
     @app.get("/api/providers")

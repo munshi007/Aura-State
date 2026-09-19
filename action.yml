@@ -5,13 +5,21 @@ branding:
   color: "green"
 inputs:
   paths:
-    description: "Space-separated flow files or globs to check (studio .json exports or .py agents)."
+    description: "Space-separated flow files or globs to check (studio .json exports, .py agents, or MCP tools/list JSON)."
     required: false
     default: "agents/*.json"
+  baseline:
+    description: "Optional prior `check --json` output. When set, the build fails only on NEW blocking findings (regression gate) instead of any existing one."
+    required: false
+    default: ""
 runs:
   using: "composite"
   steps:
     - shell: bash
       run: |
         python -m pip install --quiet aura-state
-        aura-state check ${{ inputs.paths }}
+        if [ -n "${{ inputs.baseline }}" ]; then
+          aura-state check ${{ inputs.paths }} --baseline "${{ inputs.baseline }}"
+        else
+          aura-state check ${{ inputs.paths }}
+        fi

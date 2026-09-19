@@ -1,0 +1,5 @@
+{"name":"support-copilot","entry":"ReadTicket","edges":[["ReadTicket","LookupAccount"],["LookupAccount","Draft"],["Draft","PostSlack"]],
+ "nodes":[{"id":"ReadTicket","kind":"tool","tool_name":"zendesk.ticket.read","side_effect":"read","obligations":[]},
+ {"id":"LookupAccount","kind":"tool","tool_name":"crm.customer.lookup","side_effect":"read","obligations":[]},
+ {"id":"Draft","kind":"extract","capability":"plain","obligations":[]},
+ {"id":"PostSlack","kind":"tool","tool_name":"slack.post","side_effect":"external","obligations":[]}]}

@@ -172,3 +172,41 @@ def test_audit_chain_appends_and_detects_tampering(client, tmp_path, monkeypatch
     entries = client.get("/api/audit").json()
     # newest first; every entry seals the previous hash
     assert entries[0]["prev_hash"] == entries[1]["hash"]
+
+
+# ── Trifecta + MCP import (0.7.0) ─────────────────────────────────────────────
+
+TRIFECTA_SPEC = {
+    "entry": "Fetch",
+    "edges": [["Fetch", "Read"], ["Read", "Send"]],
+    "nodes": [
+        {"id": "Fetch", "kind": "tool", "tool_name": "web.fetch", "side_effect": "read", "capability": "plain"},
+        {"id": "Read", "kind": "tool", "tool_name": "db.query", "side_effect": "read", "capability": "plain"},
+        {"id": "Send", "kind": "tool", "tool_name": "email.send", "side_effect": "external", "capability": "sink"},
+    ],
+}
+
+
+def test_verify_reports_closed_trifecta(client):
+    r = client.post("/api/verify", json=TRIFECTA_SPEC).json()
+    assert r["trifecta"]["verdict"] == "CLOSED"
+    f = r["trifecta"]["findings"][0]
+    assert (f["untrusted"], f["private"], f["exfil"]) == ("Fetch", "Read", "Send")
+
+
+def test_mcp_import_builds_hub_flow(client):
+    cfg = {"tools": [
+        {"name": "fetch", "description": "Fetch a URL", "annotations": {"readOnlyHint": True}},
+        {"name": "read_file", "description": "Read a local file", "annotations": {"readOnlyHint": True}},
+        {"name": "slack_post_message", "description": "Post to Slack", "annotations": {"readOnlyHint": False}},
+    ]}
+    flow = client.post("/api/mcp/import", json={"config": cfg}).json()
+    ids = {n["id"] for n in flow["nodes"]}
+    assert "Agent" in ids and "slack_post_message" in ids
+    # the imported flow closes the trifecta when verified
+    r = client.post("/api/verify", json={"nodes": flow["nodes"], "edges": flow["edges"], "entry": flow["entry"]}).json()
+    assert r["trifecta"]["verdict"] == "CLOSED"
+
+
+def test_mcp_import_rejects_non_mcp(client):
+    assert client.post("/api/mcp/import", json={"config": {"nodes": []}}).status_code == 400

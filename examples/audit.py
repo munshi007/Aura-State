@@ -25,21 +25,26 @@ def main() -> None:
             flow = json.load(f)
         r = check_flow(flow)
         inj = sum(1 for x in r.findings if x.check == "taint")
-        rows.append((flow.get("name", os.path.basename(p)), r.verified, inj, len(r.findings), r))
+        tri = sum(1 for x in r.findings if x.check == "trifecta" and x.severity == "critical")
+        rows.append((flow.get("name", os.path.basename(p)), r.verified, inj, tri, len(r.findings), r))
 
     w = max(len(name) for name, *_ in rows) + 2
     print(f"\n  Aura static analysis · {len(rows)} agent designs\n")
-    print(f"  {'agent'.ljust(w)}{'verdict'.ljust(14)}{'injection paths'.ljust(17)}findings")
-    print("  " + "─" * (w + 40))
-    for name, ok, inj, total, _ in rows:
+    print(f"  {'agent'.ljust(w)}{'verdict'.ljust(14)}{'injection'.ljust(11)}{'trifecta'.ljust(10)}findings")
+    print("  " + "─" * (w + 42))
+    for name, ok, inj, tri, total, _ in rows:
         verdict = "✓ PROVEN" if ok else "✗ NOT PROVEN"
-        print(f"  {name.ljust(w)}{verdict.ljust(14)}{str(inj).ljust(17)}{total}")
+        print(f"  {name.ljust(w)}{verdict.ljust(14)}{str(inj).ljust(11)}{('YES' if tri else '·').ljust(10)}{total}")
 
     vulnerable = [name for name, ok, *_ in rows if not ok]
     with_injection = [name for name, ok, inj, *_ in rows if inj > 0]
-    print("\n  " + "─" * (w + 40))
+    with_trifecta = [name for name, ok, inj, tri, *_ in rows if tri > 0]
+    print("\n  " + "─" * (w + 42))
     print(f"  {len(with_injection)}/{len(rows)} designs have an unguarded injection path "
           f"(untrusted input → a real tool call with no sanitizer).")
+    print(f"  {len(with_trifecta)}/{len(rows)} close the lethal trifecta "
+          f"(private data + untrusted content + external comms on one path → "
+          f"an injection can exfiltrate).")
     print(f"  {len(vulnerable)}/{len(rows)} fail verification.\n")
     print("  Every one is fixable by inserting a sanitizer — which Aura's auto-repair does in one step.\n")
 
