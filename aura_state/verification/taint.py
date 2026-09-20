@@ -59,13 +59,16 @@ def analyze_taint(engine) -> TaintResult:
         # dangerous sink reached while tainted is a violation.
         stack = [(src, [src])]
         seen = set()
+        recorded = set()          # (src, sink) already reported -> avoid dup paths
         while stack:
             node, path = stack.pop()
             nd = nodes[node]
 
             if node != src and _flag(nd, "dangerous_sink"):
-                violations.append(TaintViolation(source=src, sink=node, path=path))
-                continue  # record; don't propagate past the sink on this path
+                if node not in recorded:
+                    recorded.add(node)
+                    violations.append(TaintViolation(source=src, sink=node, path=path))
+                continue  # record once; don't propagate past the sink on this path
 
             if node != src and _flag(nd, "sanitizer"):
                 continue  # taint cleaned here -> downstream is safe

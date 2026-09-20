@@ -106,11 +106,15 @@ def compile_pydantic_model(
         python_type = _resolve_type(prop)
         description = prop.get("description", "")
         default_value = prop.get("default", ...)
-        
+
         # Build Field kwargs
         field_kwargs = {"description": description}
-        
-        if "enum" in prop:
+
+        if prop.get("enum"):
+            # Enforce the enum with Literal so out-of-enum values FAIL validation
+            # (was only recorded in json_schema_extra, i.e. not enforced).
+            from typing import Literal
+            python_type = Literal[tuple(prop["enum"])]
             field_kwargs["json_schema_extra"] = {"enum": prop["enum"]}
         
         if "minimum" in prop:

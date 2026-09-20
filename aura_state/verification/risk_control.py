@@ -24,7 +24,7 @@ family-wise guarantee via Bonferroni-corrected Hoeffding p-values.
 """
 import math
 from dataclasses import dataclass
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence
 
 
 @dataclass

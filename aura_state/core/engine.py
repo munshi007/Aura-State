@@ -384,12 +384,16 @@ class AuraEngine:
                         f"[{current_state}] extraction failed verification after {iterations} attempts "
                         f"(obligations: {node.obligations}); refusing to act on unverified data")
 
-            # ── STAGE 3: Conformal interval over consensus runs ──
+            # ── STAGE 3: Consensus dispersion across repeated runs ──
+            # NOTE: re-running the SAME input measures run-to-run DISPERSION
+            # (agreement), NOT predictive coverage — it is not a calibrated
+            # conformal guarantee (that needs a held-out calibration set). Kept
+            # under an honest key so downstream code doesn't over-trust it.
             if len(consensus_runs) >= 2:
                 cres: ConformalResult = conformal_from_extractions(
                     [r.model_dump() for r in consensus_runs], confidence=node.confidence
                 )
-                report["conformal"] = cres
+                report["consensus_dispersion"] = cres
         elif node.sandbox_rule or node.obligations:
             # No LLM extraction, but the node still carries a deterministic
             # contract -- check it against `memory` (fixes the flagship
@@ -415,7 +419,7 @@ class AuraEngine:
         # to act on, route to the escalation node instead of guessing. Conformal
         # Risk Control (arXiv:2208.02814).
         if node.risk_controller is not None and node.escalation_node is not None:
-            score = node.risk_score(extracted_data, report.get("conformal"), memory)
+            score = node.risk_score(extracted_data, report.get("consensus_dispersion"), memory)
             if score is not None and node.risk_controller.should_abstain(score):
                 esc = node.escalation_node
                 report["abstained"] = True

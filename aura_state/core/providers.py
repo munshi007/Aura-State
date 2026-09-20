@@ -87,8 +87,18 @@ class CostTracker:
         if not success:
             cost.total_failures += 1
         
-        # Set pricing if known
-        pricing = MODEL_PRICING.get(model, {})
+        # Set pricing if known; warn (once) on an unpriced model so a silent $0
+        # isn't mistaken for a real cost and doesn't defeat the budget check.
+        pricing = MODEL_PRICING.get(model)
+        if pricing is None:
+            warned = getattr(self, "_unpriced_warned", None)
+            if warned is None:
+                warned = self._unpriced_warned = set()
+            if model not in warned:
+                warned.add(model)
+                logger.warning(f"no pricing for model '{model}' — cost recorded as $0 "
+                               f"(add it to MODEL_PRICING for real cost/budget tracking)")
+            pricing = {}
         cost.input_cost_per_m = pricing.get("input", 0.0)
         cost.output_cost_per_m = pricing.get("output", 0.0)
         
@@ -258,9 +268,15 @@ class LLMProvider:
                         messages=messages,
                         max_retries=max_retries,
                     )
+                    # instructor attaches the raw completion here — read real
+                    # usage off it instead of recording the call as 0 tokens.
+                    raw = getattr(result, "_raw_response", None)
                 latency_ms = (time.time() * 1000) - start_ms
 
                 in_tokens, out_tokens = self._usage_from_completion(raw)
+                if in_tokens == 0 and out_tokens == 0:
+                    logger.warning(f"[{node_name}] token usage unavailable for '{current_model}' — "
+                                   f"cost/telemetry for this call is not counted")
                 self._cost_tracker.record(
                     node_name=node_name,
                     model=current_model,

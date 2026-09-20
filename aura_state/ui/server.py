@@ -653,7 +653,7 @@ def create_app() -> "FastAPI":
                     "verified": rep.get("extraction_verified", rep.get("contract_verified")),
                     "iterations": rep.get("iterations"),
                     "abstained": rep.get("abstained", False)}
-            conf = rep.get("conformal")
+            conf = rep.get("consensus_dispersion")
             if conf is not None:
                 step["conformal"] = {"covered": list(getattr(conf, "covered_fields", [])),
                                      "lower": _clean(getattr(conf, "lower", None)),

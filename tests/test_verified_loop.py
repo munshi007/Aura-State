@@ -93,7 +93,9 @@ def test_conformal_interval_produced_over_consensus_runs():
     e._transitions["Priced"] = ["END"]
     e.process("Priced", "quote please")
     rep = e.verification_reports()[-1]
-    assert "conformal" in rep  # a ConformalResult was computed in the loop
+    # Re-running the same input measures dispersion (agreement), not calibrated
+    # coverage — recorded under an honest key, not "conformal".
+    assert "consensus_dispersion" in rep
 
 
 def test_decision_node_rule_fires_without_extraction():

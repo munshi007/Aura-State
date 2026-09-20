@@ -2,6 +2,15 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.8.1]
+
+### Fixed
+- **Enum constraints are now enforced.** `schema_compiler` compiles a JSON-Schema `enum` to `typing.Literal`, so an out-of-enum value fails validation (previously the enum was only stored in `json_schema_extra` and never checked).
+- **Honest telemetry** (tasks 0004/0007): the per-node "conformal" report over repeated consensus runs is relabelled `consensus_dispersion` — re-running the same input measures agreement/dispersion, not calibrated predictive coverage. Provider cost tracking now reads real token usage off the fallback `create()` path (`_raw_response`) instead of silently recording 0 tokens, and warns once on an unpriced model instead of a silent $0.
+- Deduped `analyze_taint` (the same source→sink reached by multiple paths was reported repeatedly); removed an unused import.
+
+_Not changed (intentional):_ a decision node whose `sandbox_rule` evaluates falsy is a valid routing branch, not a provable-obligation failure, so it is not treated as a hard verification error (its Z3 obligations still fail closed).
+
 ## [0.8.0]
 
 ### Added
