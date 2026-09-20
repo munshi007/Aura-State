@@ -63,6 +63,10 @@ export const mcpImport = (config: any, name?: string) => post("/api/mcp/import",
 // Import an agent's tool surface from pasted source (LangGraph/CrewAI/LangChain).
 // Parsed statically on the backend — the code is never executed.
 export const codeImport = (source: string, name?: string) => post("/api/code/import", { source, name });
+// Full static analyzer (aura-state check) over a flow — findings carry a stable
+// `key` for baseline/regression diffing in the Audit module.
+export const checkFlow = (nodes: any[], edges: string[][], entry?: string) =>
+  post("/api/check", { nodes, edges, entry });
 
 export const callAgent = (body: any) => post("/api/agent", body);
 export const proveData = (data: any, obligations: string[]) => post("/api/prove", { data, obligations });

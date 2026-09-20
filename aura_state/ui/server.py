@@ -175,6 +175,19 @@ def create_app() -> "FastAPI":
             "contract": contract.model_dump(),
         })
 
+    @app.post("/api/check")
+    def check(spec: GraphSpec):
+        """Run the full static analyzer (`aura-state check`) over the posted flow
+        and return its findings — each with a stable `key` for baseline diffing.
+        Powers the Audit module's regression gate."""
+        from ..check import check_flow
+        flow = {
+            "nodes": [n.model_dump(exclude_none=True) for n in spec.nodes],
+            "edges": [list(e) for e in spec.edges],
+            "entry": spec.entry,
+        }
+        return check_flow(flow).to_dict()
+
     class McpImportReq(BaseModel):
         config: Any
         name: Optional[str] = None

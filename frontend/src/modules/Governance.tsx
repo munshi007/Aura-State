@@ -216,6 +216,88 @@ const ACTION_META: Record<string, { icon: string; label: string }> = {
   certificate: { icon: "download", label: "Certify" }, eval: { icon: "evals", label: "Eval" },
 };
 
+const _fkey = (f: any) => `${f.check}|${f.node || ""}|${f.severity}|${f.key || ""}`;
+const _blocking = (f: any) => f.severity === "critical" || f.severity === "high";
+
+function RegressionGate() {
+  const { nodes, edges, entry, agentName } = useStore();
+  const [report, setReport] = useState<any>(null);
+  const [baseline, setBaseline] = useState<{ ts: string; keys: string[] } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const lsKey = `aura_baseline_${agentName}`;
+
+  useEffect(() => {
+    setReport(null);
+    try { const v = localStorage.getItem(lsKey); setBaseline(v ? JSON.parse(v) : null); } catch { setBaseline(null); }
+  }, [agentName]);
+
+  const enriched = () => nodes.map((n) => ({
+    id: n.id, kind: n.kind, capability: n.capability, obligations: n.obligations,
+    tool_name: n.tool_name, side_effect: n.side_effect,
+    data_class: (n as any).data_class, exfil: (n as any).exfil, description: n.system_prompt,
+  }));
+  const runCheck = async () => {
+    setBusy(true);
+    try { const r = await api.checkFlow(enriched(), edges, entry); setReport(r); return r; }
+    catch { useStore.getState().set({ toast: "Check failed — is the local server running?" }); return null; }
+    finally { setBusy(false); }
+  };
+  const saveBaseline = async () => {
+    const r = report || (await runCheck());
+    if (!r) return;
+    const snap = { ts: new Date().toISOString(), keys: (r.findings || []).map(_fkey) };
+    try { localStorage.setItem(lsKey, JSON.stringify(snap)); } catch {}
+    setBaseline(snap);
+    api.auditLog("baseline", `baseline saved for ${agentName} — ${snap.keys.length} finding(s)`, { agent: agentName }).catch(() => {});
+  };
+
+  const findings = report?.findings || [];
+  const known = new Set(baseline?.keys || []);
+  const isNew = (f: any) => baseline && !known.has(_fkey(f));
+  const newFindings = baseline ? findings.filter(isNew) : [];
+  const newBlocking = newFindings.filter(_blocking);
+  const resolved = baseline ? baseline.keys.filter((k) => !findings.some((f: any) => _fkey(f) === k)) : [];
+
+  return (
+    <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--hair)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+        <b style={{ fontSize: 13 }}>Regression gate</b>
+        <span className="hint" style={{ margin: 0 }}>fail only on paths this change newly opened — same as <span className="mono">aura-state check --baseline</span> in CI</span>
+        <span style={{ flex: 1 }} />
+        <button className="btn sm" onClick={runCheck} disabled={busy}>{busy ? "Checking…" : "Re-check"}</button>
+        <button className="btn sm pri" onClick={saveBaseline} disabled={busy}>{baseline ? "Update baseline" : "Save baseline"}</button>
+      </div>
+
+      {!baseline && (
+        <div className="hint" style={{ margin: 0 }}>
+          No baseline for <b>{agentName}</b>. Save one when the design is clean; later edits are then checked against it — only <b>new</b> blocking findings count as a regression.
+        </div>
+      )}
+
+      {baseline && (
+        <>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {report
+              ? (newBlocking.length
+                  ? <span className="chip vi">✕ {newBlocking.length} new blocking finding(s)</span>
+                  : <span className="chip pv">✓ no regressions</span>)
+              : <span className="chip mu">baseline: {baseline.keys.length} finding(s) · re-check to compare</span>}
+            <span className="mono" style={{ color: "var(--ink-4)", fontSize: 11 }}>baseline {baseline.ts.replace("T", " ").slice(0, 16)}</span>
+            {resolved.length > 0 && report && <span className="chip pv">↓ {resolved.length} resolved</span>}
+          </div>
+          {newFindings.map((f: any, i: number) => (
+            <div key={i} style={{ marginTop: 8, fontSize: 12.5 }}>
+              <span className="chip vi" style={{ marginRight: 8 }}>NEW</span>
+              <span className="mono" style={{ color: "var(--ink-3)" }}>{f.check}{f.node ? ` [${f.node}]` : ""}</span>
+              <span style={{ color: "var(--violated)" }}> — {f.message}</span>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
 export function Audit() {
   const [entries, setEntries] = useState<any[]>([]);
   const [chain, setChain] = useState<any>(null);
@@ -244,6 +326,7 @@ export function Audit() {
           <button className="btn sm" onClick={load}><Icon name="runs" size={13} /> Refresh</button>
         </div>} />
       <div className="wsbody out" style={{ padding: 0 }}>
+        <RegressionGate />
         <div style={{ display: "flex", gap: 6, padding: "12px 20px 8px", flexWrap: "wrap", borderBottom: "1px solid var(--hair)" }}>
           <button className={"btn sm" + (filter === "all" ? " pri" : "")} onClick={() => setFilter("all")}>all</button>
           {kinds.map((k) => <button key={k} className={"btn sm" + (filter === k ? " pri" : "")} onClick={() => setFilter(k)}>{ACTION_META[k]?.label || k}</button>)}

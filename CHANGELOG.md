@@ -2,6 +2,11 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.8.3]
+
+### Added
+- **Studio: regression gate in the Audit module.** Save the current design as a baseline when it's clean; after edits, *Re-check* diffs against it and flags only the **new** blocking findings (with a "✓ no regressions" / "✕ N new blocking" verdict and a resolved count) — the CI `aura-state check --baseline` gate, now interactive. Backed by a new `/api/check` endpoint that returns the full analyzer's findings with their stable baseline keys. Baselines persist per agent in the browser.
+
 ## [0.8.2]
 
 ### Added

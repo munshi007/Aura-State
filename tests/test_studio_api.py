@@ -226,3 +226,10 @@ def test_code_import_from_source(client):
 def test_code_import_rejects_empty_and_toolless(client):
     assert client.post("/api/code/import", json={"source": ""}).status_code == 400
     assert client.post("/api/code/import", json={"source": "x = 1"}).status_code == 400
+
+
+def test_check_endpoint_returns_findings_with_keys(client):
+    r = client.post("/api/check", json=TRIFECTA_SPEC).json()
+    assert r["verified"] is False
+    tri = [f for f in r["findings"] if f["check"] == "trifecta"]
+    assert tri and tri[0]["key"] == "Fetch->Send"     # stable discriminator for baseline diff
