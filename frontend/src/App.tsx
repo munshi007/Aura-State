@@ -83,7 +83,7 @@ function Rail() {
 }
 
 function StatusBar() {
-  const { verify, statusByNode, nodes, provider, runTrace } = useStore();
+  const { verify, statusByNode, nodes, provider, runTrace, serverVersion } = useStore();
   const proven = Object.values(statusByNode).filter((s) => s === "proven").length;
   const violated = Object.values(statusByNode).filter((s) => s === "violated").length;
   const total = nodes.length;
@@ -104,7 +104,7 @@ function StatusBar() {
       <div className="sp" />
       {runTrace && <div className="seg2">run {runTrace.length} steps</div>}
       <div className="seg2">provider {provider}</div>
-      <div className="seg2">aura-state 0.8.1</div>
+      <div className="seg2">aura-state {serverVersion || "…"}</div>
     </div>
   );
 }

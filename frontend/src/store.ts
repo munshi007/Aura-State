@@ -43,7 +43,10 @@ function _applyImportedFlow(flow: any, fallbackName: string, errMsg: string, ext
     const idx = tools.findIndex((t: any) => t.id === n.id);
     const node: any = {
       id: n.id, kind: n.kind || "tool",
-      capability: isTool ? (n.side_effect === "read" ? "plain" : "sink") : (n.capability || "plain"),
+      // Only a declared EXTERNAL tool is a sink here; unknown/read/local-write
+      // stay "plain" so the trifecta classifier decides by name/role, instead of
+      // every imported tool being force-flagged as an exfil sink.
+      capability: isTool ? (n.side_effect === "external" ? "sink" : "plain") : (n.capability || "plain"),
       system_prompt: n.description || n.id, model: "qwen2.5:0.5b", provider: "ollama",
       temperature: 0, max_tokens: 256, fields: [], obligations: [], sandbox_rule: "",
       consensus: 1, confidence: 0.9, retry: 1,
@@ -52,6 +55,7 @@ function _applyImportedFlow(flow: any, fallbackName: string, errMsg: string, ext
     };
     if (n.data_class) node.data_class = n.data_class;   // preserve role overrides
     if (n.exfil !== undefined) node.exfil = n.exfil;
+    if (n.description) node.description = n.description;  // real tool description for classification
     return node as AgentNode;
   });
   useStore.setState({
@@ -129,6 +133,7 @@ interface State {
   newAgentOpen: boolean;
   mcpOpen: boolean;
   codeOpen: boolean;
+  serverVersion: string;
   treeW: number;
   inspW: number;
   treeCollapsed: boolean;
@@ -206,6 +211,7 @@ export const useStore = create<State>((setState, getState) => ({
   newAgentOpen: false,
   mcpOpen: false,
   codeOpen: false,
+  serverVersion: "",
   treeW: _lsNum("aura_treeW", 236),
   inspW: _lsNum("aura_inspW", 384),
   treeCollapsed: _lsBool("aura_treeC"),
@@ -424,7 +430,9 @@ export const useStore = create<State>((setState, getState) => ({
       id: n.id, capability: n.capability, obligations: n.obligations,
       kind: n.kind, tool_name: n.tool_name, side_effect: n.side_effect,
       data_class: (n as any).data_class, exfil: (n as any).exfil,
-      description: n.system_prompt,
+      // a real tool description only (from an import), NOT the free-text prompt —
+      // a prompt's prose would falsely trigger trifecta role words.
+      description: (n as any).description || "",
     }));
     try {
       const res = await api.verifyGraph(graphNodes, spec.edges, spec.entry);
@@ -484,7 +492,10 @@ export const useStore = create<State>((setState, getState) => ({
     }
   },
 
-  refreshProviders: async () => { try { setState({ providersList: await api.providers() }); } catch {} },
+  refreshProviders: async () => {
+    try { setState({ providersList: await api.providers() }); } catch {}
+    try { const v = await api.apiVersion(); if (v?.version) setState({ serverVersion: v.version } as any); } catch {}
+  },
   refreshFlows: async () => { try { setState({ flows: await api.listFlows() }); } catch {} },
   doSave: async () => {
     const s = getState();

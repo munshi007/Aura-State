@@ -143,8 +143,10 @@ def classify_roles(n: Dict[str, Any]) -> Tuple[Set[str], bool]:
 
     unclassified = False
     if kind == "tool":
-        blob = _norm(f"{n.get('tool_name') or n.get('id') or ''} "
-                     f"{n.get('description') or n.get('system_prompt') or ''}")
+        # Classify from the tool name + an explicit tool description ONLY — never
+        # a free-text system prompt, whose prose ("Issue the refund", "the
+        # customer's account") would falsely trigger role words.
+        blob = _norm(f"{n.get('tool_name') or n.get('id') or ''} {n.get('description') or ''}")
         # exfil = external communication (data leaves the box). side_effect
         # "external" always counts; an exfil-verb name counts too UNLESS the tool
         # is explicitly read-only (a read can't send — e.g. slack_list_channels).

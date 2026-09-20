@@ -67,6 +67,7 @@ export const codeImport = (source: string, name?: string) => post("/api/code/imp
 // `key` for baseline/regression diffing in the Audit module.
 export const checkFlow = (nodes: any[], edges: string[][], entry?: string) =>
   post("/api/check", { nodes, edges, entry });
+export const apiVersion = () => get("/api/version");
 
 export const callAgent = (body: any) => post("/api/agent", body);
 export const proveData = (data: any, obligations: string[]) => post("/api/prove", { data, obligations });

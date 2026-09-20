@@ -175,6 +175,14 @@ def create_app() -> "FastAPI":
             "contract": contract.model_dump(),
         })
 
+    @app.get("/api/version")
+    def version():
+        from importlib.metadata import version as _v
+        try:
+            return {"version": _v("aura-state")}
+        except Exception:
+            return {"version": "dev"}
+
     @app.post("/api/check")
     def check(spec: GraphSpec):
         """Run the full static analyzer (`aura-state check`) over the posted flow

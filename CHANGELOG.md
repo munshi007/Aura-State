@@ -2,6 +2,13 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.8.4]
+
+### Fixed
+- **Trifecta false positives from prompt prose.** Role classification blended a node's free-text `system_prompt` into the name heuristic, so a payment sink whose prompt read *"Issue the refund to the customer account"* was wrongly tagged untrusted+private and reported as a self-referential lethal trifecta. Classification now uses the tool name + an explicit tool description only. (Found by driving the studio.)
+- **Studio imports no longer force every tool to a sink.** An imported tool with unknown/read/local-write side-effect stays `plain` (only a declared external tool is a sink), so the classifier decides its role by name instead of flagging all imported tools as exfil.
+- The studio status bar reads the version live from a new `/api/version` endpoint instead of a hardcoded string.
+
 ## [0.8.3]
 
 ### Added

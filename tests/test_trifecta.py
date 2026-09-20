@@ -128,3 +128,13 @@ def test_postgres_is_not_exfil_via_post():
 def test_local_write_stays_non_private_non_exfil():
     roles, _ = classify_roles(_t("w", "write_file", "write"))
     assert roles == set()
+
+
+def test_prose_system_prompt_does_not_trigger_roles():
+    # a payment sink whose PROMPT reads "Issue the refund to the customer account"
+    # must not gain untrusted/private roles from that prose — classification uses
+    # tool_name + description only.
+    roles, _ = classify_roles({"id": "Pay", "kind": "tool", "tool_name": "payment.refund",
+                               "side_effect": "external",
+                               "system_prompt": "Issue the refund to the customer account."})
+    assert roles == {"exfil"}
