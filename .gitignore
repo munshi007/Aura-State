@@ -6,8 +6,8 @@ __pycache__/
 .aura_trace/
 .pytest_cache/
 *.egg-info/
-dist/
-build/
+/dist/
+/build/
 .venv/
 venv/
 
