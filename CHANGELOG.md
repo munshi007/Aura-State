@@ -2,6 +2,11 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.8.7]
+
+### Fixed
+- **Provider key entry is now one step and actually validates.** "Save key" and "Test" both save the key you typed first (so clicking Test before Save no longer reports "not set"), and "Test" makes a real `models.list()` call — it reports `key valid` for a good key or `invalid API key` for a bad one, instead of a vacuous "credentials present".
+
 ## [0.8.6]
 
 ### Added

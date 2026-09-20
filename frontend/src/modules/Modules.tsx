@@ -397,11 +397,17 @@ function ProviderRow({ p }: { p: any }) {
   const [busy, setBusy] = useState(false);
   const [key, setKey] = useState("");
   const [saving, setSaving] = useState(false);
-  const run = async () => { setBusy(true); setTest(await api.testProvider(p.name)); setBusy(false); };
-  const saveKey = async () => {
+  const commitKey = async () => {
+    if (!key.trim()) return;
+    await api.setProviderKey(p.name, key); setKey(""); await refreshProviders();
+  };
+  const run = async () => {              // Test: save any pending key first, then validate
+    setBusy(true);
+    try { await commitKey(); setTest(await api.testProvider(p.name)); } finally { setBusy(false); }
+  };
+  const saveKey = async () => {          // Save: store the key, then validate so the chip updates
     setSaving(true);
-    try { await api.setProviderKey(p.name, key); setKey(""); setTest(null); await refreshProviders(); }
-    finally { setSaving(false); }
+    try { await commitKey(); setTest(await api.testProvider(p.name)); } finally { setSaving(false); }
   };
   return (
     <div className="obl-item">

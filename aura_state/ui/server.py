@@ -275,15 +275,23 @@ def create_app() -> "FastAPI":
         if not cfg:
             return {"ok": False, "detail": "unknown provider"}
         if cfg["env"] and not os.environ.get(cfg["env"]):
-            return {"ok": False, "detail": f"{cfg['env']} not set"}
+            return {"ok": False, "detail": "no key — Save your key first"}
         try:
             if cfg["base_url"] and "localhost" in cfg["base_url"]:
                 import urllib.request
                 urllib.request.urlopen(cfg["base_url"].replace("/v1", "") + "/api/tags", timeout=2.5)
                 return {"ok": True, "detail": "reachable"}
-            return {"ok": True, "detail": "credentials present"}
+            # Real validation: a cheap models.list() actually exercises the key,
+            # so an invalid/expired key is caught here, not at first Run.
+            from openai import OpenAI
+            client = OpenAI(api_key=os.environ.get(cfg["env"]), base_url=cfg["base_url"], timeout=8.0)
+            client.models.list()
+            return {"ok": True, "detail": "key valid"}
         except Exception as e:
-            return {"ok": False, "detail": str(e)[:100]}
+            m = str(e).lower()
+            if any(s in m for s in ("api key", "api_key", "invalid", "unauthor", "permission", "401", "403")):
+                return {"ok": False, "detail": "invalid API key"}
+            return {"ok": False, "detail": str(e)[:120]}
 
     class AgentReq(BaseModel):
         provider: str = "ollama"
