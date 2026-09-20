@@ -2,6 +2,22 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.8.5]
+
+Pre-launch hardening: a clean-room install of the published wheel + an adversarial fuzz sweep of the importers and analyzers.
+
+### Fixed — trifecta fail-opens (a verifier must never call a lethal agent safe)
+- **Node `kind` no longer disables classification.** The trifecta name-heuristics only ran for `kind == "tool"`, so labelling a `send_email` node `kind: "decision"` made it vanish and the agent verified "safe". Any node that declares a `tool_name` is now classified whatever its `kind`.
+- **A mislabeled `sanitizer` can't erase a sink.** A node marked `sanitizer` that also looks like an external sink/source is a misconfiguration; the sanitizer role is dropped (fail-closed, so the sink is caught) and the node is flagged for review.
+- **Ambiguity fails closed.** When unclassifiable tools coexist with a reachable untrusted source *and* a private read, one of them could be the exfil leg — `check` now reports this as blocking ("cannot prove trifecta-free") instead of a green pass. An import that recognized no tools is no longer reported as PROVEN.
+
+### Fixed — robustness & security
+- The importers and `check_flow` return clean errors instead of tracebacks on malformed input (non-dict annotations, unhashable/missing tool names, non-UTF8 files, nodes without a string `id`, bad edges).
+- **SSRF guard** on the studio's `/api/fetch_url`: private / loopback / link-local / cloud-metadata targets (127.0.0.1, 169.254.169.254, 10.x, …) are refused.
+- README gains a **"Scope & honest limits"** section and corrects the conformal description (repeated same-input runs are dispersion, not calibrated coverage).
+
+Execution-safety is unchanged and re-confirmed: importing an agent's code/obligations never runs them (AST-only).
+
 ## [0.8.4]
 
 ### Fixed

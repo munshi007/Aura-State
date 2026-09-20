@@ -428,12 +428,26 @@ def create_app() -> "FastAPI":
 
     @app.post("/api/fetch_url")
     def fetch_url(req: FetchReq):
-        import urllib.request, re as _re2
+        import urllib.request, urllib.parse, re as _re2, ipaddress, socket
         url = req.url.strip()
         if not url.startswith(("http://", "https://")):
             url = "https://" + url
+        # SSRF guard: refuse private / loopback / link-local / reserved targets
+        # (e.g. 127.0.0.1, 169.254.169.254 cloud metadata, 10.x internal services).
+        host = urllib.parse.urlparse(url).hostname
+        if not host:
+            return {"error": "invalid URL"}
         try:
-            r = urllib.request.Request(url, headers={"User-Agent": "AuraStudio/0.6 (+local)"})
+            addrs = {info[4][0] for info in socket.getaddrinfo(host, None)}
+        except Exception:
+            return {"error": f"could not resolve host '{host}'"}
+        for a in addrs:
+            ip = ipaddress.ip_address(a)
+            if (ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved
+                    or ip.is_multicast or ip.is_unspecified):
+                return {"error": f"refused: '{host}' resolves to a non-public address ({a})"}
+        try:
+            r = urllib.request.Request(url, headers={"User-Agent": "AuraStudio (+local)"})
             with urllib.request.urlopen(r, timeout=8) as resp:
                 raw = resp.read(1_500_000).decode("utf-8", "ignore")
         except Exception as e:

@@ -142,8 +142,11 @@ def flow_from_path(path: str, name: Optional[str] = None) -> Dict[str, Any]:
                     except (OSError, UnicodeDecodeError):
                         continue
     else:
-        with open(path) as fh:
-            sources.append(fh.read())
+        try:
+            with open(path, encoding="utf-8") as fh:
+                sources.append(fh.read())
+        except (OSError, UnicodeDecodeError) as e:
+            raise ValueError(f"could not read {path}: {e}")
 
     tools: Dict[str, Dict[str, Any]] = {}
     for src in sources:

@@ -87,3 +87,15 @@ def test_read_only_tool_surface_is_not_a_trifecta():
     ]}
     r = check_flow(flow_from_mcp(safe))
     assert not [f for f in r.findings if f.check == "trifecta" and f.severity == "critical"]
+
+
+def test_malformed_tool_inputs_do_not_crash():
+    # non-dict annotations, unhashable/missing names -> skipped cleanly, no crash
+    flow = flow_from_mcp({"tools": [
+        {"name": "t", "annotations": ["readOnlyHint"]},
+        {"name": {"x": 1}},            # unhashable name -> skipped
+        {"description": "no name"},    # missing name -> skipped
+        {"name": "ok", "annotations": {"readOnlyHint": True}},
+    ]})
+    ids = {n["id"] for n in flow["nodes"]}
+    assert "ok" in ids and "t" in ids

@@ -138,3 +138,51 @@ def test_prose_system_prompt_does_not_trigger_roles():
                                "side_effect": "external",
                                "system_prompt": "Issue the refund to the customer account."})
     assert roles == {"exfil"}
+
+
+# ── Pre-launch fail-open regressions (found by adversarial fuzz) ──────────────
+
+def test_tool_name_classified_regardless_of_kind():
+    # F1: a node that CALLS a tool must be classified even if kind != "tool"
+    # (labelling send_email kind="decision" used to make it vanish -> fail-open).
+    roles, _ = classify_roles({"id": "notify", "kind": "decision",
+                               "tool_name": "send_email", "description": "send an email externally"})
+    assert "exfil" in roles
+
+
+def test_mislabeled_sanitizer_does_not_erase_sink():
+    # F2: a node marked sanitizer that also looks like an exfil sink must NOT be
+    # trusted as a pure sanitizer (it would prune the taint walk and hide the sink).
+    roles, unk = classify_roles({"id": "S", "kind": "sanitizer",
+                                 "tool_name": "send_email", "side_effect": "external"})
+    assert "sanitizer" not in roles and "exfil" in roles and unk is True
+
+
+def test_lethal_flow_with_decision_labeled_sink_is_flagged():
+    from aura_state.check import check_flow
+    flow = {"entry": "A", "edges": [["A", "F"], ["F", "R"], ["R", "N"]],
+            "nodes": [{"id": "A", "kind": "extract", "capability": "plain"},
+                      {"id": "F", "kind": "tool", "tool_name": "fetch_web", "description": "scrape a website"},
+                      {"id": "R", "kind": "tool", "tool_name": "query_db", "description": "query the customer database"},
+                      {"id": "N", "kind": "decision", "tool_name": "send_email", "description": "send an email externally"}]}
+    assert check_flow(flow).verified is False
+
+
+def test_unknown_tools_with_both_legs_cannot_be_proven_safe():
+    # F3: unclassifiable tool + reachable untrusted + private -> fail closed
+    from aura_state.check import check_flow
+    flow = {"entry": "A", "edges": [["A", "F"], ["F", "R"], ["R", "X"]],
+            "nodes": [{"id": "A", "kind": "extract", "capability": "plain"},
+                      {"id": "F", "kind": "tool", "tool_name": "fetch_url", "side_effect": "read"},
+                      {"id": "R", "kind": "tool", "tool_name": "read_customer_file", "side_effect": "read"},
+                      {"id": "X", "kind": "tool", "tool_name": "zzz_custom_op"}]}   # unknown, no side_effect
+    r = check_flow(flow)
+    assert r.verified is False
+    assert any(f.check == "trifecta" and f.severity == "high" for f in r.findings)
+
+
+def test_import_with_no_tools_is_not_reported_green():
+    from aura_state.check import check_flow
+    r = check_flow({"source": "code", "entry": "Agent",
+                    "nodes": [{"id": "Agent", "kind": "extract", "capability": "plain"}], "edges": []})
+    assert any(f.check == "structure" for f in r.findings)

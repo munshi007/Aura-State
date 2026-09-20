@@ -142,7 +142,11 @@ def classify_roles(n: Dict[str, Any]) -> Tuple[Set[str], bool]:
         roles.add("exfil")
 
     unclassified = False
-    if kind == "tool":
+    # Run the name heuristics for any node that CALLS a tool — a node with a
+    # tool_name is an external call whatever its `kind` label says. Gating this on
+    # kind=="tool" was a fail-open: labelling a send_email node kind:"decision"
+    # made it vanish from the trifecta and the agent verified "safe".
+    if kind == "tool" or n.get("tool_name"):
         # Classify from the tool name + an explicit tool description ONLY — never
         # a free-text system prompt, whose prose ("Issue the refund", "the
         # customer's account") would falsely trigger role words.
@@ -167,8 +171,16 @@ def classify_roles(n: Dict[str, Any]) -> Tuple[Set[str], bool]:
         # Fail-closed: a tool we could place in NO role (typically an
         # unannotated/custom tool) is a blind spot, not a safe node — surface it
         # as an advisory so the verdict is never silently "proven safe".
-        if not roles and dc != "public":
+        if not (roles - {"sanitizer"}) and dc != "public":
             unclassified = True
+
+    # Fail-closed: a node marked `sanitizer` that ALSO looks like a source/sink is
+    # a misconfiguration. Do NOT let a mislabeled sanitizer silently erase a real
+    # sink (the taint walk prunes at sanitizers) — drop the sanitizer role so the
+    # exfil/source is caught, and flag it for review.
+    if "sanitizer" in roles and (roles & {"exfil", "untrusted", "private"}):
+        roles.discard("sanitizer")
+        unclassified = True
     return roles, unclassified
 
 

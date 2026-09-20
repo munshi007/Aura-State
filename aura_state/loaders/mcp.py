@@ -35,13 +35,14 @@ def _tools_from(config: Any) -> List[Dict[str, Any]]:
     out: List[Dict[str, Any]] = []
 
     def _add(t: Dict[str, Any], server: str = "") -> None:
-        if not isinstance(t, dict) or "name" not in t:
-            return
+        if not isinstance(t, dict) or not isinstance(t.get("name"), str):
+            return   # skip malformed tools (missing / non-string name)
+        ann = t.get("annotations")
         out.append({
             "server": server,
             "name": t["name"],
-            "description": t.get("description", ""),
-            "annotations": t.get("annotations", {}) or {},
+            "description": t.get("description") if isinstance(t.get("description"), str) else "",
+            "annotations": ann if isinstance(ann, dict) else {},
         })
 
     if isinstance(config, list):
@@ -75,6 +76,8 @@ def _side_effect(ann: Dict[str, Any]) -> str:
     untrusted/private legs, so an unannotated fetch+read+send surface verified as
     safe. None is the fail-closed default.
     """
+    if not isinstance(ann, dict):
+        return None
     if ann.get("readOnlyHint") is True:
         return "read"
     if ann.get("openWorldHint") is True:

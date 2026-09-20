@@ -18,7 +18,7 @@
   <img alt="CI" src="https://github.com/munshi007/Aura-State/actions/workflows/ci.yml/badge.svg">
   <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-3d3aa8.svg">
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
-  <img alt="tests" src="https://img.shields.io/badge/tests-209%20passing-1c8a5b.svg">
+  <img alt="tests" src="https://img.shields.io/badge/tests-215%20passing-1c8a5b.svg">
 </p>
 
 <p align="center">
@@ -217,9 +217,18 @@ The key difference is what happens between nodes:
 
 - **Extractions** are checked against Z3 proof obligations, in the extract→verify→retry loop — a value that can't be proven is not accepted (fail-closed)
 - **Math** runs in a no-`exec` sandboxed interpreter, never hallucinated
-- **Uncertainty** is a real conformal interval over repeated runs, not a vibe
+- **Uncertainty** uses split-conformal / jackknife+ calibration (with the honest worst-case coverage); repeated same-input runs are reported as *dispersion*, not a coverage guarantee
 - **Workflows** are model-checked (CTL) for reachability/completion/ordering *before* they run
 - **Routing** (when a node returns an ambiguous edge) is a Thompson-sampling bandit, not an LLM guess
+
+## Scope & honest limits
+
+Aura-State is a **design-time verifier**, and worth being precise about:
+
+- It reasons over your agent's **structure** (a typed graph / tool surface), not its runtime behaviour — it does not execute your agent or tools.
+- The **lethal-trifecta / taint** checks are **sound but heuristic**: tool roles are inferred from names + declared side-effects, so the analysis **over-flags rather than misses** (fail-closed), and you can correct any call with a `data_class` / `exfil` override. It is not a semantic proof that a specific injection string succeeds.
+- The **Z3 / CTL** guarantees are exact for the obligations and properties you write; they don't invent the spec for you.
+- It's **early (v0.x)** — verified on real OSS agent shapes, but treat it as a strong linter you can trust to fail closed, not a certified security product.
 
 ## Quick example
 
@@ -501,7 +510,7 @@ Python 3.10+ required. Dependencies: `pydantic`, `instructor`, `openai`, `networ
 
 ```bash
 python -m pytest tests/ -v
-# 209 tests passing
+# 215 tests passing
 ```
 
 ## Works with any LLM provider

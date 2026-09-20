@@ -108,6 +108,16 @@ def check_flow(flow: Dict[str, Any]) -> CheckReport:
     if not nodes:
         return CheckReport(agent=name, nodes=0, verified=False,
                            findings=[Finding("structure", "high", None, "flow has no nodes")])
+    # Shape validation — fail closed with a clear message, not a traceback.
+    if not all(isinstance(n, dict) and isinstance(n.get("id"), str) and n["id"] for n in nodes):
+        return CheckReport(agent=name, nodes=len(nodes), verified=False,
+                           findings=[Finding("structure", "high", None, "every node must be an object with a non-empty string 'id'")])
+    if len({n["id"] for n in nodes}) != len(nodes):
+        return CheckReport(agent=name, nodes=len(nodes), verified=False,
+                           findings=[Finding("structure", "high", None, "duplicate node ids")])
+    if not all(isinstance(e, (list, tuple)) and len(e) == 2 for e in edges):
+        return CheckReport(agent=name, nodes=len(nodes), verified=False,
+                           findings=[Finding("structure", "high", None, "each edge must be a [from, to] pair")])
 
     engine = _build_engine(nodes, edges)
     ids = [n["id"] for n in nodes]
@@ -165,8 +175,27 @@ def check_flow(flow: Dict[str, Any]) -> CheckReport:
     for uid in tri.unclassified:
         findings.append(Finding(
             "trifecta", "low", uid,
-            f"tool '{uid}' reads data but its trust class is unknown — "
-            f"tag it `data_class: private|untrusted|public` so the trifecta check is sound"))
+            f"tool '{uid}' has an unknown trust class — "
+            f"tag it `data_class: private|untrusted|public` (or `exfil: true`) so the trifecta check is sound"))
+
+    # 4c. Fail-closed on ambiguity: if there are unclassifiable tools AND both an
+    #     untrusted source and a private read are reachable, an unknown tool COULD
+    #     be the exfil leg — we cannot prove the trifecta is absent. Block it.
+    have_untrusted = any("untrusted" in v for v in tri.roles.values())
+    have_private = any("private" in v for v in tri.roles.values())
+    if tri.unclassified and have_untrusted and have_private and tri.verified:
+        preview = ", ".join(tri.unclassified[:4]) + ("…" if len(tri.unclassified) > 4 else "")
+        findings.append(Finding(
+            "trifecta", "high", None,
+            f"cannot prove trifecta-free: {len(tri.unclassified)} tool(s) of unknown capability "
+            f"({preview}) while untrusted input AND private data are both reachable — one may be an "
+            f"exfiltration channel. Tag them with data_class/exfil to resolve."))
+
+    # 4d. An import that recognized no tools analyzed nothing — don't report green.
+    if flow.get("source") in ("mcp", "code") and not [n for n in nodes if (n.get("kind") or n.get("type")) == "tool"]:
+        findings.append(Finding(
+            "structure", "medium", None,
+            "no tools were recognized in the import — nothing was analyzed (check the source / tool declarations)"))
 
     # 5. Agent-level invariants consistency.
     inv = list(flow.get("invariants", []))
