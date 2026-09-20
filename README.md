@@ -280,7 +280,8 @@ When you call `engine.process()`, it runs through these steps in order:
 1. Few-shot injection      →  optional: inject similar past successes as examples.
 2. Verification loop       →  extract → check (sandbox rule + Z3 obligations) → retry.
                               A value that fails its contract is not accepted (fail-closed).
-3. Conformal interval      →  with consensus > 1, build a real interval over the runs.
+3. Consensus dispersion    →  with consensus > 1, measure agreement across the runs
+                              (dispersion, not a calibrated coverage guarantee).
 4. Your handle() method    →  your routing / business logic runs here.
 5. Bandit router           →  if handle() returns an invalid edge, Thompson-sample a feasible one.
 6. State serialization     →  save state (JSON, tamper-evident) for time-travel debugging.
