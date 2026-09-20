@@ -22,8 +22,8 @@
 </p>
 
 <p align="center">
-  <img src="assets/demo.gif" alt="End-to-end: verify an agent, taint flags a payment sink, one-click auto-repair, run trace, and a real SQL agent proven safe" width="860">
-  <br><sub>Verify → taint flags the payment sink → one-click <b>auto-repair</b> → run trace → a real <b>LangGraph SQL agent</b> proven read-only + injection-safe. &nbsp;·&nbsp; <a href="assets/demo.mp4">▶ watch the 1080p walkthrough</a></sub>
+  <img src="assets/demo.gif" alt="Aura Studio: verify a design, import a real agent from its code, the lethal trifecta lights up with the exact path, then gate regressions" width="860">
+  <br><sub>Verify a design → <b>import a real agent from its code</b> → the <b>lethal trifecta</b> lights up with the exact path → save a baseline and <b>gate regressions</b>. &nbsp;·&nbsp; <a href="assets/demo.mp4">▶ watch the full walkthrough</a></sub>
 </p>
 
 ```bash
