@@ -18,10 +18,20 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 from z3 import (
-    Solver, Int, Real, Bool, BoolVal, is_true, sat,
+    Solver, Int, Real, Bool, BoolVal, is_true, sat, unsat,
     And as Z3And, Or as Z3Or, Not as Z3Not,
-    BoolRef,
+    ToReal, ToInt, RealVal, BoolRef,
 )
+
+
+def _as_real(x: Any) -> Any:
+    """Coerce a Python number or a Z3 Int/Real expr to a Z3 Real, so division is
+    true division (not truncating Z3 Int division)."""
+    if isinstance(x, bool):
+        raise ObligationError("cannot use a boolean in arithmetic")
+    if isinstance(x, (int, float)):
+        return RealVal(x)
+    return ToReal(x) if getattr(x, "is_int", lambda: False)() else x   # leave Real as-is
 
 logger = logging.getLogger("aura_state.proof")
 
@@ -82,8 +92,12 @@ def _apply_bin(op: ast.operator, left: Any, right: Any) -> Any:
         return left - right
     if isinstance(op, ast.Mult):
         return left * right
-    if isinstance(op, ast.Div) or isinstance(op, ast.FloorDiv):
-        return left / right
+    if isinstance(op, ast.Div):
+        # true division — force Real so `avg == 7/2` is 3.5, not Z3 Int 3 (a
+        # truncating `/` here silently marked wrong values satisfied).
+        return _as_real(left) / _as_real(right)
+    if isinstance(op, ast.FloorDiv):
+        return ToInt(_as_real(left) / _as_real(right))
     if isinstance(op, ast.Mod):
         return left % right
     if isinstance(op, ast.Pow):
@@ -223,9 +237,14 @@ def prove_extraction(
             solver.add(z3_vars[name] == extracted_data[name])
         solver.add(Z3Not(constraint))
 
-        if solver.check() == sat:
+        res = solver.check()
+        if res == sat:
             failed.append(obligation)
             logger.info(f"Obligation failed: {obligation}")
+        elif res != unsat:
+            # Z3 'unknown' -> we did NOT prove the constraint holds. Fail closed.
+            logger.warning(f"Obligation unproven (solver returned {res}): {obligation}")
+            unproven.append(obligation)
 
     verified = not failed and not unproven
     counterexample = None

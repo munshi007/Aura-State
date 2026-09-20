@@ -174,20 +174,15 @@ def compile_schema(
     def _handle(self, user_text, extracted_data=None, memory=None):
         if extracted_data:
             data = extracted_data.model_dump()
-            # Fuzzy field correction: if LLM returned unexpected key names,
-            # try Levenshtein matching to recover
-            corrected = {}
-            for key, value in data.items():
-                if key in expected_fields:
-                    corrected[key] = value
-                else:
-                    suggestion = suggest_field(key, expected_fields)
-                    if suggestion:
-                        logger.info(f"[SchemaCompiler] Fuzzy match: '{key}' → '{suggestion}'")
-                        corrected[suggestion] = value
-                    else:
-                        corrected[key] = value
-            
+            # Do NOT silently remap unexpected keys to a fuzzy-nearest field —
+            # that quietly wrote e.g. `amount` into `account` (rule 6). Keep keys
+            # as-is; surface an unexpected one (with a suggestion) for the caller.
+            corrected = dict(data)
+            for key in data:
+                if key not in expected_fields:
+                    hint = suggest_field(key, expected_fields)
+                    logger.warning(f"[SchemaCompiler] unexpected field '{key}' kept as-is"
+                                   + (f" (did you mean '{hint}'?)" if hint else ""))
             return "END", {"extracted": corrected, "source": "schema_compiled"}
         return "END", {"extracted": {}, "source": "schema_compiled"}
     

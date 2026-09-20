@@ -21,7 +21,31 @@ def test_annotations_map_to_side_effect():
     assert _side_effect({"readOnlyHint": True}) == "read"
     assert _side_effect({"readOnlyHint": True, "destructiveHint": True}) == "read"     # read-only wins
     assert _side_effect({"openWorldHint": True}) == "external"                          # acts externally
-    assert _side_effect({}) == "write"                                                 # local mutation, not exfil
+    assert _side_effect({"openWorldHint": False}) == "write"                            # explicitly local
+    assert _side_effect({}) is None                                                     # unknown reach -> fail-closed
+
+
+def test_unannotated_lethal_surface_is_not_silently_safe():
+    # regression: fetch + read_file + create_issue with NO annotations must not
+    # verify as safe (the 0.7.1 fail-open: _side_effect defaulted to 'write').
+    cfg = {"tools": [
+        {"name": "fetch", "description": "Fetch a URL"},
+        {"name": "read_file", "description": "Read a local file"},
+        {"name": "create_issue", "description": "Create a GitHub issue"},
+    ]}
+    r = check_flow(flow_from_mcp(cfg))
+    assert r.verified is False
+    assert [f for f in r.findings if f.check == "trifecta" and f.severity == "critical"]
+
+
+def test_collision_across_servers_keeps_both_tools():
+    cfg = {"mcpServers": {
+        "web": {"tools": [{"name": "search", "description": "Search the web", "annotations": {"openWorldHint": True}}]},
+        "docs": {"tools": [{"name": "search", "description": "Search internal customer records", "annotations": {"readOnlyHint": True}}]},
+    }}
+    flow = flow_from_mcp(cfg)
+    tool_ids = [n["id"] for n in flow["nodes"] if n["kind"] == "tool"]
+    assert len(tool_ids) == 2 and len(set(tool_ids)) == 2   # neither dropped
 
 
 def test_readonly_name_match_is_not_exfil():

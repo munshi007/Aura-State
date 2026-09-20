@@ -59,8 +59,10 @@ def _load_flow(path):
 
 def _finding_key(f):
     """Identity of a finding for baseline comparison — the property that
-    regressed, independent of the exact counterexample path in the message."""
-    return (f.get("check"), f.get("node") or "", f.get("severity"))
+    regressed, independent of the exact counterexample path in the message.
+    Includes the producer's `key` discriminator (e.g. taint source->sink) so a
+    NEW source reaching an EXISTING sink is not mistaken for a known finding."""
+    return (f.get("check"), f.get("node") or "", f.get("severity"), f.get("key") or "")
 
 
 def _load_baseline(path):
@@ -102,10 +104,24 @@ def _cmd_check(args):
         reports.append((path, report))
 
     if args.json:
-        out = {"verified": all(r.verified for _, r in reports),
-               "agents": [{"path": p, **r.to_dict()} for p, r in reports]}
-        print(json.dumps(out, indent=2))
-        return 0 if out["verified"] else 1
+        agents = []
+        for p, r in reports:
+            d = {"path": p, **r.to_dict()}
+            if baseline is not None:
+                known = baseline.get(r.agent, set())
+                for fd in d["findings"]:
+                    fd["is_new"] = _finding_key(fd) not in known
+            agents.append(d)
+        if baseline is not None:
+            regressed = sum(1 for a in agents
+                            if any(fd.get("is_new") and fd["severity"] in ("critical", "high")
+                                   for fd in a["findings"]))
+            print(json.dumps({"mode": "regression", "regressed": regressed,
+                              "ok": regressed == 0, "agents": agents}, indent=2))
+            return 1 if regressed else 0
+        ok = all(r.verified for _, r in reports)
+        print(json.dumps({"verified": ok, "agents": agents}, indent=2))
+        return 0 if ok else 1
 
     failed = 0            # agents with blocking issues (absolute mode)
     regressed = 0         # agents with NEW blocking findings vs the baseline

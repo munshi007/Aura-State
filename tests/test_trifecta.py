@@ -93,3 +93,38 @@ def test_check_flow_reports_trifecta_as_critical():
     tri = [f for f in r.findings if f.check == "trifecta" and f.severity == "critical"]
     assert tri and tri[0].node == "Send"
     assert r.summary.get("trifecta") == "closed"
+
+
+# ── 0.7.2 regression: false-negatives the review found ────────────────────────
+
+def _t(id, name, se):
+    return {"id": id, "kind": "tool", "tool_name": name, "side_effect": se}
+
+
+def test_compound_exfil_name_is_caught():
+    # 'post_update' must register as exfil ('post\b' used to miss compound names)
+    flow = {"nodes": [_t("scrape_web", "scrape_web", "read"),
+                      _t("customer_lookup", "customer_lookup", "read"),
+                      _t("post_update", "post_update", "write")],
+            "edges": [["scrape_web", "customer_lookup"], ["customer_lookup", "post_update"]]}
+    assert analyze_trifecta(flow["nodes"], flow["edges"], "scrape_web").verified is False
+
+
+def test_read_and_send_single_node_closes_trifecta():
+    # one tool that reads private data AND sends externally is a full trifecta;
+    # private/untrusted must be classified even when side_effect == 'external'
+    flow = {"nodes": [_t("read_inbox", "read_inbox", "read"),
+                      _t("email_customer_record", "email_customer_record", "external")],
+            "edges": [["read_inbox", "email_customer_record"]]}
+    r = analyze_trifecta(flow["nodes"], flow["edges"], "read_inbox")
+    assert r.verified is False
+
+
+def test_postgres_is_not_exfil_via_post():
+    roles, _ = classify_roles(_t("q", "postgres_query", "read"))
+    assert "exfil" not in roles and "private" in roles
+
+
+def test_local_write_stays_non_private_non_exfil():
+    roles, _ = classify_roles(_t("w", "write_file", "write"))
+    assert roles == set()

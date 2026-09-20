@@ -58,13 +58,15 @@ class PipelineConformal:
         return self
 
     def interval(self, prediction: float) -> Tuple[float, float]:
-        if self.q_hat is None:
-            raise RuntimeError("PipelineConformal used before calibrate()")
+        # Fail closed: not calibrated (never run, or too few samples so q_hat=inf)
+        # must NOT return a vacuous (-inf, +inf) that "covers" everything.
+        if not self.calibrated:
+            raise RuntimeError("PipelineConformal is not calibrated (call calibrate() with enough samples)")
         return (prediction - self.q_hat, prediction + self.q_hat)
 
     def covers(self, prediction: float, truth: float) -> bool:
-        if self.q_hat is None:
-            raise RuntimeError("PipelineConformal used before calibrate()")
+        if not self.calibrated:
+            raise RuntimeError("PipelineConformal is not calibrated (call calibrate() with enough samples)")
         return abs(prediction - truth) <= self.q_hat
 
     def min_samples(self) -> int:

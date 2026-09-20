@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional
 
 from .core.engine import AuraEngine, Node, CompiledTransition
 from .verification.temporal_verifier import (
-    reachability, eventual_completion, find_dead_ends, PropertyResult,
+    reachability, eventual_completion, PropertyResult,
 )
 from .verification.proof_engine import prove_obligations_satisfiable
 from .verification.trifecta import analyze_trifecta
@@ -33,6 +33,7 @@ class Finding:
     severity: str       # critical | high | medium | low
     node: Optional[str]
     message: str
+    key: str = ""       # stable discriminator for baseline diffing (e.g. "source->sink")
 
 
 @dataclass
@@ -112,6 +113,7 @@ def check_flow(flow: Dict[str, Any]) -> CheckReport:
     ids = [n["id"] for n in nodes]
     outgoing = {a for a, _ in edges}
     leaves = [i for i in ids if i not in outgoing]
+    entry = flow.get("entry") or (ids[0] if ids else None)
 
     # 1. Taint dataflow — untrusted source -> dangerous sink without a sanitizer.
     taint = engine.analyze_field_taint()
@@ -120,23 +122,23 @@ def check_flow(flow: Dict[str, Any]) -> CheckReport:
             findings.append(Finding(
                 "taint", "critical", v.sink,
                 f"untrusted data from '{v.source}' can reach sink '{v.sink}'"
-                f"{f' via field {v.field}' if v.field and v.field != '*' else ''} with no sanitizer — injection path"))
+                f"{f' via field {v.field}' if v.field and v.field != '*' else ''} with no sanitizer — injection path",
+                key=f"{v.source}->{v.sink}:{v.field or ''}"))
 
-    # 2. CTL reachability — every node reachable from the entry.
+    # 2. CTL reachability — every node reachable from the DECLARED entry.
     props = [{"description": f"{i} reachable", "formula": reachability(i)} for i in ids]
-    for i, vr in zip(ids, engine.verify(props)):
+    for i, vr in zip(ids, engine.verify(props, init_node=entry)):
         if vr.result != PropertyResult.PROVEN:
             findings.append(Finding("reachability", "high", i, f"node '{i}' is not reachable from the entry — dead code"))
 
     # 3. Completion — every path reaches a terminal (no accidental dead-ends).
+    #    The `eventual_completion` CTL property (checked at the init state) is the
+    #    real test here; a separate structural find_dead_ends over the same leaf
+    #    set can never add anything (its terminals ARE the leaves), so it's gone.
     if leaves:
-        for vr in engine.verify([{"description": "completes", "formula": eventual_completion(*leaves)}]):
+        for vr in engine.verify([{"description": "completes", "formula": eventual_completion(*leaves)}], init_node=entry):
             if vr.result != PropertyResult.PROVEN:
                 findings.append(Finding("completion", "high", None, "some path never reaches a terminal — the agent can get stuck"))
-    dead = sorted(find_dead_ends({i: None for i in ids},
-                                 {a: [b for x, b in edges if x == a] for a, _ in edges}, terminals=leaves))
-    for d in dead:
-        findings.append(Finding("completion", "high", d, f"non-terminal node '{d}' has no way forward"))
 
     # 4. Obligation consistency — each node's obligations are jointly satisfiable.
     for n in nodes:
@@ -158,7 +160,8 @@ def check_flow(flow: Dict[str, Any]) -> CheckReport:
             f"lethal trifecta closed — {tf.detail}. "
             f"Path: {' → '.join(tf.path)}. "
             f"Break it with a sanitizer between '{tf.untrusted}' and '{tf.exfil}', "
-            f"or remove one of the three capabilities."))
+            f"or remove one of the three capabilities.",
+            key=f"{tf.untrusted}->{tf.exfil}"))
     for uid in tri.unclassified:
         findings.append(Finding(
             "trifecta", "low", uid,

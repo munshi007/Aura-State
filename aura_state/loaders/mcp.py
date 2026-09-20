@@ -61,21 +61,27 @@ def _tools_from(config: Any) -> List[Dict[str, Any]]:
 def _side_effect(ann: Dict[str, Any]) -> str:
     """Map MCP tool annotations to an Aura side-effect.
 
-    readOnlyHint=True  → 'read'     (never mutates; e.g. fetch, list, get_*)
-    openWorldHint=True → 'external'  (acts on outside systems → an exfil channel:
-                          slack_post, add_issue_comment, http POST)
-    otherwise          → 'write'     (a local mutation like write_file — a
-                          dangerous sink, but NOT the trifecta's exfil leg)
+    readOnlyHint=True   → 'read'      (never mutates; e.g. fetch, list, get_*)
+    openWorldHint=True  → 'external'  (acts on outside systems → an exfil channel:
+                           slack_post, add_issue_comment, http POST)
+    openWorldHint=False → 'write'     (a local mutation like write_file — a
+                           dangerous sink, but NOT the trifecta's exfil leg)
+    no hints            → None        (UNKNOWN reach — do NOT assume local/safe;
+                           None lets the classifier's name heuristics run and, if
+                           still unplaceable, flags the tool as an advisory rather
+                           than silently proving a lethal surface safe.)
 
-    Missing openWorldHint defaults to a local write: the official servers set it
-    on genuinely external tools, and an exfil-verb name (send/post/upload) is
-    still caught by the classifier, so this errs toward precision without a miss.
+    Erring toward 'write' on unannotated tools was a fail-open: it skipped the
+    untrusted/private legs, so an unannotated fetch+read+send surface verified as
+    safe. None is the fail-closed default.
     """
     if ann.get("readOnlyHint") is True:
         return "read"
     if ann.get("openWorldHint") is True:
         return "external"
-    return "write"
+    if ann.get("openWorldHint") is False:
+        return "write"
+    return None
 
 
 def is_mcp_config(obj: Any) -> bool:
@@ -85,7 +91,7 @@ def is_mcp_config(obj: Any) -> bool:
     `mcpServers`, or is a bare list of tool defs.
     """
     if isinstance(obj, list):
-        return bool(obj) and all(isinstance(t, dict) and "name" in t for t in obj)
+        return all(isinstance(t, dict) and "name" in t for t in obj)  # [] = empty surface
     if isinstance(obj, dict):
         if "nodes" in obj:
             return False
@@ -105,16 +111,22 @@ def flow_from_mcp(config: Any, name: str = "mcp-agent") -> Dict[str, Any]:
          "description": "LLM planner — may call any tool in any order"}
     ]
     edges: List[List[str]] = []
-    seen: set = set()
+    used: set = {AGENT}
     for t in tools:
+        # Keep the bare tool name as the id (readable), but disambiguate real
+        # collisions across servers instead of silently dropping the second tool
+        # (dropping one hides a whole leg of the trifecta).
         nid = t["name"]
-        if nid in seen or nid == AGENT:
-            continue
-        seen.add(nid)
+        if nid in used:
+            base = f"{t['server']}:{t['name']}" if t["server"] else t["name"]
+            nid, k = base, 2
+            while nid in used:
+                nid = f"{base}_{k}"; k += 1
+        used.add(nid)
         nodes.append({
             "id": nid,
             "kind": "tool",
-            "tool_name": nid,
+            "tool_name": t["name"],
             "side_effect": _side_effect(t["annotations"]),
             "description": (f"[{t['server']}] " if t["server"] else "") + t["description"],
         })

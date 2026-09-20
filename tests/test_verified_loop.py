@@ -67,9 +67,14 @@ def test_z3_obligation_failure_is_caught_in_loop():
     e = _engine_with_extraction(Quote(area=100, rate=3, total=999))
     e.register(Priced)
     e._transitions["Priced"] = ["END"]
-    e.process("Priced", "quote please")
+    # Fail-closed: an extraction whose obligations never hold must NOT be acted
+    # on. With no risk-controlled escalation, process() refuses (raises) rather
+    # than transitioning on unverified data.
+    import pytest
+    from aura_state.core.exceptions import MaxRetriesExceededError
+    with pytest.raises(MaxRetriesExceededError):
+        e.process("Priced", "quote please")
     rep = e.verification_reports()[-1]
-    # The bad extraction cannot be verified -> the loop reports it (fail-closed).
     assert rep["extraction_verified"] is False
 
 

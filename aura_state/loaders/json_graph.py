@@ -92,10 +92,15 @@ class JSONGraphLoader:
                         next_state = edge["to"]
                         break
             
-            if not next_state and edges:
-                next_state = edges[0]["to"]
-            elif not next_state:
-                next_state = "END"
+            if not next_state:
+                # No condition matched. Do NOT silently take the first edge
+                # (rule 6): honor an explicit default edge (condition "true"/none)
+                # if declared, otherwise end the run rather than guessing a branch.
+                next_state = next(
+                    (e["to"] for e in edges
+                     if not e.get("condition") or e.get("condition") in (True, "true")),
+                    "END",
+                )
 
             payload = {
                 "response": f"Processed via JSON node {state_name}",

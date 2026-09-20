@@ -92,3 +92,11 @@ def test_boolean_obligations_symbolic_and_pointwise():
     # point check fails CLOSED on the adversarial (read_only False) input
     assert prove_extraction({"read_only": True}, ["read_only == True"]).verified is True
     assert prove_extraction({"read_only": False}, ["read_only == True"]).verified is False
+
+
+def test_true_division_not_integer_division():
+    """avg == total/count must use true division: 7/2 = 3.5, not Z3 Int 3.
+    Regression for the fail-open where Div compiled to truncating Int division."""
+    from aura_state.verification.proof_engine import prove_extraction
+    assert prove_extraction({"total": 7, "count": 2, "avg": 3}, ["avg == total / count"]).verified is False
+    assert prove_extraction({"total": 6, "count": 2, "avg": 3}, ["avg == total / count"]).verified is True

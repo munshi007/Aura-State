@@ -39,37 +39,50 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 # Matched against "<tool_name> <description>" for tool nodes. Deliberately
 # conservative and readable; override with `data_class` / `exfil` on the node.
 
-# Stems allow suffixes (secret→secrets, ticket→tickets) via \w*; ambiguous
-# short tokens (post, send) keep a trailing \b so `post` can't match `postgres`.
+# Matching runs on a NORMALIZED blob: camelCase and snake_case are split into
+# space-separated tokens and lowercased (see `_norm`), so `\b(word)\b` matches a
+# whole token regardless of how the tool name was cased/joined —
+# `slack_post_message`, `postMessage`, `post_update` all expose the token `post`,
+# while `postgres` stays one token and does NOT match `post`.
+def _norm(s: str) -> str:
+    s = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", s)   # camelCase -> "camel Case"
+    return re.sub(r"[^a-zA-Z0-9]+", " ", s).lower()  # snake/punct -> spaces, lower
+
 _UNTRUSTED_RX = re.compile(
     r"\b("
-    r"https?|url|web|browse|scrape|crawl|fetch|download|"          # the open web
+    r"https?|url|web|website|browse|scrape|crawl|fetch|download|"  # the open web
     r"rss|feed|"
-    r"inbox|imap|email\w*read|readmail|"                           # inbound mail
-    r"search|google|bing|serp|"                                    # web search
-    r"user\w*(input|message|content|doc|upload)|attachment\w*|"    # user-supplied
-    r"comment\w*|review\w*|ticket\w*|issue\w*|form\w*"             # third-party text
-    r")", re.I)
+    r"inbox|imap|readmail|"                                        # inbound mail
+    r"search\w*|google|bing|serp|"                                 # web search
+    r"attachment\w*|comment\w*|review\w*|ticket\w*|issue\w*|form"  # third-party text
+    r")\b")
 
 _PRIVATE_RX = re.compile(
     r"\b("
     r"db|database\w*|sql\w*|postgres\w*|mysql|mongo\w*|sqlite|redis|quer(y|ies)|"  # datastores
-    r"file\w*|fs|readfile|filesystem|"                            # local files
-    r"secret\w*|vault|credential\w*|apikey|api_key|token\w*|password\w*|"  # secrets
-    r"s3|storage|bucket\w*|blob\w*|"                              # object stores
-    r"crm|salesforce|hubspot|"                                    # internal SaaS
-    r"customer\w*|account\w*|record\w*|profile\w*|pii|"           # personal data
+    r"file\w*|fs|readfile|filesystem|"                           # local files
+    r"secret\w*|vault|credential\w*|apikey|token\w*|password\w*|"  # secrets
+    r"s3|storage|bucket\w*|blob\w*|"                             # object stores
+    r"crm|salesforce|hubspot|"                                   # internal SaaS
+    r"customer\w*|account\w*|record\w*|profile\w*|pii|"          # personal data
     r"kb|knowledge|internal|private|confidential|vectordb|embed\w*"  # internal KB / RAG
-    r")", re.I)
+    r")\b")
 
 _EXFIL_RX = re.compile(
     r"\b("
-    r"send\w*|smtp|sendmail|"                                     # outbound mail
-    r"post\b|put\b|patch\b|webhook\w*|"                           # outbound HTTP (post\b ≠ postgres)
+    r"send\w*|smtp|sendmail|email|mail|"                          # outbound mail
+    r"post|put|patch|webhook\w*|"                                # outbound HTTP
     r"publish\w*|upload\w*|export\w*|"                            # push out
-    r"payment\w*|charge\w*|stripe|transfer\w*|"                   # money
-    r"slack|discord|telegram|sms|twilio|tweet\w*|notify\w*"       # messaging
-    r")", re.I)
+    r"payment\w*|charge\w*|stripe|transfer\w*|"                  # money
+    r"slack\w*|discord|telegram|sms|twilio|tweet\w*|notify\w*"   # messaging
+    r")\b")
+
+# Mutation verbs used ONLY for tools of UNKNOWN reach (no annotations): we can't
+# tell if such a write leaves the box, so fail closed and assume it can. Explicit
+# local writes (openWorldHint=False -> side_effect 'write') are exempt.
+_MUTATION_RX = re.compile(
+    r"\b(create|add|update|delete|insert|modify|merge|push|write|edit|"
+    r"move|remove|append|comment|reply|submit|open)\b")
 
 
 @dataclass
@@ -130,22 +143,30 @@ def classify_roles(n: Dict[str, Any]) -> Tuple[Set[str], bool]:
 
     unclassified = False
     if kind == "tool":
-        blob = f"{n.get('tool_name') or n.get('id') or ''} {n.get('description') or n.get('system_prompt') or ''}"
+        blob = _norm(f"{n.get('tool_name') or n.get('id') or ''} "
+                     f"{n.get('description') or n.get('system_prompt') or ''}")
         # exfil = external communication (data leaves the box). side_effect
         # "external" always counts; an exfil-verb name counts too UNLESS the tool
         # is explicitly read-only (a read can't send — e.g. slack_list_channels).
         # A plain local "write" (write_file) is a mutation, not an exfil channel.
         if se == "external" or (se != "read" and _EXFIL_RX.search(blob)):
             roles.add("exfil")
-        if se == "read" or se is None:
-            hit = False
+        elif se is None and _MUTATION_RX.search(blob):
+            roles.add("exfil")   # unknown-reach mutation -> assume it can leave the box
+        # private / untrusted are read-flavoured but NOT gated by side_effect: a
+        # tool can both read private data and send it out (e.g. email_customer),
+        # so an "external" node is still checked for those legs. Only a pure local
+        # "write" (write_file) neither reads private data nor ingests untrusted.
+        if se != "write":
             if _UNTRUSTED_RX.search(blob):
-                roles.add("untrusted"); hit = True
+                roles.add("untrusted")
             if _PRIVATE_RX.search(blob):
-                roles.add("private"); hit = True
-            # a pure read tool we couldn't place is a real blind spot
-            if not hit and "exfil" not in roles and dc != "public":
-                unclassified = True
+                roles.add("private")
+        # Fail-closed: a tool we could place in NO role (typically an
+        # unannotated/custom tool) is a blind spot, not a safe node — surface it
+        # as an advisory so the verdict is never silently "proven safe".
+        if not roles and dc != "public":
+            unclassified = True
     return roles, unclassified
 
 
@@ -216,7 +237,9 @@ def analyze_trifecta(nodes: List[Dict[str, Any]], edges: List[List[str]],
             node, path = stack.pop()
             if node != src and node in sanitizers:
                 continue                       # taint cleaned here
-            if node != src and node in exfil and node not in tainted_exfil:
+            if node in exfil and node not in tainted_exfil:
+                # node == src is a real self-contained channel: one tool that both
+                # ingests untrusted content and sends externally.
                 tainted_exfil[node] = (src, path)
                 # keep exploring past it in case of further sinks on other paths
             if node in seen:

@@ -56,6 +56,10 @@ class PredictionInterval:
     n_samples: int
     calibrated: bool = False
     method: str = "jackknife+"
+    # jackknife+ (Barber et al. 2021) guarantees coverage >= 1 - 2*alpha in the
+    # worst case, NOT the nominal `confidence`. Expose the honest floor so a
+    # downstream gate doesn't over-trust `confidence` as a hard guarantee.
+    worst_case_coverage: Optional[float] = None
 
 
 @dataclass
@@ -195,6 +199,7 @@ def conformal_interval(
         confidence=confidence,
         n_samples=n,
         calibrated=True,
+        worst_case_coverage=max(0.0, 1.0 - 2.0 * (1.0 - confidence)),
     )
 
 

@@ -113,7 +113,15 @@ class SandboxedInterpreter:
             op = self._BINOPS.get(type(node.op))
             if op is None:
                 raise self._reject(node.op, "unsupported binary operator")
-            return op(self._eval(node.left, env), self._eval(node.right, env))
+            left, right = self._eval(node.left, env), self._eval(node.right, env)
+            # DoS guard: `9**9**9**9` is one op but hangs/OOMs the process. The
+            # rule string is untrusted authoring input (CLAUDE.md rule 11).
+            if isinstance(node.op, ast.Pow):
+                if isinstance(right, (int, float)) and abs(right) > 256:
+                    raise self._reject(node.op, "exponent too large (DoS guard)")
+                if isinstance(left, (int, float)) and abs(left) > 10 ** 9:
+                    raise self._reject(node.op, "base too large (DoS guard)")
+            return op(left, right)
 
         if isinstance(node, ast.UnaryOp):
             op = self._UNARYOPS.get(type(node.op))

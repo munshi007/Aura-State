@@ -211,7 +211,13 @@ export const useStore = create<State>((setState, getState) => ({
   importMcp: async (text) => {
     let cfg: any = text;
     try { cfg = JSON.parse(text); } catch { /* backend also parses strings */ }
-    const flow = await api.mcpImport(cfg);
+    let flow: any;
+    try {
+      flow = await api.mcpImport(cfg);
+    } catch {
+      setState({ toast: "Couldn't reach the MCP importer — is the local server running?" });
+      return;
+    }
     if (!flow || flow.error || !flow.nodes) {
       setState({ toast: flow?.error || "Couldn't read that as MCP tools." });
       return;
@@ -292,7 +298,7 @@ export const useStore = create<State>((setState, getState) => ({
       ...(kind === "tool" ? { tool_name: "tool.call", side_effect: "write" as const, mock_return: "{ }" } : {}),
       x: 140 + (n % 4) * 120, y: 120 + Math.floor(n / 4) * 120,
     };
-    setState((s) => ({ nodes: [...s.nodes, base], selectedId: base.id }));
+    setState((s) => ({ nodes: [...s.nodes, base], selectedId: base.id, verify: null, statusByNode: {} }));
   },
 
   addTool: (toolName, sideEffect, label) => {
@@ -310,7 +316,7 @@ export const useStore = create<State>((setState, getState) => ({
       tool_name: toolName, side_effect: sideEffect, mock_return: "{ }",
       x: 140 + (n % 4) * 120, y: 120 + Math.floor(n / 4) * 120,
     };
-    setState({ nodes: [...s.nodes, node], selectedId: id });
+    setState({ nodes: [...s.nodes, node], selectedId: id, verify: null, statusByNode: {} });
   },
 
   updateNode: (id, patch) =>
@@ -325,7 +331,7 @@ export const useStore = create<State>((setState, getState) => ({
       }
       return {
         nodes: s.nodes.map((nd) => (nd.id === id ? { ...nd, ...patch } : nd)),
-        edges, entry, selectedId,
+        edges, entry, selectedId, verify: null, statusByNode: {},
       };
     }),
 
@@ -335,6 +341,7 @@ export const useStore = create<State>((setState, getState) => ({
       edges: s.edges.filter(([a, b]) => a !== id && b !== id),
       selectedId: s.selectedId === id ? null : s.selectedId,
       entry: s.entry === id ? (s.nodes.find((n) => n.id !== id)?.id ?? "") : s.entry,
+      verify: null, statusByNode: {},
     })),
 
   select: (id) => setState({ selectedId: id, module: "build" }),
@@ -343,9 +350,9 @@ export const useStore = create<State>((setState, getState) => ({
     setState((s) => {
       if (from === to || s.edges.some(([a, b]) => a === from && b === to)) return {};
       const edges = [...s.edges, [from, to]];
-      return { edges, entry: deriveEntry(s.nodes, edges, s.entry) };
+      return { edges, entry: deriveEntry(s.nodes, edges, s.entry), verify: null, statusByNode: {} };
     }),
-  removeEdge: (from, to) => setState((s) => ({ edges: s.edges.filter(([a, b]) => !(a === from && b === to)) })),
+  removeEdge: (from, to) => setState((s) => ({ edges: s.edges.filter(([a, b]) => !(a === from && b === to)), verify: null, statusByNode: {} })),
 
   toSpec: () => {
     const s = getState();
@@ -388,8 +395,9 @@ export const useStore = create<State>((setState, getState) => ({
         if (c.verdict === "VIOLATED" && status[id] !== undefined) status[id] = "violated";
       });
       (res.taint?.violations || []).forEach((v: any) => {
-        const hit = s.nodes.find((n) => n.capability === "sink");
-        if (hit) status[hit.id] = "violated";
+        // Mark the ACTUAL sink the backend reported, not the first sink node
+        // (with 2+ sinks the wrong node used to light up).
+        if (v.sink && status[v.sink] !== undefined) status[v.sink] = "violated";
       });
       // Trifecta: mark the three implicated nodes so the canvas shows the channel.
       (res.trifecta?.findings || []).forEach((f: any) => {

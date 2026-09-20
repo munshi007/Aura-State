@@ -193,7 +193,23 @@ def insert_sanitizer_repair(engine, signal: RepairSignal) -> bool:
     engine._transitions.setdefault(san_name, [])
     if sink not in engine._transitions[san_name]:
         engine._transitions[san_name].append(sink)
+    # Keep the compiled-transition list (used by compile()/flow.json export) in
+    # sync so every emitted artifact reflects the repair, not just the contract.
+    _sync_compiled(engine, prev, san_name)
+    _sync_compiled(engine, san_name, sink)
     return True
+
+
+def _sync_compiled(engine, from_name: str, to_name: str) -> None:
+    """Append a CompiledTransition for from->to if the classes exist and it's new."""
+    from .engine import CompiledTransition
+    fo, to = engine._nodes.get(from_name), engine._nodes.get(to_name)
+    if fo is None or to is None:
+        return
+    fc = fo if isinstance(fo, type) else type(fo)   # _nodes may hold instances
+    tc = to if isinstance(to, type) else type(to)
+    if not any(ct.from_node is fc and ct.to_node is tc for ct in engine._compiled_transitions):
+        engine._compiled_transitions.append(CompiledTransition(from_node=fc, to_node=tc))
 
 
 def add_edge_to_reach_repair(engine, signal: RepairSignal) -> bool:

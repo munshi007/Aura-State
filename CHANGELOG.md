@@ -2,6 +2,29 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.7.2]
+
+A full end-to-end code review (5 parallel reviewers) surfaced real defects; all fixed with regression tests. 199 tests.
+
+### Fixed — trifecta false-negatives (the flagship must never fail open)
+- **Un-annotated MCP tools no longer verify a lethal surface as safe.** The importer defaulted tools with no annotation hints to `write`, which the classifier skipped for the untrusted/private legs — so `fetch + read_file + create_issue` (no hints) reported *safe*. `_side_effect` now returns `None` (unknown reach) and any tool that can't be placed in a role is surfaced as an advisory, not silently passed.
+- **Private/untrusted classification is no longer gated by `side_effect`.** A single tool that both reads private data and sends externally (e.g. `email_customer_record`) was tagged exfil-only and missed; it now closes the trifecta correctly.
+- **Compound tool names are matched.** Exfil detection tokenizes camelCase/snake_case, so `post_update` / `slack_post_message` / `postMessage` register as exfil while `postgres` does not.
+- A single node that is both untrusted-source and external sink is now flagged.
+
+### Fixed — verifier correctness
+- **`proof_engine` division:** `/` now compiles to true (Real) division and `//` to floor, instead of both truncating as Z3 Int division (which marked `avg == 7/2 == 3` satisfied). Z3 `unknown` now fails closed.
+- **Engine fails closed:** an extraction that never satisfies its obligations is no longer acted on — `process()` raises `MaxRetriesExceededError` unless a risk-controlled escalation is configured. Health/router metrics now record the real outcome instead of a hardcoded success.
+- **`pipeline_conformal`** `covers()`/`interval()` now raise when uncalibrated instead of vacuously covering everything; **`conformal`** exposes the honest jackknife+ `worst_case_coverage` (1−2α).
+- **CTL reachability/completion** in `check` now use the declared `entry` node.
+
+### Fixed — the CI regression gate
+- `check --json --baseline` now applies the regression gate (was ignored, so JSON/CI mode failed on pre-existing debt).
+- Baseline finding identity now includes a source→sink discriminator, so a **new** untrusted source reaching an **existing** sink is correctly flagged as a regression instead of tagged `[known]`.
+
+### Fixed — other
+- Sandbox `**` is bounded (a single `9**9**9**9` could hang the process); MCP importer no longer drops same-named tools from different servers; `json_graph` routing no longer silently falls through to the first edge; `schema_compiler` no longer silently remaps unknown fields to a fuzzy-nearest name; studio taint/edit UI marks the correct sink and clears stale verdicts; dead code removed.
+
 ## [0.7.1]
 
 ### Added

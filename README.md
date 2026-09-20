@@ -18,7 +18,7 @@
   <img alt="CI" src="https://github.com/munshi007/Aura-State/actions/workflows/ci.yml/badge.svg">
   <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-3d3aa8.svg">
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
-  <img alt="tests" src="https://img.shields.io/badge/tests-190%20passing-1c8a5b.svg">
+  <img alt="tests" src="https://img.shields.io/badge/tests-199%20passing-1c8a5b.svg">
 </p>
 
 <p align="center">
@@ -76,7 +76,7 @@ $ aura-state check dev_assistant.tools.json   # ← your MCP tools/list export
 
 > We audited **real MCP-server compositions and agent frameworks** (GitHub, filesystem, fetch, Slack, Postgres · CrewAI, AutoGPT) modeled from their published tool surfaces. **5 of 6 can close the lethal trifecta** — including the exact shape of the [Invariant Labs GitHub-MCP exploit](https://invariantlabs.ai/blog/mcp-github-vulnerability). Full writeup + sources: **[docs/AUDIT.md](docs/AUDIT.md)**. Reproduce it: `python examples/audit/run.py`.
 
-> (Also `python examples/audit.py`: **9 hand-built agent patterns**, 5 with an unguarded injection path, 3 closing the trifecta — each fixable with one sanitizer via Aura's **auto-repair**.)
+> (Also `python examples/audit.py`: **9 hand-built agent patterns**, 5 with an unguarded injection path, 4 closing the trifecta — each fixable with one sanitizer via Aura's **auto-repair**.)
 
 ## Gate regressions, not existing debt
 
@@ -490,7 +490,7 @@ Python 3.10+ required. Dependencies: `pydantic`, `instructor`, `openai`, `networ
 
 ```bash
 python -m pytest tests/ -v
-# 190 tests passing
+# 199 tests passing
 ```
 
 ## Works with any LLM provider

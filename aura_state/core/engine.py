@@ -29,9 +29,8 @@ from ..execution.tracer import AuraTrace
 from ..compiler.dspy_tuner import BootstrapTeleprompter
 from ..execution.sandbox import SandboxedInterpreter
 from ..consensus.auto_vote import AutoConsensus, ConsensusStrategy
-from ..memory.pruner import ContextPruner
 from ..verification.conformal import conformal_from_extractions, ConformalResult
-from .exceptions import StateTransitionError
+from .exceptions import StateTransitionError, MaxRetriesExceededError
 from .adaptive_graph import AdaptiveDAG
 from .verification_loop import VerificationLoop
 from .providers import LLMProvider
@@ -342,15 +341,6 @@ class AuraEngine:
         # ── STAGE 1: Bootstrap Teleprompter Injection ──
         optimized_prompt = self.compiler.optimize_node(current_state, node.system_prompt, user_text)
 
-        # Build messages
-        if history and node.memory_context:
-            messages = ContextPruner.prune(history, required_keys=node.memory_context)
-        else:
-            messages = [
-                {"role": "system", "content": optimized_prompt},
-                {"role": "user", "content": user_text},
-            ]
-
         # ── STAGE 2: Verification loop (extract -> sandbox+Z3 -> retry) ──
         extracted_data = None
         consensus_runs: List[BaseModel] = []
@@ -384,6 +374,15 @@ class AuraEngine:
             report["iterations"] = iterations
             if not verified:
                 logger.warning(f"[{current_state}] Extraction not verified after {iterations} attempts.")
+                # Fail closed (CLAUDE.md rule 4/6): an extraction whose obligations
+                # never held must NOT be acted on. If the node has a risk-controlled
+                # escalation path (STAGE 4b), let that handle it; otherwise stop.
+                if not (node.risk_controller is not None and node.escalation_node is not None):
+                    self.adaptive_graph.record_execution(current_state, False, (time.time() * 1000) - start_ms)
+                    self._verification_reports.append(report)
+                    raise MaxRetriesExceededError(
+                        f"[{current_state}] extraction failed verification after {iterations} attempts "
+                        f"(obligations: {node.obligations}); refusing to act on unverified data")
 
             # ── STAGE 3: Conformal interval over consensus runs ──
             if len(consensus_runs) >= 2:
@@ -456,10 +455,15 @@ class AuraEngine:
         )
 
         # ── STAGE 7: Record health + edge outcome (feeds the bandit router) ──
+        # Record the REAL outcome: an unverified extraction has already raised
+        # above, so a failed deterministic contract is the remaining not-ok case.
+        # (Was hardcoded True, which made fail_rate ~0 and the bandit posterior
+        # never see a loss.)
+        ok = bool(report.get("extraction_verified", report.get("contract_verified", True)))
         latency = (time.time() * 1000) - start_ms
-        self.adaptive_graph.record_execution(current_state, True, latency)
+        self.adaptive_graph.record_execution(current_state, ok, latency)
         if next_state in self._transitions.get(current_state, []):
-            self.adaptive_graph.record_edge_outcome(current_state, next_state, success=True)
+            self.adaptive_graph.record_edge_outcome(current_state, next_state, success=ok)
 
         report["next_state"] = next_state
         self._verification_reports.append(report)
