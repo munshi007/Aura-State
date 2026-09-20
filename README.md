@@ -170,7 +170,7 @@ An agent is a typed graph of **four node kinds** — you name them anything:
 | **Versions · Certify** | snapshot + diff designs; export a signed **proof certificate** (SHA-256) or the whole agent as **runnable Python** |
 | **SDK** | copy-paste snippets to use the library in code — the studio is optional |
 
-Keys are read from your environment; a local Ollama model needs no key at all. Nothing leaves your laptop.
+**Bring any model.** A local Ollama model needs no key. For OpenAI / Gemini / DeepSeek, paste your key in **Settings → Providers** — it's held in memory for the session (never written to disk) and works immediately, no restart. Keys set in your environment before launch are picked up too. Nothing leaves your laptop.
 
 ### Connect your agent (any code · CrewAI · LangGraph)
 
