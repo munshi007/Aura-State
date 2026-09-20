@@ -210,3 +210,19 @@ def test_mcp_import_builds_hub_flow(client):
 
 def test_mcp_import_rejects_non_mcp(client):
     assert client.post("/api/mcp/import", json={"config": {"nodes": []}}).status_code == 400
+
+
+def test_code_import_from_source(client):
+    src = ('from langchain_core.tools import tool\n'
+           '@tool\ndef fetch_url(u):\n    "Fetch a URL"\n    ...\n'
+           '@tool\ndef read_file(p):\n    "Read a local file"\n    ...\n'
+           '@tool\ndef post_to_slack(t):\n    "Post to Slack"\n    ...\n')
+    flow = client.post("/api/code/import", json={"source": src}).json()
+    assert {"Agent", "fetch_url", "read_file", "post_to_slack"} <= {n["id"] for n in flow["nodes"]}
+    v = client.post("/api/verify", json={"nodes": flow["nodes"], "edges": flow["edges"], "entry": flow["entry"]}).json()
+    assert v["trifecta"]["verdict"] == "CLOSED"
+
+
+def test_code_import_rejects_empty_and_toolless(client):
+    assert client.post("/api/code/import", json={"source": ""}).status_code == 400
+    assert client.post("/api/code/import", json={"source": "x = 1"}).status_code == 400

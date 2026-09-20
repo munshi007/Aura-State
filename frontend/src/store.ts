@@ -12,6 +12,13 @@ const uid = () => "n" + ++_seq;
 // The entry is where execution starts — it must be a SOURCE node (no incoming
 // edge). Keep the stored entry if it's still a valid source; otherwise derive
 // the real source. This makes "entry stuck on a downstream node" impossible.
+const _lsNum = (k: string, d: number): number => {
+  try { const v = localStorage.getItem(k); return v ? Number(v) || d : d; } catch { return d; }
+};
+const _lsBool = (k: string): boolean => {
+  try { return localStorage.getItem(k) === "1"; } catch { return false; }
+};
+
 function deriveEntry(nodes: AgentNode[], edges: string[][], current: string): string {
   if (!nodes.length) return "";
   const ids = new Set(nodes.map((n) => n.id));
@@ -20,6 +27,41 @@ function deriveEntry(nodes: AgentNode[], edges: string[][], current: string): st
   if (current && sources.includes(current)) return current;   // valid source → keep user's choice
   if (sources.length) return sources[0];                       // first real source
   return ids.has(current) ? current : nodes[0].id;             // cyclic fallback
+}
+
+// Shared by importMcp / importCode: the backend returns a hub flow with minimal
+// tool nodes (id/kind/tool_name/side_effect/description[/data_class/exfil]); inflate
+// them to full canvas nodes laid out as a hub + a column of tools, load, verify.
+function _applyImportedFlow(flow: any, fallbackName: string, errMsg: string, extra: Record<string, any>) {
+  if (!flow || flow.error || !flow.nodes) {
+    useStore.setState({ toast: flow?.error || errMsg } as any);
+    return;
+  }
+  const tools = flow.nodes.filter((n: any) => n.id !== "Agent");
+  const nodes: AgentNode[] = flow.nodes.map((n: any) => {
+    const isTool = n.kind === "tool";
+    const idx = tools.findIndex((t: any) => t.id === n.id);
+    const node: any = {
+      id: n.id, kind: n.kind || "tool",
+      capability: isTool ? (n.side_effect === "read" ? "plain" : "sink") : (n.capability || "plain"),
+      system_prompt: n.description || n.id, model: "qwen2.5:0.5b", provider: "ollama",
+      temperature: 0, max_tokens: 256, fields: [], obligations: [], sandbox_rule: "",
+      consensus: 1, confidence: 0.9, retry: 1,
+      tool_name: n.tool_name, side_effect: n.side_effect,
+      x: n.id === "Agent" ? 90 : 420, y: n.id === "Agent" ? 200 : 60 + idx * 92,
+    };
+    if (n.data_class) node.data_class = n.data_class;   // preserve role overrides
+    if (n.exfil !== undefined) node.exfil = n.exfil;
+    return node as AgentNode;
+  });
+  useStore.setState({
+    agentName: flow.name || fallbackName, provider: "ollama", nodes,
+    edges: (flow.edges || []).map((e: string[]) => [...e]),
+    entry: deriveEntry(nodes, flow.edges || [], flow.entry), invariants: [], selectedId: "Agent",
+    verify: null, statusByNode: {}, runTrace: null, diffOverlay: {}, module: "build",
+    agentMenuOpen: false, newAgentOpen: false, ...extra,
+  } as any);
+  useStore.getState().runVerify();
 }
 
 function seed(): AgentNode[] {
@@ -86,6 +128,13 @@ interface State {
   agentMenuOpen: boolean;
   newAgentOpen: boolean;
   mcpOpen: boolean;
+  codeOpen: boolean;
+  treeW: number;
+  inspW: number;
+  treeCollapsed: boolean;
+  inspCollapsed: boolean;
+  setPanelWidth: (which: "tree" | "insp", px: number) => void;
+  togglePanel: (which: "tree" | "insp") => void;
   diffOverlay: Record<string, "added" | "changed">;
   repairing: boolean;
   toast: string | null;
@@ -95,6 +144,7 @@ interface State {
   loadTemplate: (key: string) => void;
   importAgent: (flow: any) => void;
   importMcp: (text: string) => Promise<void>;
+  importCode: (source: string) => Promise<void>;
   newBlank: () => void;
   duplicateAgent: () => Promise<void>;
   renameAgent: (name: string) => Promise<void>;
@@ -155,6 +205,21 @@ export const useStore = create<State>((setState, getState) => ({
   agentMenuOpen: false,
   newAgentOpen: false,
   mcpOpen: false,
+  codeOpen: false,
+  treeW: _lsNum("aura_treeW", 236),
+  inspW: _lsNum("aura_inspW", 384),
+  treeCollapsed: _lsBool("aura_treeC"),
+  inspCollapsed: _lsBool("aura_inspC"),
+  setPanelWidth: (which, px) => {
+    try { localStorage.setItem(which === "tree" ? "aura_treeW" : "aura_inspW", String(px)); } catch {}
+    setState((which === "tree" ? { treeW: px } : { inspW: px }) as any);
+  },
+  togglePanel: (which) =>
+    setState((s) => {
+      const nv = !(which === "tree" ? s.treeCollapsed : s.inspCollapsed);
+      try { localStorage.setItem(which === "tree" ? "aura_treeC" : "aura_inspC", nv ? "1" : "0"); } catch {}
+      return (which === "tree" ? { treeCollapsed: nv } : { inspCollapsed: nv }) as any;
+    }),
   diffOverlay: {},
   repairing: false,
   toast: null,
@@ -212,39 +277,15 @@ export const useStore = create<State>((setState, getState) => ({
     let cfg: any = text;
     try { cfg = JSON.parse(text); } catch { /* backend also parses strings */ }
     let flow: any;
-    try {
-      flow = await api.mcpImport(cfg);
-    } catch {
-      setState({ toast: "Couldn't reach the MCP importer — is the local server running?" });
-      return;
-    }
-    if (!flow || flow.error || !flow.nodes) {
-      setState({ toast: flow?.error || "Couldn't read that as MCP tools." });
-      return;
-    }
-    // The backend returns minimal nodes (id/kind/tool_name/side_effect/description);
-    // inflate to full canvas nodes and lay them out as a hub + a column of tools.
-    const tools = flow.nodes.filter((n: any) => n.id !== "Agent");
-    const nodes: AgentNode[] = flow.nodes.map((n: any) => {
-      const isTool = n.kind === "tool";
-      const idx = tools.findIndex((t: any) => t.id === n.id);
-      return {
-        id: n.id, kind: n.kind || "tool",
-        capability: isTool ? (n.side_effect === "read" ? "plain" : "sink") : (n.capability || "plain"),
-        system_prompt: n.description || n.id, model: "qwen2.5:0.5b", provider: "ollama",
-        temperature: 0, max_tokens: 256, fields: [], obligations: [], sandbox_rule: "",
-        consensus: 1, confidence: 0.9, retry: 1,
-        tool_name: n.tool_name, side_effect: n.side_effect,
-        x: n.id === "Agent" ? 90 : 420, y: n.id === "Agent" ? 200 : 60 + idx * 92,
-      } as AgentNode;
-    });
-    setState({
-      agentName: flow.name || "mcp-agent", provider: "ollama", nodes, edges: (flow.edges || []).map((e: string[]) => [...e]),
-      entry: deriveEntry(nodes, flow.edges || [], flow.entry), invariants: [], selectedId: "Agent",
-      verify: null, statusByNode: {}, runTrace: null, diffOverlay: {}, module: "build",
-      mcpOpen: false, agentMenuOpen: false, newAgentOpen: false,
-    });
-    await getState().runVerify();
+    try { flow = await api.mcpImport(cfg); }
+    catch { setState({ toast: "Couldn't reach the MCP importer — is the local server running?" }); return; }
+    _applyImportedFlow(flow, "mcp-agent", "Couldn't read that as MCP tools.", { mcpOpen: false });
+  },
+  importCode: async (source) => {
+    let flow: any;
+    try { flow = await api.codeImport(source); }
+    catch { setState({ toast: "Couldn't reach the code importer — is the local server running?" }); return; }
+    _applyImportedFlow(flow, "code-agent", "Couldn't import that agent code.", { codeOpen: false });
   },
   newBlank: () => setState({
     agentName: "untitled-agent", provider: "ollama", nodes: [], edges: [], entry: "", invariants: [],

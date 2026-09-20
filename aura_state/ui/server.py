@@ -198,6 +198,28 @@ def create_app() -> "FastAPI":
                 status_code=400)
         return flow_from_mcp(cfg, name=req.name or "mcp-agent")
 
+    class CodeImportReq(BaseModel):
+        source: str
+        name: Optional[str] = None
+
+    @app.post("/api/code/import")
+    def code_import(req: CodeImportReq):
+        """Import an agent's tool surface from pasted source (LangGraph/CrewAI/
+        LangChain). Parsed with ast — the code is never imported or executed."""
+        from ..loaders.code import flow_from_code
+        if not req.source.strip():
+            return JSONResponse({"error": "paste some agent code"}, status_code=400)
+        try:
+            flow = flow_from_code(req.source, name=req.name or "code-agent")
+        except SyntaxError as e:
+            return JSONResponse({"error": f"could not parse Python: {e}"}, status_code=400)
+        if not [n for n in flow["nodes"] if n["id"] != "Agent"]:
+            return JSONResponse(
+                {"error": "no tools found — expected @tool functions, Tool(...)/StructuredTool, "
+                          "or framework tool classes (SerperDevTool, FileReadTool, …)"},
+                status_code=400)
+        return flow
+
     # ── Live Agent module ──
     @app.get("/api/providers")
     def providers():

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useStore, MODEL_PRESETS } from "../store";
 import { KIND, CAP_LABEL, Icon, Info } from "../ui";
 import { statusReason, ctlReason } from "../explain";
+import { CollapseBtn } from "./Resizer";
 import * as api from "../api";
 import type { AgentNode, NodeKind, Capability, Field } from "../api";
 
@@ -9,7 +10,7 @@ const TABS = ["model", "schema", "proofs", "tools", "retry"];
 const TYPES = ["str", "int", "float", "bool"];
 
 export default function Inspector() {
-  const { nodes, selectedId, tab, set, updateNode, deleteNode, verify } = useStore();
+  const { nodes, selectedId, tab, set, updateNode, deleteNode, verify, inspCollapsed } = useStore();
   const node = nodes.find((n) => n.id === selectedId);
 
   if (!node) return <GraphInspector />;
@@ -22,6 +23,8 @@ export default function Inspector() {
         <div className="t">
           <span className="ty" style={{ background: KIND[node.kind].shade }} />
           <h2>{node.id}</h2>
+          <span style={{ flex: 1 }} />
+          <CollapseBtn which="insp" />
         </div>
         <div className="sub">{KIND[node.kind].label} · {CAP_LABEL[node.capability]}</div>
         <div className="tabs">
@@ -48,7 +51,7 @@ export default function Inspector() {
 }
 
 function GraphInspector() {
-  const { nodes, edges, entry, agentName, invariants, verify, repairing, autoRepair, toSpec, graphNodes, set } = useStore();
+  const { nodes, edges, entry, agentName, invariants, verify, repairing, autoRepair, toSpec, graphNodes, set, inspCollapsed } = useStore();
   const [repairMsg, setRepairMsg] = useState<any>(null);
   const taintBad = verify?.taint?.verdict === "VIOLATED";
   const doRepair = async () => { const r = await autoRepair(); setRepairMsg(r); };
@@ -90,7 +93,7 @@ function GraphInspector() {
   return (
     <div className="insp">
       <div className="ih">
-        <div className="t"><span className="ty" style={{ background: "var(--ink-3)" }} /><h2>Graph</h2></div>
+        <div className="t"><span className="ty" style={{ background: "var(--ink-3)" }} /><h2>Graph</h2><span style={{ flex: 1 }} /><CollapseBtn which="insp" /></div>
         <div className="sub">{agentName} · {nodes.length} nodes · entry {entry}</div>
       </div>
       <div className="ibody">

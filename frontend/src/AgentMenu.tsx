@@ -49,6 +49,7 @@ export function AgentMenu() {
         {item("sdk", "Export as Python", () => s.exportPythonFile())}
         {item("prove", "Import JSON…", () => fileRef.current?.click())}
         {item("sdk", "Import MCP tools…", () => s.set({ mcpOpen: true, agentMenuOpen: false }))}
+        {item("sdk", "Import from code…", () => s.set({ codeOpen: true, agentMenuOpen: false }))}
         <input ref={fileRef} type="file" accept="application/json,.json" onChange={onFile} style={{ display: "none" }} />
         {item("trash", "Delete agent", () => { if (window.confirm(`Delete "${s.agentName}"? This removes the saved file.`)) s.deleteAgent(); }, true)}
         {others.length > 0 && <>
@@ -98,6 +99,70 @@ export function McpModal() {
         </div>
         <div className="na-foot" style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <button className="btn" onClick={() => setText(MCP_SAMPLE)}>Use sample</button>
+          <span style={{ flex: 1 }} />
+          <button className="btn primary" disabled={busy || !text.trim()} onClick={go}>
+            {busy ? "Analyzing…" : "Import & verify"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const CODE_SAMPLE = `from langchain_core.tools import tool
+
+@tool
+def fetch_url(url: str) -> str:
+    "Fetch a URL and return its contents."
+    ...
+
+@tool
+def read_customer_file(path: str) -> str:
+    "Read a customer record from a local file."
+    ...
+
+@tool
+def post_to_slack(text: str) -> str:
+    "Post a message to a Slack channel."
+    ...
+
+agent = create_react_agent(model, tools=[fetch_url, read_customer_file, post_to_slack])`;
+
+export function CodeModal() {
+  const s = useStore();
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  if (!s.codeOpen) return null;
+  const close = () => s.set({ codeOpen: false });
+  const go = async () => {
+    if (!text.trim()) return;
+    setBusy(true);
+    try { await s.importCode(text); } finally { setBusy(false); }
+  };
+  return (
+    <div className="palette-scrim" onClick={close}>
+      <div className="newagent" style={{ maxWidth: 640 }} onClick={(e) => e.stopPropagation()}>
+        <div className="na-head">
+          <h2>Import from code</h2>
+          <button className="icobtn" aria-label="Close" onClick={close}>✕</button>
+        </div>
+        <div style={{ padding: "0 20px" }}>
+          <p className="hint" style={{ marginTop: 0 }}>
+            Paste a <b>LangGraph / CrewAI / LangChain</b> agent's source. Aura extracts its
+            tools (<code>@tool</code> functions, <code>Tool(...)</code>, framework tool classes),
+            models the worst case, and checks the <b>lethal trifecta</b>. It parses the code with
+            <code> ast</code> — it never imports or runs it.
+          </p>
+          <textarea
+            value={text} onChange={(e) => setText(e.target.value)}
+            placeholder={CODE_SAMPLE} spellCheck={false}
+            style={{ width: "100%", height: 240, fontFamily: "var(--mono, monospace)", fontSize: 12,
+                     background: "var(--panel, #111)", color: "var(--ink-1, #eee)",
+                     border: "1px solid var(--line, #333)", borderRadius: 8, padding: 10, resize: "vertical" }}
+          />
+        </div>
+        <div className="na-foot" style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <button className="btn" onClick={() => setText(CODE_SAMPLE)}>Use sample</button>
           <span style={{ flex: 1 }} />
           <button className="btn primary" disabled={busy || !text.trim()} onClick={go}>
             {busy ? "Analyzing…" : "Import & verify"}

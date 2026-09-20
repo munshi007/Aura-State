@@ -60,6 +60,9 @@ export const fetchUrl = (url: string) => post("/api/fetch_url", { url });
 // Import an MCP tool surface (tools/list result, client config, or bare list)
 // into an Aura flow — models the worst case (planner can call any tool).
 export const mcpImport = (config: any, name?: string) => post("/api/mcp/import", { config, name });
+// Import an agent's tool surface from pasted source (LangGraph/CrewAI/LangChain).
+// Parsed statically on the backend — the code is never executed.
+export const codeImport = (source: string, name?: string) => post("/api/code/import", { source, name });
 
 export const callAgent = (body: any) => post("/api/agent", body);
 export const proveData = (data: any, obligations: string[]) => post("/api/prove", { data, obligations });

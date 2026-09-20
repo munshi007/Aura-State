@@ -6,7 +6,8 @@ import { Run, Prove, Data, Monitor, Calibrate, Settings, Sdk, Memory } from "./m
 import { Runs, Evals, Versions, Audit } from "./modules/Governance";
 import Palette from "./Palette";
 import Tour from "./Tour";
-import { AgentMenu, NewAgentModal, McpModal } from "./AgentMenu";
+import { AgentMenu, NewAgentModal, McpModal, CodeModal } from "./AgentMenu";
+import { Resizer } from "./build/Resizer";
 
 const RAIL: { id: Module; icon: string; label: string }[] = [
   { id: "build", icon: "build", label: "Build" },
@@ -103,14 +104,15 @@ function StatusBar() {
       <div className="sp" />
       {runTrace && <div className="seg2">run {runTrace.length} steps</div>}
       <div className="seg2">provider {provider}</div>
-      <div className="seg2">aura-state 0.6.0</div>
+      <div className="seg2">aura-state 0.8.1</div>
     </div>
   );
 }
 
 export default function App() {
   useTheme();
-  const { module, paletteOpen, tourOpen, set, refreshProviders, refreshFlows } = useStore();
+  const { module, paletteOpen, tourOpen, set, refreshProviders, refreshFlows,
+          treeW, inspW, treeCollapsed, inspCollapsed, togglePanel } = useStore();
   useEffect(() => {
     refreshProviders(); refreshFlows();
     try { if (!localStorage.getItem("aura_tour_seen")) set({ tourOpen: true }); } catch {}
@@ -144,15 +146,24 @@ export default function App() {
   return (
     <div className="app">
       <TopBar />
-      <div className={"main" + (isBuild ? "" : " wide")}>
+      <div className={"main" + (isBuild ? "" : " wide")}
+        style={isBuild ? { gridTemplateColumns: `52px ${treeCollapsed ? 0 : treeW}px 1fr ${inspCollapsed ? 0 : inspW}px` } : undefined}>
         <Rail />
         {isBuild ? <Build /> : panel[module]}
+        {isBuild && <><Resizer side="tree" /><Resizer side="insp" /></>}
       </div>
+      {isBuild && treeCollapsed && (
+        <button className="reopen reopen-l" onClick={() => togglePanel("tree")} title="Show nodes panel" aria-label="Show nodes panel">›</button>
+      )}
+      {isBuild && inspCollapsed && (
+        <button className="reopen reopen-r" onClick={() => togglePanel("insp")} title="Show inspector" aria-label="Show inspector">‹</button>
+      )}
       <StatusBar />
       {paletteOpen && <Palette />}
       {tourOpen && <Tour />}
       <NewAgentModal />
       <McpModal />
+      <CodeModal />
       <Toast />
     </div>
   );

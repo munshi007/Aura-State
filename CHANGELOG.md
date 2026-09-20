@@ -2,6 +2,12 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.8.2]
+
+### Added
+- **Studio: "Import from code"** — the source-code importer is now in the UI (agent menu → *Import from code…*): paste a LangGraph/CrewAI/LangChain agent and it builds the flow and verifies the trifecta, via a new `/api/code/import` endpoint (parses with `ast`, never runs the code). The studio now surfaces all three import paths (MCP tools, agent source, JSON).
+- **Resizable & collapsible panels** — drag the divider on either side to resize the Nodes tree and the Inspector; a ‹/› button collapses each (with a slim reopen tab), persisted per browser. The status bar now shows the correct version.
+
 ## [0.8.1]
 
 ### Fixed

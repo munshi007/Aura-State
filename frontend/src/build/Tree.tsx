@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useStore, Status } from "../store";
 import { KIND, Icon } from "../ui";
 import type { NodeKind } from "../api";
+import { CollapseBtn } from "./Resizer";
 
 const ADD: { kind: NodeKind; label: string; desc: string }[] = [
   { kind: "extract", label: "Extract", desc: "LLM step → structured output" },
@@ -20,7 +21,7 @@ const TOOL_PRESETS: { label: string; name: string; effect: "read" | "write" | "e
 ];
 
 export default function Tree() {
-  const { nodes, selectedId, statusByNode, entry, verify, addNode, addTool, select } = useStore();
+  const { nodes, selectedId, statusByNode, entry, verify, addNode, addTool, select, treeCollapsed } = useStore();
   const [toolMenu, setToolMenu] = useState(false);
   const z3 = verify?.obligations || [];
   const z3ok = z3.filter((o: any) => o.consistent).length;
@@ -37,7 +38,10 @@ export default function Tree() {
     <div className="tree">
       <div className="hd">
         <div className="nm">Nodes</div>
-        <div className="lbl">{nodes.length}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div className="lbl">{nodes.length}</div>
+          <CollapseBtn which="tree" />
+        </div>
       </div>
 
       <div className="grp">
