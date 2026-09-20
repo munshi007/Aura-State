@@ -18,7 +18,7 @@
   <img alt="CI" src="https://github.com/munshi007/Aura-State/actions/workflows/ci.yml/badge.svg">
   <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-3d3aa8.svg">
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
-  <img alt="tests" src="https://img.shields.io/badge/tests-199%20passing-1c8a5b.svg">
+  <img alt="tests" src="https://img.shields.io/badge/tests-204%20passing-1c8a5b.svg">
 </p>
 
 <p align="center">
@@ -73,6 +73,17 @@ $ aura-state check dev_assistant.tools.json   # ← your MCP tools/list export
 ```
 
 **Point it straight at your MCP setup.** Export your agent's `tools/list` (or hand it your client config) and Aura models the worst case — the LLM can call any tool in any order — then decides whether `fetch` + `filesystem` + `slack` together form an exfiltration channel. It never connects to or runs a server.
+
+**Or point it at your agent's *code*.** Aura statically imports the tool surface from a **LangGraph / CrewAI / LangChain** source file or repo — no install, and it never runs your code:
+
+```bash
+aura-state check your_agent.py          # extracts @tool functions & framework tools
+aura-state check ./my-agent-repo/       # a whole directory
+```
+```console
+✗ trifecta [post_to_slack]: prompt injection at 'fetch_url' (untrusted) can reach
+  'post_to_slack' unsanitized while 'read_customer_file' brings private data into scope.
+```
 
 > We audited **real MCP-server compositions and agent frameworks** (GitHub, filesystem, fetch, Slack, Postgres · CrewAI, AutoGPT) modeled from their published tool surfaces. **5 of 6 can close the lethal trifecta** — including the exact shape of the [Invariant Labs GitHub-MCP exploit](https://invariantlabs.ai/blog/mcp-github-vulnerability). Full writeup + sources: **[docs/AUDIT.md](docs/AUDIT.md)**. Reproduce it: `python examples/audit/run.py`.
 
@@ -490,7 +501,7 @@ Python 3.10+ required. Dependencies: `pydantic`, `instructor`, `openai`, `networ
 
 ```bash
 python -m pytest tests/ -v
-# 199 tests passing
+# 204 tests passing
 ```
 
 ## Works with any LLM provider

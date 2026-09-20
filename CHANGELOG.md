@@ -2,6 +2,12 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.8.0]
+
+### Added
+- **Source-code importer** (`aura_state.loaders.code`) — `aura-state check` now accepts a **LangGraph / CrewAI / LangChain agent's source** (a `.py` file or a whole directory) and statically extracts its tool surface: `@tool`/`@tool("name")` functions, `Tool(...)`/`StructuredTool.from_function(...)`, and framework tool classes (`SerperDevTool`, `FileReadTool`, `CodeInterpreterTool`, …) mapped to known roles. It builds the same worst-case hub flow as the MCP importer and runs the trifecta/taint checks. Parses with `ast` and **never imports or executes the code** — reading an agent's repo must not run it. Examples in `examples/code/`.
+- `_load_flow` for `.py` no longer executes the module: an explicit `flow`/`FLOW` dict is read with `ast.literal_eval` (safe), otherwise the tool surface is imported statically. Directories are supported.
+
 ## [0.7.2]
 
 A full end-to-end code review (5 parallel reviewers) surfaced real defects; all fixed with regression tests. 199 tests.

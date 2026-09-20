@@ -27,6 +27,7 @@ def _load_flow(path):
     """Load a flow from a .json export, or a .py module exposing `flow`/`FLOW`
     (a dict) or `build()` returning an AuraEngine."""
     import json
+    import ast
     import os
     if path.endswith(".json"):
         with open(path) as f:
@@ -35,26 +36,34 @@ def _load_flow(path):
         if is_mcp_config(obj):
             return flow_from_mcp(obj, name=os.path.basename(path)[:-5])
         return obj
+    if os.path.isdir(path):
+        # a repo / package directory -> import the agent's tool surface statically
+        from .loaders.code import flow_from_path
+        return flow_from_path(path)
     if path.endswith(".py"):
-        import importlib.util
-        spec = importlib.util.spec_from_file_location("aura_flow_under_check", path)
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        for attr in ("flow", "FLOW"):
-            if isinstance(getattr(mod, attr, None), dict):
-                return getattr(mod, attr)
-        if hasattr(mod, "build"):
-            eng = mod.build()
-            c = eng.compile_contract().model_dump()
-            nodes = [{"id": n["name"],
-                      "kind": ("sanitizer" if n.get("sanitizer") else "tool" if n.get("dangerous_sink") else "extract"),
-                      "capability": ("sanitizer" if n.get("sanitizer") else "sink" if n.get("dangerous_sink")
-                                     else "untrusted" if n.get("untrusted_source") else "plain"),
-                      "obligations": n.get("obligations", [])} for n in c["nodes"]]
-            edges = [[a, b] for a, bs in c["transitions"].items() for b in bs]
-            return {"name": os.path.basename(path)[:-3], "nodes": nodes, "edges": edges, "entry": c.get("entry_node")}
-        raise ValueError(f"{path}: no `flow` dict or `build()` found")
-    raise ValueError(f"unsupported file type: {path} (use .json or .py)")
+        with open(path) as f:
+            src = f.read()
+        # Prefer an explicit Aura flow literal (`flow`/`FLOW = {...}`), evaluated
+        # SAFELY with literal_eval — we never exec the module (reading an agent's
+        # source must not run it).
+        try:
+            tree = ast.parse(src)
+        except SyntaxError as e:
+            raise ValueError(f"{path}: could not parse ({e})")
+        for stmt in tree.body:
+            if isinstance(stmt, ast.Assign):
+                for tgt in stmt.targets:
+                    if isinstance(tgt, ast.Name) and tgt.id in ("flow", "FLOW"):
+                        try:
+                            val = ast.literal_eval(stmt.value)
+                        except (ValueError, SyntaxError):
+                            val = None
+                        if isinstance(val, dict):
+                            return val
+        # Otherwise, import the agent's tool surface from its code (static AST).
+        from .loaders.code import flow_from_code
+        return flow_from_code(src, name=os.path.basename(path)[:-3])
+    raise ValueError(f"unsupported file type: {path} (use .json, .py, or a directory)")
 
 
 def _finding_key(f):
