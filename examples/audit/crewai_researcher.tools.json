@@ -1,0 +1,10 @@
+{
+  "_comment": "Typical CrewAI research crew tool surface (crewai-tools docs). SerperDevTool + ScrapeWebsiteTool bring untrusted web content; FileReadTool reads private files; FileWriterTool is a LOCAL write (not exfil); CodeInterpreterTool runs arbitrary Python — the external-comms leg (a sandbox that can open sockets). openWorldHint reflects each tool's reach.",
+  "tools": [
+    {"name": "SerperDevTool", "description": "Search the web via the Serper API", "annotations": {"readOnlyHint": true, "openWorldHint": true}},
+    {"name": "ScrapeWebsiteTool", "description": "Scrape the contents of a website", "annotations": {"readOnlyHint": true, "openWorldHint": true}},
+    {"name": "FileReadTool", "description": "Read the contents of a local file", "annotations": {"readOnlyHint": true, "openWorldHint": false}},
+    {"name": "FileWriterTool", "description": "Write content to a local file", "annotations": {"readOnlyHint": false, "openWorldHint": false}},
+    {"name": "CodeInterpreterTool", "description": "Execute arbitrary Python code", "annotations": {"readOnlyHint": false, "openWorldHint": true}}
+  ]
+}

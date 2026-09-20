@@ -1,0 +1,14 @@
+{
+  "_comment": "An issue-triage agent on the official GitHub MCP server (github/github-mcp-server). Tool names + read/act nature from its README. This is the exact capability shape of the Invariant Labs GitHub-MCP exploit (2025-05-26, https://invariantlabs.ai/blog/mcp-github-vulnerability): a malicious public issue coerces the agent to read a PRIVATE repo and leak it via a PR the attacker can read.",
+  "mcpServers": {
+    "github": {
+      "command": "docker", "args": ["run", "ghcr.io/github/github-mcp-server"],
+      "tools": [
+        {"name": "get_issue", "description": "Get the contents and comments of a GitHub issue", "annotations": {"readOnlyHint": true, "openWorldHint": true}},
+        {"name": "get_file_contents", "description": "Get the contents of a file from a repository", "annotations": {"readOnlyHint": true, "openWorldHint": false}},
+        {"name": "add_issue_comment", "description": "Add a comment to a GitHub issue", "annotations": {"readOnlyHint": false, "openWorldHint": true}},
+        {"name": "create_pull_request", "description": "Open a new pull request", "annotations": {"readOnlyHint": false, "openWorldHint": true}}
+      ]
+    }
+  }
+}

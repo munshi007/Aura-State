@@ -131,7 +131,11 @@ def classify_roles(n: Dict[str, Any]) -> Tuple[Set[str], bool]:
     unclassified = False
     if kind == "tool":
         blob = f"{n.get('tool_name') or n.get('id') or ''} {n.get('description') or n.get('system_prompt') or ''}"
-        if se in ("write", "external") or _EXFIL_RX.search(blob):
+        # exfil = external communication (data leaves the box). side_effect
+        # "external" always counts; an exfil-verb name counts too UNLESS the tool
+        # is explicitly read-only (a read can't send — e.g. slack_list_channels).
+        # A plain local "write" (write_file) is a mutation, not an exfil channel.
+        if se == "external" or (se != "read" and _EXFIL_RX.search(blob)):
             roles.add("exfil")
         if se == "read" or se is None:
             hit = False

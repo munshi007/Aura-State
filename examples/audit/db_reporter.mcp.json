@@ -1,0 +1,23 @@
+{
+  "_comment": "A DB reporting agent: postgres (read-only query) + brave-search (untrusted web) + slack (post). Tool names from the archived server READMEs. Postgres runs in a READ ONLY transaction, so it reads PRIVATE data; the trifecta still closes because untrusted search results can steer the Slack post.",
+  "mcpServers": {
+    "postgres": {
+      "command": "npx", "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://localhost/app"],
+      "tools": [
+        {"name": "query", "description": "Run a read-only SQL query against the database", "annotations": {"readOnlyHint": true, "openWorldHint": false}}
+      ]
+    },
+    "brave-search": {
+      "command": "npx", "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "tools": [
+        {"name": "brave_web_search", "description": "Search the web and return results", "annotations": {"readOnlyHint": true, "openWorldHint": true}}
+      ]
+    },
+    "slack": {
+      "command": "npx", "args": ["-y", "@modelcontextprotocol/server-slack"],
+      "tools": [
+        {"name": "slack_post_message", "description": "Post a message to a Slack channel", "annotations": {"readOnlyHint": false, "openWorldHint": true}}
+      ]
+    }
+  }
+}

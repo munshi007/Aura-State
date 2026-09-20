@@ -19,8 +19,24 @@ def test_detects_mcp_shapes_and_not_flows():
 
 def test_annotations_map_to_side_effect():
     assert _side_effect({"readOnlyHint": True}) == "read"
-    assert _side_effect({"readOnlyHint": True, "destructiveHint": True}) == "external"
-    assert _side_effect({}) == "external"
+    assert _side_effect({"readOnlyHint": True, "destructiveHint": True}) == "read"     # read-only wins
+    assert _side_effect({"openWorldHint": True}) == "external"                          # acts externally
+    assert _side_effect({}) == "write"                                                 # local mutation, not exfil
+
+
+def test_readonly_name_match_is_not_exfil():
+    # slack_list_channels is read-only — "slack" in the name must NOT make it an exfil sink
+    from aura_state.verification.trifecta import classify_roles
+    roles, _ = classify_roles({"id": "slack_list_channels", "kind": "tool",
+                               "tool_name": "slack_list_channels", "side_effect": "read"})
+    assert "exfil" not in roles
+
+
+def test_local_write_is_not_exfil():
+    from aura_state.verification.trifecta import classify_roles
+    roles, _ = classify_roles({"id": "write_file", "kind": "tool",
+                               "tool_name": "write_file", "side_effect": "write"})
+    assert "exfil" not in roles
 
 
 def test_hub_graph_makes_every_tool_reachable_both_ways():

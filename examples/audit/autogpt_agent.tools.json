@@ -1,0 +1,11 @@
+{
+  "_comment": "AutoGPT (Classic) built-in command surface (agpt.co classic forge docs). read_website + search_web bring untrusted content; read_file reads private files; write_file is a local write; execute_python_code / execute_shell run arbitrary code — the external-comms leg (documented RCE surface, positive.security/blog/auto-gpt-rce).",
+  "tools": [
+    {"name": "search_web", "description": "Search the web for a query", "annotations": {"readOnlyHint": true, "openWorldHint": true}},
+    {"name": "read_website", "description": "Read the text content of a web page", "annotations": {"readOnlyHint": true, "openWorldHint": true}},
+    {"name": "read_file", "description": "Read a file from the workspace", "annotations": {"readOnlyHint": true, "openWorldHint": false}},
+    {"name": "write_file", "description": "Write a file to the workspace", "annotations": {"readOnlyHint": false, "openWorldHint": false}},
+    {"name": "execute_python_code", "description": "Execute arbitrary Python code", "annotations": {"readOnlyHint": false, "openWorldHint": true}},
+    {"name": "execute_shell", "description": "Run a shell command", "annotations": {"readOnlyHint": false, "openWorldHint": true}}
+  ]
+}

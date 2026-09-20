@@ -61,13 +61,21 @@ def _tools_from(config: Any) -> List[Dict[str, Any]]:
 def _side_effect(ann: Dict[str, Any]) -> str:
     """Map MCP tool annotations to an Aura side-effect.
 
-    readOnlyHint=True  → 'read'  (never mutates its environment)
-    otherwise          → 'external' (may act on the outside world; the
-                          name/description heuristic still refines the role)
+    readOnlyHint=True  → 'read'     (never mutates; e.g. fetch, list, get_*)
+    openWorldHint=True → 'external'  (acts on outside systems → an exfil channel:
+                          slack_post, add_issue_comment, http POST)
+    otherwise          → 'write'     (a local mutation like write_file — a
+                          dangerous sink, but NOT the trifecta's exfil leg)
+
+    Missing openWorldHint defaults to a local write: the official servers set it
+    on genuinely external tools, and an exfil-verb name (send/post/upload) is
+    still caught by the classifier, so this errs toward precision without a miss.
     """
-    if ann.get("readOnlyHint") is True and not ann.get("destructiveHint"):
+    if ann.get("readOnlyHint") is True:
         return "read"
-    return "external"
+    if ann.get("openWorldHint") is True:
+        return "external"
+    return "write"
 
 
 def is_mcp_config(obj: Any) -> bool:

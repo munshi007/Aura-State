@@ -1,0 +1,24 @@
+{
+  "_comment": "CONTRAST CASE (should PROVE safe): a read-only research agent — filesystem (read) + fetch + brave-search, with NO tool that communicates externally. Untrusted web content can be read and can touch private files, but there is no exfil leg, so the trifecta cannot close. Shows the check discriminates rather than always failing.",
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/me/notes"],
+      "tools": [
+        {"name": "read_text_file", "description": "Read the complete contents of a file", "annotations": {"readOnlyHint": true, "openWorldHint": false}},
+        {"name": "search_files", "description": "Recursively search for files matching a pattern", "annotations": {"readOnlyHint": true, "openWorldHint": false}}
+      ]
+    },
+    "fetch": {
+      "command": "uvx", "args": ["mcp-server-fetch"],
+      "tools": [
+        {"name": "fetch", "description": "Fetch a URL and return its contents", "annotations": {"readOnlyHint": true, "openWorldHint": true}}
+      ]
+    },
+    "brave-search": {
+      "command": "npx", "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "tools": [
+        {"name": "brave_web_search", "description": "Search the web and return results", "annotations": {"readOnlyHint": true, "openWorldHint": true}}
+      ]
+    }
+  }
+}

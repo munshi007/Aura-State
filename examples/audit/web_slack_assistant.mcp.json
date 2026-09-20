@@ -1,0 +1,26 @@
+{
+  "_comment": "A common Claude-Desktop/Cursor combo: filesystem + fetch + slack MCP servers. Tool names from each server's README (modelcontextprotocol/servers[-archived]). Matches the exfil class in Embrace The Red's Slack MCP advisory (2025-06-24, https://embracethered.com/blog/posts/2025/security-advisory-anthropic-slack-mcp-server-data-leakage/).",
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/me/work"],
+      "tools": [
+        {"name": "read_text_file", "description": "Read the complete contents of a file", "annotations": {"readOnlyHint": true, "openWorldHint": false}},
+        {"name": "list_directory", "description": "List files in a directory", "annotations": {"readOnlyHint": true, "openWorldHint": false}},
+        {"name": "write_file", "description": "Create or overwrite a file", "annotations": {"readOnlyHint": false, "destructiveHint": true, "openWorldHint": false}}
+      ]
+    },
+    "fetch": {
+      "command": "uvx", "args": ["mcp-server-fetch"],
+      "tools": [
+        {"name": "fetch", "description": "Fetch a URL and return its contents as markdown", "annotations": {"readOnlyHint": true, "openWorldHint": true}}
+      ]
+    },
+    "slack": {
+      "command": "npx", "args": ["-y", "@modelcontextprotocol/server-slack"],
+      "tools": [
+        {"name": "slack_list_channels", "description": "List public channels", "annotations": {"readOnlyHint": true, "openWorldHint": false}},
+        {"name": "slack_post_message", "description": "Post a new message to a Slack channel", "annotations": {"readOnlyHint": false, "openWorldHint": true}}
+      ]
+    }
+  }
+}

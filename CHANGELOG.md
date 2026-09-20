@@ -2,6 +2,14 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.7.1]
+
+### Added
+- **Real-world trifecta audit** (`examples/audit/` + `docs/AUDIT.md`) — reproducible lethal-trifecta analysis of real MCP-server compositions (GitHub, filesystem, fetch, Slack, Postgres, Brave) and agent frameworks (CrewAI, AutoGPT), modeled faithfully from their published tool surfaces with sources. **5 of 6 can close the trifecta**, including the exact shape of the Invariant Labs GitHub-MCP exploit. `python examples/audit/run.py` prints the table; each target is one `uvx aura-state check` away.
+
+### Fixed
+- **Trifecta role classifier — fewer false positives.** A read-only tool is no longer treated as an external-comms sink just because its name matches an exfil verb (e.g. `slack_list_channels`), and the MCP importer now uses `openWorldHint` to distinguish external comms (`slack_post_message`, `add_issue_comment`) from local mutations (`write_file`), which are dangerous sinks but not the trifecta's exfil leg.
+
 ## [0.7.0]
 
 ### Added

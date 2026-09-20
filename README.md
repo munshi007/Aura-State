@@ -18,7 +18,7 @@
   <img alt="CI" src="https://github.com/munshi007/Aura-State/actions/workflows/ci.yml/badge.svg">
   <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-3d3aa8.svg">
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
-  <img alt="tests" src="https://img.shields.io/badge/tests-188%20passing-1c8a5b.svg">
+  <img alt="tests" src="https://img.shields.io/badge/tests-190%20passing-1c8a5b.svg">
 </p>
 
 <p align="center">
@@ -74,7 +74,9 @@ $ aura-state check dev_assistant.tools.json   # ← your MCP tools/list export
 
 **Point it straight at your MCP setup.** Export your agent's `tools/list` (or hand it your client config) and Aura models the worst case — the LLM can call any tool in any order — then decides whether `fetch` + `filesystem` + `slack` together form an exfiltration channel. It never connects to or runs a server.
 
-> We statically analyzed **9 common agent patterns** (SQL agent, RAG chatbot, support copilot, PR-triage bot, email assistant…). **5 of 9 had an unguarded injection path**, and **3 of 9 close the full lethal trifecta**. Run `python examples/audit.py` yourself. Each is fixable with one sanitizer — which Aura's **auto-repair** inserts in a click.
+> We audited **real MCP-server compositions and agent frameworks** (GitHub, filesystem, fetch, Slack, Postgres · CrewAI, AutoGPT) modeled from their published tool surfaces. **5 of 6 can close the lethal trifecta** — including the exact shape of the [Invariant Labs GitHub-MCP exploit](https://invariantlabs.ai/blog/mcp-github-vulnerability). Full writeup + sources: **[docs/AUDIT.md](docs/AUDIT.md)**. Reproduce it: `python examples/audit/run.py`.
+
+> (Also `python examples/audit.py`: **9 hand-built agent patterns**, 5 with an unguarded injection path, 3 closing the trifecta — each fixable with one sanitizer via Aura's **auto-repair**.)
 
 ## Gate regressions, not existing debt
 
@@ -112,7 +114,7 @@ pip install -e .
 
 | Demo | What it proves |
 |---|---|
-| `aura-state check examples/agents/*.json` | statically audits 7 common agent designs — **5 have injection paths** |
+| `aura-state check examples/agents/*.json` | statically audits 9 common agent designs — **5 have injection paths** |
 | `python examples/audit.py` | the audit table you can drop in a launch post |
 | `python examples/verified_loop_demo.py` | Z3 rejects a hallucinated extraction in the loop, retries, accepts |
 | `python examples/taint_proof_demo.py` | untrusted input provably can't reach a dangerous tool |
@@ -488,7 +490,7 @@ Python 3.10+ required. Dependencies: `pydantic`, `instructor`, `openai`, `networ
 
 ```bash
 python -m pytest tests/ -v
-# 188 tests passing
+# 190 tests passing
 ```
 
 ## Works with any LLM provider
