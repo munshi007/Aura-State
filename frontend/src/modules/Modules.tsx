@@ -392,18 +392,36 @@ function Risk() {
 }
 
 function ProviderRow({ p }: { p: any }) {
+  const refreshProviders = useStore((s) => s.refreshProviders);
   const [test, setTest] = useState<any>(null);
   const [busy, setBusy] = useState(false);
+  const [key, setKey] = useState("");
+  const [saving, setSaving] = useState(false);
   const run = async () => { setBusy(true); setTest(await api.testProvider(p.name)); setBusy(false); };
+  const saveKey = async () => {
+    setSaving(true);
+    try { await api.setProviderKey(p.name, key); setKey(""); setTest(null); await refreshProviders(); }
+    finally { setSaving(false); }
+  };
   return (
-    <div className="obl-item"><div className="top">
-      <span className="expr">{p.name} <span style={{ color: "var(--ink-3)" }}>· {p.model}</span></span>
-      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        {test && <span className={"chip " + (test.ok ? "pv" : "vi")}>{test.ok ? "✓ " + test.detail : "✕ " + test.detail}</span>}
-        {!test && <span className={"chip " + (p.available ? "pv" : "mu")}>{p.available ? "ready" : "set " + p.needs}</span>}
-        <button className="btn sm" onClick={run} disabled={busy}>{busy ? "…" : "Test"}</button>
-      </span>
-    </div></div>
+    <div className="obl-item">
+      <div className="top">
+        <span className="expr">{p.name} <span style={{ color: "var(--ink-3)" }}>· {p.model}</span></span>
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {test && <span className={"chip " + (test.ok ? "pv" : "vi")}>{test.ok ? "✓ " + test.detail : "✕ " + test.detail}</span>}
+          {!test && <span className={"chip " + (p.available ? "pv" : "mu")}>{p.available ? "ready" : "no key"}</span>}
+          <button className="btn sm" onClick={run} disabled={busy}>{busy ? "…" : "Test"}</button>
+        </span>
+      </div>
+      {p.needs && (
+        <div style={{ display: "flex", gap: 6, marginTop: 8, alignItems: "center" }}>
+          <input className="field mono" type="password" placeholder={p.available ? "key set · paste a new one to replace" : "paste your " + p.needs}
+            value={key} onChange={(e) => setKey(e.target.value)} style={{ flex: 1 }}
+            onKeyDown={(e) => { if (e.key === "Enter" && key.trim()) saveKey(); }} />
+          <button className="btn sm pri" onClick={saveKey} disabled={saving || !key.trim()}>{saving ? "…" : "Save key"}</button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -611,8 +629,9 @@ export function Settings() {
         </div>
 
         <div className="shd"><span className="lbl">Providers</span></div>
-        <div className="hint" style={{ marginTop: 0, marginBottom: 10 }}>Ollama runs locally with no key. For OpenAI / Gemini / DeepSeek, set the key in your shell <b>before</b> launching, then restart the studio:</div>
-        <pre style={{ marginBottom: 12 }}>{`export OPENAI_API_KEY=sk-...\naura-state ui`}</pre>
+        <div className="hint" style={{ marginTop: 0, marginBottom: 10 }}>
+          Ollama runs locally with no key. For OpenAI / Gemini / DeepSeek, paste your key below — it's held <b>in memory for this session only</b> (never written to disk), and the provider is usable immediately. It's also read from your shell env (<span className="mono">OPENAI_API_KEY</span>, …) if set before launch.
+        </div>
         {providersList.map((p: any) => <ProviderRow key={p.name} p={p} />)}
 
         <div className="shd"><span className="lbl">Appearance</span></div>

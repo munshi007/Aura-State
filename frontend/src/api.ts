@@ -77,6 +77,8 @@ export const verifyDataset = (records: any[], obligations: string[]) =>
   post("/api/verify_dataset", { records, obligations });
 export const providers = () => get("/api/providers");
 export const testProvider = (name: string) => get("/api/providers/test/" + encodeURIComponent(name));
+// Set/clear an API key for a provider, in memory for this local session (not written to disk).
+export const setProviderKey = (provider: string, key: string) => post("/api/providers/key", { provider, key });
 export const feed = () => get("/api/feed");
 export const clearFeed = () => post("/api/feed/clear", {});
 export const auditList = (limit = 200) => get("/api/audit?limit=" + limit);

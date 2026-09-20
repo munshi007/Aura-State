@@ -2,6 +2,11 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.8.6]
+
+### Added
+- **Enter API keys in the studio.** Settings → Providers now has a key field per provider (OpenAI / Gemini / DeepSeek): paste a key and it's usable immediately — no shell export, no restart. Keys are held **in memory for the session only** and never written to disk (env vars set before launch still work too). New `POST /api/providers/key` endpoint.
+
 ## [0.8.5]
 
 Pre-launch hardening: a clean-room install of the published wheel + an adversarial fuzz sweep of the importers and analyzers.

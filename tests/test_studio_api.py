@@ -233,3 +233,12 @@ def test_check_endpoint_returns_findings_with_keys(client):
     assert r["verified"] is False
     tri = [f for f in r["findings"] if f["check"] == "trifecta"]
     assert tri and tri[0]["key"] == "Fetch->Send"     # stable discriminator for baseline diff
+
+
+def test_provider_key_set_and_clear(client):
+    assert not [p for p in client.get("/api/providers").json() if p["name"] == "openai"][0]["available"]
+    r = client.post("/api/providers/key", json={"provider": "openai", "key": "sk-test"}).json()
+    assert r["available"] is True
+    assert [p for p in client.get("/api/providers").json() if p["name"] == "openai"][0]["available"]
+    assert client.post("/api/providers/key", json={"provider": "openai", "key": ""}).json()["available"] is False
+    assert client.post("/api/providers/key", json={"provider": "ollama", "key": "x"}).status_code == 400

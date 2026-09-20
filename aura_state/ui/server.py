@@ -250,6 +250,25 @@ def create_app() -> "FastAPI":
             for n, c in _PROVIDERS.items()
         ]
 
+    class ProviderKeyReq(BaseModel):
+        provider: str
+        key: str = ""
+
+    @app.post("/api/providers/key")
+    def set_provider_key(req: ProviderKeyReq):
+        """Set (or clear) an API key for a provider IN MEMORY for this local
+        session — it is not written to disk. Existing key reads use os.environ,
+        so setting it here makes the provider immediately usable without a restart."""
+        cfg = _PROVIDERS.get(req.provider)
+        if not cfg or not cfg["env"]:
+            return JSONResponse({"error": f"provider '{req.provider}' needs no key"}, status_code=400)
+        key = (req.key or "").strip()
+        if key:
+            os.environ[cfg["env"]] = key
+        else:
+            os.environ.pop(cfg["env"], None)
+        return {"name": req.provider, "model": cfg["model"], "available": bool(key), "needs": cfg["env"]}
+
     @app.get("/api/providers/test/{name}")
     def test_provider(name: str):
         cfg = _PROVIDERS.get(name)
