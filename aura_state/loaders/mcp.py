@@ -38,11 +38,13 @@ def _tools_from(config: Any) -> List[Dict[str, Any]]:
         if not isinstance(t, dict) or not isinstance(t.get("name"), str):
             return   # skip malformed tools (missing / non-string name)
         ann = t.get("annotations")
+        schema = t.get("inputSchema") or t.get("input_schema")
         out.append({
             "server": server,
             "name": t["name"],
             "description": t.get("description") if isinstance(t.get("description"), str) else "",
             "annotations": ann if isinstance(ann, dict) else {},
+            "inputSchema": schema if isinstance(schema, dict) else None,
         })
 
     if isinstance(config, list):
@@ -57,6 +59,31 @@ def _tools_from(config: Any) -> List[Dict[str, Any]]:
                 for t in (spec or {}).get("tools", []) or []:
                     _add(t, server)
     return out
+
+
+def obligations_from_schema(schema: Any) -> List[str]:
+    """Compile a JSON-Schema (an MCP tool's `inputSchema`) into starter Z3
+    obligations — the tool's declared input contract. Numeric bounds map directly
+    to Z3, so `check` runs obligation-consistency on imported tools (and catches a
+    self-contradictory schema, e.g. minimum > maximum). A real spec to extend, not
+    a fabricated one — only what the schema actually declares."""
+    if not isinstance(schema, dict):
+        return []
+    props = schema.get("properties")
+    if not isinstance(props, dict):
+        return []
+    obls: List[str] = []
+    for pname, p in props.items():
+        if not (isinstance(pname, str) and pname.isidentifier() and isinstance(p, dict)):
+            continue
+        if p.get("type") not in ("number", "integer"):
+            continue
+        for key, op in (("minimum", ">="), ("maximum", "<="),
+                        ("exclusiveMinimum", ">"), ("exclusiveMaximum", "<")):
+            v = p.get(key)
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                obls.append(f"{pname} {op} {v}")
+    return obls
 
 
 def _side_effect(ann: Dict[str, Any]) -> str:
@@ -126,13 +153,17 @@ def flow_from_mcp(config: Any, name: str = "mcp-agent") -> Dict[str, Any]:
             while nid in used:
                 nid = f"{base}_{k}"; k += 1
         used.add(nid)
-        nodes.append({
+        node = {
             "id": nid,
             "kind": "tool",
             "tool_name": t["name"],
             "side_effect": _side_effect(t["annotations"]),
             "description": (f"[{t['server']}] " if t["server"] else "") + t["description"],
-        })
+        }
+        obls = obligations_from_schema(t.get("inputSchema"))
+        if obls:
+            node["obligations"] = obls          # starter contract from the tool's inputSchema
+        nodes.append(node)
         edges.append([AGENT, nid])   # planner can invoke it
         edges.append([nid, AGENT])   # its result feeds the next decision
     return {"name": name, "entry": AGENT, "nodes": nodes, "edges": edges, "source": "mcp"}

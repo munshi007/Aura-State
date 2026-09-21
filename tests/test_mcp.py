@@ -99,3 +99,21 @@ def test_malformed_tool_inputs_do_not_crash():
     ]})
     ids = {n["id"] for n in flow["nodes"]}
     assert "ok" in ids and "t" in ids
+
+
+def test_input_schema_becomes_starter_obligations():
+    from aura_state.loaders.mcp import obligations_from_schema
+    obls = obligations_from_schema({"properties": {"amount": {"type": "number", "minimum": 0, "maximum": 1000},
+                                                    "n": {"type": "integer", "exclusiveMinimum": 0}}})
+    assert "amount >= 0" in obls and "amount <= 1000" in obls and "n > 0" in obls
+    # attached to the imported tool node
+    flow = flow_from_mcp({"tools": [{"name": "charge", "inputSchema": {"properties": {"amount": {"type": "number", "minimum": 0}}}}]})
+    assert any(n.get("obligations") == ["amount >= 0"] for n in flow["nodes"])
+
+
+def test_contradictory_tool_schema_is_caught_by_z3():
+    # a tool whose input schema is self-contradictory (min > max) fails obligation
+    # consistency — imported tools now get real Z3 work, not just trifecta/taint.
+    bad = {"tools": [{"name": "charge", "inputSchema": {"properties": {"amount": {"type": "integer", "minimum": 100, "maximum": 10}}}}]}
+    r = check_flow(flow_from_mcp(bad))
+    assert any(f.check == "obligation" for f in r.findings)

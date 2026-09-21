@@ -2,6 +2,11 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.11.0]
+
+### Added
+- **Imported agents now get real Z3 work.** An MCP tool's `inputSchema` (JSON Schema) is compiled into starter Z3 obligations on the tool node — numeric bounds (`minimum`/`maximum`/`exclusive*`) map directly, e.g. `amount >= 0`, `amount <= 1000`. So `check` runs obligation-consistency on imported tools and **catches a self-contradictory tool contract** (`minimum > maximum`), and the obligations are a real starter spec you can extend (checked against inputs at run time). Combined with the CTL reachability/completion that already runs on every flow, imports now exercise Z3 + CTL, not only trifecta/taint. `aura_state.loaders.mcp.obligations_from_schema`.
+
 ## [0.10.0]
 
 Makes import actually work on real, big agents — the analysis now respects real structure instead of a worst-case hub. Still 100% design-time and static (`ast`; never executes your code).
