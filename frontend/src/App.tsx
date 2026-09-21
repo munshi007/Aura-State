@@ -32,8 +32,14 @@ function useTheme() {
 }
 
 function TopBar() {
-  const { agentName, selectedId, verifying, running, agentMenuOpen, runVerify, runFlow, doSave, theme, set } = useStore();
+  const { agentName, selectedId, verifying, running, agentMenuOpen, runVerify, runFlow, doSave, theme, set,
+          provider, providersList } = useStore();
   const cycleTheme = () => set({ theme: theme === "dark" ? "light" : "dark" });
+  const pickProvider = (name: string) => {
+    const p = providersList.find((x: any) => x.name === name);
+    set({ provider: name });
+    if (p && !p.available) set({ toast: `${name} needs a key — add it in Settings → Providers`, module: "settings" });
+  };
   return (
     <div className="topbar">
       <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
@@ -55,6 +61,12 @@ function TopBar() {
         <button className="btn" onClick={runVerify} disabled={verifying}>
           <Icon name="prove" size={14} /> {verifying ? "Verifying…" : "Verify design"}
         </button>
+        <select className="provsel" value={provider} onChange={(e) => pickProvider(e.target.value)}
+          title="Model provider used by Run">
+          {providersList.map((p: any) => (
+            <option key={p.name} value={p.name}>{p.name}{p.available ? "" : " · no key"}</option>
+          ))}
+        </select>
         <button className="btn pri" onClick={runFlow} disabled={running}>
           <Icon name="play" size={14} /> {running ? "Running…" : "Run"}
         </button>

@@ -69,6 +69,8 @@ a{color:inherit}
 .reopen-r{right:0;border-right:0;border-radius:7px 0 0 7px}
 .reopen:hover{color:var(--ink);background:var(--hair)}
 .ih .t{display:flex;align-items:center;gap:8px}
+.provsel{height:28px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink-2);font-size:12px;padding:0 6px;cursor:pointer;max-width:150px}
+.provsel:hover{color:var(--ink)}
 .main.wide{grid-template-columns:52px 1fr}
 .rail{background:var(--sink);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding-top:8px;gap:3px}
 .rail a{width:36px;height:36px;display:grid;place-items:center;border-radius:8px;color:var(--ink-3);position:relative}

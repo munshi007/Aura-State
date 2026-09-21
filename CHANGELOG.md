@@ -2,6 +2,11 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.8.9]
+
+### Added
+- **Provider picker next to Run.** Choose the model provider (ollama / openai / gemini / deepseek) right in the top bar — Run uses it immediately, no trip to Settings. Providers without a key show "· no key" and selecting one jumps you to Settings → Providers to add it.
+
 ## [0.8.8]
 
 ### Fixed
