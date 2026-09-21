@@ -2,6 +2,11 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.11.1]
+
+### Fixed
+- **Studio import kept the graph analysis.** The studio's import path dropped the graph importer's per-node `roles` and starter obligations when inflating the flow, so `/api/verify` re-classified by name and produced a bogus self-referential trifecta (e.g. `draft → draft`). Roles + obligations now flow through, so an imported LangGraph agent shows the same correct analysis in the studio as on the CLI.
+
 ## [0.11.0]
 
 ### Added

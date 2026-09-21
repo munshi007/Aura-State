@@ -89,6 +89,7 @@ class NodeSpec(BaseModel):
     data_class: Optional[str] = None   # private | untrusted | public (override)
     exfil: Optional[bool] = None       # override: this node communicates externally
     description: Optional[str] = None
+    roles: Optional[List[str]] = None  # analysis-derived roles (graph importer)
 
 
 class GraphSpec(BaseModel):

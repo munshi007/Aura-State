@@ -56,6 +56,8 @@ function _applyImportedFlow(flow: any, fallbackName: string, errMsg: string, ext
     if (n.data_class) node.data_class = n.data_class;   // preserve role overrides
     if (n.exfil !== undefined) node.exfil = n.exfil;
     if (n.description) node.description = n.description;  // real tool description for classification
+    if (n.roles) node.roles = n.roles;                   // analysis-derived roles (graph importer)
+    if (Array.isArray(n.obligations) && n.obligations.length) node.obligations = n.obligations;  // starter obligations from schema
     return node as AgentNode;
   });
   useStore.setState({
@@ -440,7 +442,7 @@ export const useStore = create<State>((setState, getState) => ({
     const graphNodes = s.nodes.map((n) => ({
       id: n.id, capability: n.capability, obligations: n.obligations,
       kind: n.kind, tool_name: n.tool_name, side_effect: n.side_effect,
-      data_class: (n as any).data_class, exfil: (n as any).exfil,
+      data_class: (n as any).data_class, exfil: (n as any).exfil, roles: (n as any).roles,
       // a real tool description only (from an import), NOT the free-text prompt —
       // a prompt's prose would falsely trigger trifecta role words.
       description: (n as any).description || "",

@@ -257,3 +257,16 @@ def test_demo_provider_runs_with_no_setup(client):
     assert "A" in nodes and "B" in nodes
     assert any(s.get("extracted", {}).get("amount") is not None for s in r["trace"])
     assert [p for p in client.get("/api/providers").json() if p["name"] == "demo"][0]["available"]
+
+
+def test_verify_honors_analysis_roles(client):
+    # the studio must pass a graph-importer's `roles` through to /api/verify, so a
+    # node classified by its code (not name) is respected (was dropped -> false findings)
+    spec = {"entry": "fetch", "edges": [["fetch", "lookup"], ["lookup", "send"]],
+            "nodes": [{"id": "fetch", "kind": "tool", "roles": ["untrusted"]},
+                      {"id": "lookup", "kind": "tool", "roles": ["private"]},
+                      {"id": "send", "kind": "tool", "roles": ["exfil"]}]}
+    r = client.post("/api/verify", json=spec).json()
+    assert r["trifecta"]["verdict"] == "CLOSED"
+    f = r["trifecta"]["findings"][0]
+    assert f["exfil"] == "send" and f["untrusted"] == "fetch"
