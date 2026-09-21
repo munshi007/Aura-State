@@ -65,3 +65,84 @@ def test_import_never_executes_module_side_effects():
     # tool decorator not imported as `tool` here, but the decorator name is `tool`
     tools = _extract_tools("from langchain.tools import tool\n" + src)
     assert any(t["name"] == "f" for t in tools)   # parsed, not run
+
+
+LANGGRAPH_STATEGRAPH = '''
+import requests, smtplib
+from langgraph.graph import StateGraph, START, END
+def fetch_ticket(state):
+    "Read the incoming support ticket"
+    return {"t": requests.get(state["url"]).text}
+def lookup_account(state):
+    "Look up the private customer account"
+    cur = db.cursor(); cur.execute("select * from customers"); return {"a": cur.fetchone()}
+def draft(state):
+    return {"r": llm(state)}
+def send_reply(state):
+    "Email the reply to the customer"
+    smtplib.SMTP("m").sendmail("f", state["to"], state["r"])
+g = StateGraph(dict)
+g.add_node("fetch", fetch_ticket)
+g.add_node("lookup", lookup_account)
+g.add_node("draft", draft)
+g.add_node("send", send_reply)
+g.add_edge(START, "fetch")
+g.add_edge("fetch", "lookup")
+g.add_edge("lookup", "draft")
+g.add_edge("draft", "send")
+g.add_edge("send", END)
+app = g.compile()
+'''
+
+
+def test_langgraph_stategraph_is_captured_with_real_structure():
+    from aura_state.loaders.code import flow_from_code
+    flow = flow_from_code(LANGGRAPH_STATEGRAPH, "support")
+    ids = {n["id"] for n in flow["nodes"]}
+    # the graph node functions are captured, incl. the exfil node a @tool scan misses
+    assert {"fetch", "lookup", "draft", "send"} <= ids
+    assert ["fetch", "lookup"] in flow["edges"] and ["draft", "send"] in flow["edges"]
+    assert flow["entry"] == "fetch"
+
+
+def test_langgraph_node_classified_by_what_its_code_does():
+    from aura_state.loaders.code import flow_from_code
+    flow = flow_from_code(LANGGRAPH_STATEGRAPH, "support")
+    roles = {n["id"]: set(n.get("roles", [])) for n in flow["nodes"]}
+    assert "untrusted" in roles["fetch"]        # requests.get
+    assert "private" in roles["lookup"]         # db.cursor/execute
+    assert "exfil" in roles["send"]             # smtplib.sendmail
+
+
+def test_langgraph_trifecta_over_real_flow():
+    r = check_flow(flow_from_code(LANGGRAPH_STATEGRAPH, "support"))
+    assert r.verified is False
+    tri = [f for f in r.findings if f.check == "trifecta" and f.severity == "critical"]
+    # the exfil sink is the send node (which a @tool scan never saw); the key is
+    # "<untrusted-source>-><exfil-sink>" on the real path
+    assert tri and any(f.node == "send" and f.key.endswith("->send") for f in tri)
+
+
+CREW = '''
+from crewai import Agent, Crew, Task
+from crewai_tools import SerperDevTool, FileReadTool, CodeInterpreterTool, ScrapeWebsiteTool
+researcher = Agent(role="researcher", goal="g", tools=[SerperDevTool(), ScrapeWebsiteTool()])
+analyst = Agent(role="analyst", goal="g", tools=[FileReadTool(), CodeInterpreterTool()])
+crew = Crew(agents=[researcher, analyst], tasks=[Task(description="x", agent=researcher)])
+'''
+
+
+def test_crewai_tools_are_scoped_per_agent():
+    from aura_state.loaders.code import flow_from_code
+    flow = flow_from_code(CREW, "crew")
+    ids = {n["id"] for n in flow["nodes"]}
+    # each agent's tools are namespaced to that agent, not merged into one hub
+    assert "researcher:SerperDevTool" in ids and "analyst:CodeInterpreterTool" in ids
+    assert ["researcher", "analyst"] in flow["edges"]   # sequential hand-off
+
+
+def test_crewai_trifecta_only_via_real_handoff():
+    r = check_flow(flow_from_code(CREW, "crew"))
+    tri = [f for f in r.findings if f.check == "trifecta" and f.severity == "critical"]
+    # untrusted (researcher scrape) -> exfil (analyst code interp), via the R->A hand-off
+    assert tri and any("analyst:" in (f.node or "") for f in tri)

@@ -54,6 +54,8 @@ _UNTRUSTED_RX = re.compile(
     r"rss|feed|"
     r"inbox|imap|readmail|"                                        # inbound mail
     r"search\w*|google|bing|serp|"                                 # web search
+    r"github|gitlab|jira|notion|confluence|zendesk|intercom|"      # collab platforms
+    r"channel\w*|thread\w*|history|wiki|page\w*|doc\w*|upload\w*|"  # user/third-party content
     r"attachment\w*|comment\w*|review\w*|ticket\w*|issue\w*|form"  # third-party text
     r")\b")
 
@@ -63,8 +65,9 @@ _PRIVATE_RX = re.compile(
     r"file\w*|fs|readfile|filesystem|"                           # local files
     r"secret\w*|vault|credential\w*|apikey|token\w*|password\w*|"  # secrets
     r"s3|storage|bucket\w*|blob\w*|"                             # object stores
-    r"crm|salesforce|hubspot|"                                   # internal SaaS
-    r"customer\w*|account\w*|record\w*|profile\w*|pii|"          # personal data
+    r"crm|salesforce|hubspot|snowflake|bigquery|warehouse|"      # internal SaaS / data
+    r"gdrive|drive|sharepoint|onedrive|dropbox|"                 # private doc stores
+    r"customer\w*|account\w*|record\w*|profile\w*|pii|contact\w*|employee|payroll|salary|"  # personal data
     r"kb|knowledge|internal|private|confidential|vectordb|embed\w*"  # internal KB / RAG
     r")\b")
 
@@ -129,6 +132,13 @@ def classify_roles(n: Dict[str, Any]) -> Tuple[Set[str], bool]:
     if kind == "sanitizer" or cap == "sanitizer":
         roles.add("sanitizer")
 
+    # Explicit roles from upstream analysis (e.g. the graph importer classifies a
+    # node by what its CODE does). These are authoritative — a node can carry
+    # several (untrusted + private + exfil) at once.
+    for r in (n.get("roles") or []):
+        if r in ("untrusted", "private", "exfil", "sanitizer"):
+            roles.add(r)
+
     # Explicit overrides.
     if n.get("exfil") is True:
         roles.add("exfil")
@@ -146,7 +156,10 @@ def classify_roles(n: Dict[str, Any]) -> Tuple[Set[str], bool]:
     # tool_name is an external call whatever its `kind` label says. Gating this on
     # kind=="tool" was a fail-open: labelling a send_email node kind:"decision"
     # made it vanish from the trifecta and the agent verified "safe".
-    if kind == "tool" or n.get("tool_name"):
+    # BUT skip it when the node already carries explicit `roles` (the graph
+    # importer classified it by what its CODE does) — re-running name heuristics
+    # on a docstring there just adds false positives (e.g. "drafts a reply").
+    if (kind == "tool" or n.get("tool_name")) and not n.get("roles"):
         # Classify from the tool name + an explicit tool description ONLY — never
         # a free-text system prompt, whose prose ("Issue the refund", "the
         # customer's account") would falsely trigger role words.

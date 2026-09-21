@@ -122,8 +122,86 @@ def _extract_tools(source: str) -> List[Dict[str, Any]]:
     return list(found.values())
 
 
+def _tool_name_of(el: ast.AST) -> Optional[str]:
+    """Tool name from a `tools=[...]` element: a class instantiation or a @tool ref."""
+    if isinstance(el, ast.Call):
+        return _callee_name(el)
+    if isinstance(el, ast.Name):
+        return el.id
+    if isinstance(el, ast.Attribute):
+        return el.attr
+    return None
+
+
+def _crewai_flow(source: str, name: str) -> Optional[Dict[str, Any]]:
+    """Model a MULTI-AGENT crew (CrewAI / AutoGen) with each agent's tools SCOPED
+    to that agent, connected by the crew's hand-off order — instead of flattening
+    every tool into one hub (which invents cross-agent paths that can't happen)."""
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return None
+    agents: Dict[str, Dict[str, Any]] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Call) and _callee_name(node.value) in ("Agent", "AssistantAgent", "ConversableAgent"):
+            var = node.targets[0].id if node.targets and isinstance(node.targets[0], ast.Name) else None
+            if not var:
+                continue
+            role = _str_arg(node.value, "role") or _str_arg(node.value, "name") or var
+            tools: List[str] = []
+            for kw in node.value.keywords:
+                if kw.arg in ("tools",) and isinstance(kw.value, ast.List):
+                    tools = [t for t in (_tool_name_of(e) for e in kw.value.elts) if t]
+            agents[var] = {"role": role, "tools": tools}
+    if len(agents) < 2:
+        return None   # a single agent is fine as a plain tool hub
+
+    order = list(agents.keys())
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and _callee_name(node) == "Crew":
+            for kw in node.keywords:
+                if kw.arg == "agents" and isinstance(kw.value, ast.List):
+                    order = [e.id for e in kw.value.elts if isinstance(e, ast.Name) and e.id in agents] or order
+
+    nodes: List[Dict[str, Any]] = [{"id": "END", "kind": "extract"}][:0]   # typed empty
+    edges: List[List[str]] = []
+    prev_agent: Optional[str] = None
+    for var in order:
+        a = agents[var]
+        aid = a["role"]
+        nodes.append({"id": aid, "kind": "extract", "capability": "plain",
+                      "description": f"agent: {a['role']}"})
+        for t in a["tools"]:
+            tid = f"{aid}:{t}"                     # scope the tool to THIS agent
+            spec = _KNOWN_TOOLS.get(t, {})
+            tnode: Dict[str, Any] = {"id": tid, "kind": "tool", "tool_name": t,
+                                     "description": spec.get("desc", "")}
+            for k in ("data_class", "side_effect", "exfil"):
+                if k in spec:
+                    tnode[k] = spec[k]
+            nodes.append(tnode)
+            edges.append([aid, tid]); edges.append([tid, aid])
+        if prev_agent:                             # sequential hand-off between agents
+            edges.append([prev_agent, aid])
+        prev_agent = aid
+    return {"name": name, "entry": nodes[0]["id"] if nodes else None,
+            "nodes": nodes, "edges": edges, "source": "code"}
+
+
 def flow_from_code(source: str, name: str = "code-agent") -> Dict[str, Any]:
-    """Build a hub flow from agent source code (a single module's text)."""
+    """Build a flow from agent source code (a single module's text).
+
+    Prefers a FAITHFUL model: a LangGraph StateGraph (real nodes/edges + role per
+    node from what the code does), then a scoped multi-agent crew, then the
+    worst-case tool-surface hub.
+    """
+    from .graph_extract import langgraph_flow
+    g = langgraph_flow(source, name)
+    if g and len(g["nodes"]) >= 2:
+        return g
+    crew = _crewai_flow(source, name)
+    if crew and len(crew["nodes"]) >= 2:
+        return crew
     return flow_from_code_tools(_extract_tools(source), name)
 
 

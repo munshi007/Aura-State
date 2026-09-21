@@ -18,7 +18,7 @@
   <img alt="CI" src="https://github.com/munshi007/Aura-State/actions/workflows/ci.yml/badge.svg">
   <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-3d3aa8.svg">
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
-  <img alt="tests" src="https://img.shields.io/badge/tests-217%20passing-1c8a5b.svg">
+  <img alt="tests" src="https://img.shields.io/badge/tests-222%20passing-1c8a5b.svg">
 </p>
 
 <p align="center">
@@ -511,7 +511,7 @@ Python 3.10+ required. Dependencies: `pydantic`, `instructor`, `openai`, `networ
 
 ```bash
 python -m pytest tests/ -v
-# 217 tests passing
+# 222 tests passing
 ```
 
 ## Works with any LLM provider

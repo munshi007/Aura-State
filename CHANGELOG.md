@@ -2,6 +2,19 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.10.0]
+
+Makes import actually work on real, big agents — the analysis now respects real structure instead of a worst-case hub. Still 100% design-time and static (`ast`; never executes your code).
+
+### Added
+- **Graph-aware LangGraph import.** `aura-state check your_agent.py` now parses the `StateGraph` — the real nodes, real edges (incl. conditional edges), entry point — instead of only `@tool` functions. Actions written as graph **node functions** (a `send_reply` node that emails) are captured, so an exfil leg the tool scan missed is no longer invisible. The trifecta/taint run over the **actual control flow**. Example: `examples/code/langgraph_stategraph.py`.
+- **Classification by what the code *does*.** Each graph node is classified from the calls in its body — `requests.get` → untrusted, `db.execute` → private, `smtplib.sendmail` → exfil — not just its name. A node can carry several roles at once.
+- **Scoped multi-agent crews.** A CrewAI / AutoGen crew is modeled with each agent's tools **scoped to that agent** and agents connected by the crew's hand-off order — instead of flattening every tool into one hub (which invented cross-agent paths that can't happen). A trifecta now only closes across agents via a real hand-off.
+
+### Fixed
+- **Broader untrusted/private detection** for name-based (MCP) analysis, so a big system of generically-named tools (`github_*`, `notion_*`, `gdrive_*`, …) is no longer silently reported safe.
+- A node with explicit analysis-derived roles no longer re-runs the name heuristics (removes false positives like a "drafts a reply" node being flagged as an exfil sink).
+
 ## [0.9.0]
 
 Usability pass driven by an end-to-end first-time-user audit. The studio was technically solid but its most prominent action — **Run** — was a guaranteed failure for a user with no Ollama and no API key. Fixed.
