@@ -529,10 +529,13 @@ export const useStore = create<State>((setState, getState) => ({
 
 export { uid };
 
+// Suggestions only (the Model field is free text — type any model id). Providers
+// evolve, so these are just a starting menu; the default when you pick a provider
+// comes from the backend (/api/providers), which is the single source of truth.
 export const MODEL_PRESETS: Record<string, string[]> = {
   ollama: ["qwen2.5:0.5b", "qwen2.5:3b", "llama3.2", "llama3.1", "mistral", "phi3"],
   openai: ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1", "o4-mini"],
-  gemini: ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"],
+  gemini: ["gemini-flash-latest", "gemini-3.6-flash", "gemini-pro-latest", "gemini-3.6-pro"],
   deepseek: ["deepseek-chat", "deepseek-reasoner"],
 };
 

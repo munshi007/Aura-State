@@ -221,7 +221,12 @@ function ModelTab({ node, up }: { node: AgentNode; up: (p: Partial<AgentNode>) =
         </select></div>
       {node.kind === "extract" && <div className="two">
         <div className="fg"><span className="lbl">Provider</span>
-          <select className="field" value={node.provider || ""} onChange={(e) => up({ provider: e.target.value || undefined, model: MODEL_PRESETS[e.target.value || globalProvider]?.[0] || node.model })}>
+          <select className="field" value={node.provider || ""} onChange={(e) => {
+            const np = e.target.value || undefined;
+            const key = np || globalProvider;
+            const dm = providersList.find((p: any) => p.name === key)?.model || MODEL_PRESETS[key]?.[0] || node.model;
+            up({ provider: np, model: dm });   // switch model to the provider's current default
+          }}>
             <option value="">Inherit ({globalProvider})</option>
             {provNames.map((p) => <option key={p} value={p}>{p}</option>)}
           </select></div>

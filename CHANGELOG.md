@@ -2,6 +2,11 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.8.11]
+
+### Fixed
+- **Refreshed the studio's model presets** — the front-end `MODEL_PRESETS` still listed retired Gemini models (`gemini-2.0-flash`, `1.5-*`); now `gemini-flash-latest` / `gemini-3.6-flash` / `gemini-pro-latest` / `gemini-3.6-pro`. The node's Model field is free text (type any id), and switching a node's provider now pulls the default model from the backend (`/api/providers`) so there's one source of truth.
+
 ## [0.8.10]
 
 ### Fixed
