@@ -2,6 +2,12 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.8.8]
+
+### Fixed
+- **Run errors are now visible.** A per-node failure (e.g. an LLM connection error) was recorded in the trace but never surfaced, so a failed Run looked like "nothing happened". It now raises a toast, and the ollama-not-running case gets a clear message ("Can't reach Ollama … pick a provider with a key in Settings").
+- **Switching provider actually switches the model.** A node that inherits the agent's provider now also inherits that provider's default model, so selecting `gemini` runs `gemini-2.0-flash` instead of sending a baked-in local model name (`qwen2.5:0.5b`) to the cloud API.
+
 ## [0.8.7]
 
 ### Fixed

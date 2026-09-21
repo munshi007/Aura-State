@@ -484,8 +484,15 @@ export const useStore = create<State>((setState, getState) => ({
     try {
       const res = await api.runFlow(spec.nodes, spec.edges, spec.entry, input, s.provider, s.agentName, mem);
       const trace = res.error ? [{ node: "—", error: res.error }] : res.trace;
+      // Surface a per-step error too (e.g. a node's LLM connection error) — it's
+      // easy to miss buried in the trace panel, which reads like "nothing happened".
+      const stepErr = Array.isArray(trace) ? trace.find((t: any) => t.error) : null;
+      let errMsg = res.error || (stepErr ? `${stepErr.node}: ${stepErr.error}` : null);
+      if (errMsg && /connection error|connect|refused|11434/i.test(errMsg) && s.provider === "ollama") {
+        errMsg = "Can't reach Ollama (localhost:11434). Start Ollama, or pick a provider with a key in Settings → Providers.";
+      }
       const showOnCanvas = !res.error && Array.isArray(trace) && trace.length > 0 && trace.some((t: any) => t.node !== "—");
-      setState({ runTrace: trace, runHealth: res.health || null, running: false, toast: res.error ? res.error : null,
+      setState({ runTrace: trace, runHealth: res.health || null, running: false, toast: errMsg,
                  traceActive: showOnCanvas, traceIndex: 0, module: showOnCanvas ? "build" : s.module, selectedId: null });
     } catch (e: any) {
       setState({ runTrace: [{ node: "—", error: String(e) }], running: false, toast: "Run failed — check the provider in Settings." });

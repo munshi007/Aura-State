@@ -635,9 +635,14 @@ def create_app() -> "FastAPI":
         for n in spec["nodes"]:
             if n.get("type") != "extract":
                 continue
-            prov = n.get("provider") or default_provider
+            explicit = n.get("provider")
+            prov = explicit or default_provider
             client, dmodel = _get(prov)
-            model = n.get("model") or dmodel
+            # A node that inherits the agent's provider inherits its DEFAULT model
+            # too — otherwise a baked-in local model (e.g. qwen2.5:0.5b) would be
+            # sent to a cloud provider that doesn't have it. An explicit provider
+            # keeps the node's chosen model.
+            model = (n.get("model") if explicit else None) or dmodel
             node_models[n["id"]] = model
             engine.provider.register_client(model, client)
             if first_client is None:
