@@ -47,7 +47,7 @@ function _applyImportedFlow(flow: any, fallbackName: string, errMsg: string, ext
       // stay "plain" so the trifecta classifier decides by name/role, instead of
       // every imported tool being force-flagged as an exfil sink.
       capability: isTool ? (n.side_effect === "external" ? "sink" : "plain") : (n.capability || "plain"),
-      system_prompt: n.description || n.id, model: "qwen2.5:0.5b", provider: "ollama",
+      system_prompt: n.description || n.id, model: "(simulated)", provider: undefined,
       temperature: 0, max_tokens: 256, fields: [], obligations: [], sandbox_rule: "",
       consensus: 1, confidence: 0.9, retry: 1,
       tool_name: n.tool_name, side_effect: n.side_effect,
@@ -59,7 +59,7 @@ function _applyImportedFlow(flow: any, fallbackName: string, errMsg: string, ext
     return node as AgentNode;
   });
   useStore.setState({
-    agentName: flow.name || fallbackName, provider: "ollama", nodes,
+    agentName: flow.name || fallbackName, provider: "demo", nodes,
     edges: (flow.edges || []).map((e: string[]) => [...e]),
     entry: deriveEntry(nodes, flow.edges || [], flow.entry), invariants: [], selectedId: "Agent",
     verify: null, statusByNode: {}, runTrace: null, diffOverlay: {}, module: "build",
@@ -176,7 +176,7 @@ interface State {
 
 export const useStore = create<State>((setState, getState) => ({
   agentName: "refund-agent",
-  provider: "ollama",
+  provider: "demo",
   nodes: seed(),
   edges: [["Ingest", "Classify"], ["Classify", "PolicyCheck"], ["PolicyCheck", "IssueRefund"], ["PolicyCheck", "Escalate"]],
   selectedId: "Classify",
@@ -305,7 +305,7 @@ export const useStore = create<State>((setState, getState) => ({
       return { provider: name, nodes };
     }),
   newBlank: () => setState({
-    agentName: "untitled-agent", provider: "ollama", nodes: [], edges: [], entry: "", invariants: [],
+    agentName: "untitled-agent", provider: "demo", nodes: [], edges: [], entry: "", invariants: [],
     selectedId: null, verify: null, statusByNode: {}, runTrace: null, runHealth: null, diffOverlay: {},
     evalCases: [], runInput: "", runSource: "text", runUrl: "", runMemory: "", traceActive: false,
     module: "build", newAgentOpen: false, agentMenuOpen: false,
@@ -354,7 +354,7 @@ export const useStore = create<State>((setState, getState) => ({
       fields: kind === "extract" ? [{ name: "value", type: "str" }] : [],
       obligations: [],
       ...(kind === "tool" ? { tool_name: "tool.call", side_effect: "write" as const, mock_return: "{ }" } : {}),
-      x: 140 + (n % 4) * 120, y: 120 + Math.floor(n / 4) * 120,
+      x: 120 + (n % 3) * 250, y: 110 + Math.floor(n / 3) * 150,
     };
     setState((s) => ({ nodes: [...s.nodes, base], selectedId: base.id, verify: null, statusByNode: {} }));
   },
@@ -372,7 +372,7 @@ export const useStore = create<State>((setState, getState) => ({
       model: "qwen2.5:0.5b", system_prompt: label, temperature: 0, max_tokens: 512,
       retry: 1, consensus: 1, confidence: 0.9, sandbox_rule: "", fields: [], obligations: [],
       tool_name: toolName, side_effect: sideEffect, mock_return: "{ }",
-      x: 140 + (n % 4) * 120, y: 120 + Math.floor(n / 4) * 120,
+      x: 120 + (n % 3) * 250, y: 110 + Math.floor(n / 3) * 150,
     };
     setState({ nodes: [...s.nodes, node], selectedId: id, verify: null, statusByNode: {} });
   },
@@ -504,8 +504,14 @@ export const useStore = create<State>((setState, getState) => ({
       } else if (errMsg && /(^|[^0-9])(429|503)|high demand|overload|rate.?limit|quota|exhausted/i.test(errMsg)) {
         errMsg = `${s.provider} is rate-limited / overloaded (try again in a moment). Free-tier limits are low — retry, switch the model (e.g. gemini-flash-latest), or use a paid key.`;
       }
+      // Make the actionable message PERSISTENT in the trace panel, not just a
+      // toast that vanishes (the raw "Connection error" alone is cryptic).
+      if (stepErr && errMsg) stepErr.error = errMsg;
+      // Zero-setup demo run: tell the user it's simulated so they know it's not a real LLM.
+      let toast = errMsg;
+      if (!errMsg && s.provider === "demo") toast = "Simulated run (demo) — mock data, no LLM. Pick a provider + key by Run for a real run.";
       const showOnCanvas = !res.error && Array.isArray(trace) && trace.length > 0 && trace.some((t: any) => t.node !== "—");
-      setState({ runTrace: trace, runHealth: res.health || null, running: false, toast: errMsg,
+      setState({ runTrace: trace, runHealth: res.health || null, running: false, toast,
                  traceActive: showOnCanvas, traceIndex: 0, module: showOnCanvas ? "build" : s.module, selectedId: null });
     } catch (e: any) {
       setState({ runTrace: [{ node: "—", error: String(e) }], running: false, toast: "Run failed — check the provider in Settings." });
@@ -521,9 +527,12 @@ export const useStore = create<State>((setState, getState) => ({
     const s = getState();
     const r = await api.saveFlow(s.agentName, { name: s.agentName, provider: s.provider, nodes: s.nodes, edges: s.edges, entry: s.entry, invariants: s.invariants });
     api.auditLog("save", `saved ${s.agentName}`, { agent: s.agentName, hash: r?.hash, nodes: s.nodes.length, edges: s.edges.length }).catch(() => {});
+    try { localStorage.setItem("aura_current", s.agentName); } catch {}   // reload this on next visit
+    setState({ toast: `Saved “${s.agentName}” ✓` });
     await getState().refreshFlows();
   },
   doLoad: async (name) => {
+    try { localStorage.setItem("aura_current", name); } catch {}
     const f = await api.loadFlow(name);
     if (f && f.nodes) setState({ agentName: f.name || name, provider: f.provider || "ollama", nodes: f.nodes, edges: f.edges || [], entry: deriveEntry(f.nodes, f.edges || [], f.entry), invariants: f.invariants || [], selectedId: f.nodes[0]?.id ?? null, verify: null, statusByNode: {}, runInput: "", runSource: "text", runUrl: "", runMemory: "", runTrace: null, traceActive: false });
   },

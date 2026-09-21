@@ -242,3 +242,18 @@ def test_provider_key_set_and_clear(client):
     assert [p for p in client.get("/api/providers").json() if p["name"] == "openai"][0]["available"]
     assert client.post("/api/providers/key", json={"provider": "openai", "key": ""}).json()["available"] is False
     assert client.post("/api/providers/key", json={"provider": "ollama", "key": "x"}).status_code == 400
+
+
+def test_demo_provider_runs_with_no_setup(client):
+    # The zero-setup "demo" provider must run an extract flow end-to-end (mock
+    # extractions, real routing) with no key and no ollama.
+    spec = {"provider": "demo", "input": "I want a refund", "entry": "A",
+            "edges": [["A", "B"]],
+            "nodes": [{"id": "A", "type": "extract", "fields": [{"name": "amount", "type": "int"}], "obligations": ["amount >= 0"]},
+                      {"id": "B", "type": "extract", "fields": [{"name": "category", "type": "str"}]}]}
+    r = client.post("/api/run", json=spec).json()
+    assert not r.get("error")
+    nodes = [s["node"] for s in r["trace"]]
+    assert "A" in nodes and "B" in nodes
+    assert any(s.get("extracted", {}).get("amount") is not None for s in r["trace"])
+    assert [p for p in client.get("/api/providers").json() if p["name"] == "demo"][0]["available"]

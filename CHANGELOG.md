@@ -2,6 +2,19 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.9.0]
+
+Usability pass driven by an end-to-end first-time-user audit. The studio was technically solid but its most prominent action — **Run** — was a guaranteed failure for a user with no Ollama and no API key. Fixed.
+
+### Added
+- **Built-in `demo` provider (zero-setup Run).** The studio now opens on a `demo` provider that simulates the LLM extractions (mock data) while running the real routing + verification, so the very first Run succeeds end-to-end — no Ollama, no key, no rate limits — clearly labelled "simulated". Pick openai / gemini / deepseek / ollama by the Run button for a real run.
+
+### Fixed
+- **Save/reload no longer looks like it lost your work.** The last saved/opened agent is remembered and re-loaded on the next visit (was always rendering the bundled default), and Save now shows a "Saved ✓" confirmation.
+- **Run errors are persistent and actionable** — the friendly message (e.g. "Can't reach Ollama … pick a provider in Settings", or a rate-limit explanation) is written into the trace panel, not just a toast that vanishes.
+- **Honest onboarding** — the tour no longer implies a real LLM run needs nothing; it explains that proofs + the demo run are keyless while a real run needs a provider.
+- New nodes no longer overlap on the canvas (wider auto-placement); "1 step" pluralization.
+
 ## [0.8.13]
 
 ### Fixed

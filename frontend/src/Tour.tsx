@@ -5,7 +5,7 @@ import { Icon } from "./ui";
 const STEPS = [
   {
     title: "Agents you can prove things about",
-    body: "Most tools show you a trace after the fact. Aura proves your agent is correct and safe before it runs — with real math, not vibes. Everything here runs locally on your machine; no cloud, no API key required.",
+    body: "Most tools show you a trace after the fact. Aura proves your agent is correct and safe before it runs — with real math, not vibes. It all runs locally, no cloud. Design-time proofs (Verify, taint, trifecta) and the demo Run need NO API key; running your LLM nodes for real just needs a provider key or a local Ollama — set either in Settings.",
     icon: "prove",
   },
     {
@@ -25,7 +25,7 @@ const STEPS = [
   },
   {
     title: "Run, observe, and calibrate",
-    body: "Run the agent end-to-end and read the verified trace — every step explains why it passed. Stream real production outputs into Monitor from your own CrewAI / LangGraph / code via the SDK. Calibrate gives distribution-free conformal intervals and risk-controlled abstention.",
+    body: "Hit Run to execute the agent end-to-end and read the verified trace — every step explains why it passed. The default 'demo' provider simulates the LLM steps so it works with zero setup; pick openai / gemini / a local Ollama by the Run button for a real run. Stream real production outputs into Monitor via the SDK; Calibrate gives conformal intervals + risk-controlled abstention.",
     icon: "run",
   },
   {

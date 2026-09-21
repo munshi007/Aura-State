@@ -56,7 +56,7 @@ export function Runs() {
                 <span className="mono" style={{ marginLeft: "auto", color: "var(--ink-3)", fontSize: 11 }}>{r.ts}</span>
               </div>
               <div className="hint" style={{ marginTop: 5 }}>{r.input}</div>
-              <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-3)", marginTop: 3 }}>{r.steps} steps</div>
+              <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-3)", marginTop: 3 }}>{r.steps} {r.steps === 1 ? "step" : "steps"}</div>
             </div>
           ))}
         </div>

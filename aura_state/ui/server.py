@@ -40,11 +40,32 @@ _STATIC = os.path.join(os.path.dirname(__file__), "static")
 # OpenAI-compatible providers for the Live Agent module. Keys are read from the
 # server's environment (this server runs locally, on the user's machine).
 _PROVIDERS = {
+    "demo":     {"env": None,               "base_url": None,                                                          "model": "(simulated)",    "mode": "DEMO"},
     "ollama":   {"env": None,               "base_url": "http://localhost:11434/v1",                                   "model": "qwen2.5:0.5b",   "mode": "JSON"},
     "openai":   {"env": "OPENAI_API_KEY",   "base_url": None,                                                          "model": "gpt-4o-mini",    "mode": "TOOLS"},
     "gemini":   {"env": "GOOGLE_API_KEY",   "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",    "model": "gemini-3.6-flash","mode": "JSON"},
     "deepseek": {"env": "DEEPSEEK_API_KEY", "base_url": "https://api.deepseek.com",                                    "model": "deepseek-chat",  "mode": "TOOLS"},
 }
+
+
+class _MockProvider:
+    """A zero-setup 'demo' extraction backend: fills each extract node's schema
+    with plausible placeholder values instead of calling an LLM. Lets a first-time
+    user Run an agent end-to-end (nodes execute, obligations checked, contract
+    emitted) with no Ollama and no API key. It's clearly labelled 'simulated'."""
+    _SAMPLE = {int: 42, float: 42.0, bool: True, str: "sample"}
+
+    def register_client(self, *a, **k):
+        pass
+
+    def extract(self, model=None, response_model=None, messages=None, node_name=None, **kw):
+        if response_model is None:
+            return {}
+        vals = {}
+        for name, f in response_model.model_fields.items():
+            ann = getattr(f, "annotation", str)
+            vals[name] = self._SAMPLE.get(ann, "sample")
+        return response_model(**vals)
 
 
 def _clean(x):
@@ -274,6 +295,8 @@ def create_app() -> "FastAPI":
         cfg = _PROVIDERS.get(name)
         if not cfg:
             return {"ok": False, "detail": "unknown provider"}
+        if name == "demo":
+            return {"ok": True, "detail": "built-in · simulated, no key"}
         if cfg["env"] and not os.environ.get(cfg["env"]):
             return {"ok": False, "detail": "no key — Save your key first"}
         try:
@@ -622,33 +645,38 @@ def create_app() -> "FastAPI":
         from pydantic import create_model
         engine = AuraEngine()
         default_provider = spec.get("provider", "ollama")
-
-        # Per-node provider routing: each node may name its own provider. We build
-        # one client per distinct provider and register it under the node's model
-        # name (the provider layer resolves client by model prefix).
-        _clients: Dict[str, Any] = {}
-        def _get(provider: str):
-            if provider not in _clients:
-                _clients[provider] = _client_for(provider)
-            return _clients[provider]
-
         node_models: Dict[str, str] = {}
-        first_client = None
-        for n in spec["nodes"]:
-            if n.get("type") != "extract":
-                continue
-            prov = n.get("provider") or default_provider
-            client, dmodel = _get(prov)
-            # Respect the node's chosen model (editable per node); fall back to the
-            # provider default. The studio keeps node models in sync when you switch
-            # provider, so this is the exact model shown in the inspector.
-            model = n.get("model") or dmodel
-            node_models[n["id"]] = model
-            engine.provider.register_client(model, client)
-            if first_client is None:
-                first_client = client
-        if first_client is not None:
-            engine.client = first_client
+
+        if default_provider == "demo":
+            # Zero-setup simulated run: mock extractions, real routing + verification.
+            engine.provider = _MockProvider()
+            engine.client = engine.provider   # any truthy sentinel enables the extract path
+        else:
+            # Per-node provider routing: each node may name its own provider. We build
+            # one client per distinct provider and register it under the node's model
+            # name (the provider layer resolves client by model prefix).
+            _clients: Dict[str, Any] = {}
+            def _get(provider: str):
+                if provider not in _clients:
+                    _clients[provider] = _client_for(provider)
+                return _clients[provider]
+
+            first_client = None
+            for n in spec["nodes"]:
+                if n.get("type") != "extract":
+                    continue
+                prov = n.get("provider") or default_provider
+                client, dmodel = _get(prov)
+                # Respect the node's chosen model (editable per node); fall back to the
+                # provider default. The studio keeps node models in sync when you switch
+                # provider, so this is the exact model shown in the inspector.
+                model = n.get("model") or dmodel
+                node_models[n["id"]] = model
+                engine.provider.register_client(model, client)
+                if first_client is None:
+                    first_client = client
+            if first_client is not None:
+                engine.client = first_client
 
         edgemap: Dict[str, List[str]] = {}
         for a, b in spec.get("edges", []):

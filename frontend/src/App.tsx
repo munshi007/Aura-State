@@ -114,7 +114,7 @@ function StatusBar() {
       <div className="seg2">taint {taint ? taint.toLowerCase() : "—"}</div>
       <div className="seg2">nodes {proven}✓ {violated ? violated + "✕ " : ""}/ {total}</div>
       <div className="sp" />
-      {runTrace && <div className="seg2">run {runTrace.length} steps</div>}
+      {runTrace && <div className="seg2">run {runTrace.length} {runTrace.length === 1 ? "step" : "steps"}</div>}
       <div className="seg2">provider {provider}</div>
       <div className="seg2">aura-state {serverVersion || "…"}</div>
     </div>
@@ -126,7 +126,19 @@ export default function App() {
   const { module, paletteOpen, tourOpen, set, refreshProviders, refreshFlows,
           treeW, inspW, treeCollapsed, inspCollapsed, togglePanel } = useStore();
   useEffect(() => {
-    refreshProviders(); refreshFlows();
+    refreshProviders();
+    // Reload the agent you last saved/opened, so a refresh doesn't look like it
+    // lost your work (the bundled default only shows on a truly first visit).
+    (async () => {
+      await refreshFlows();
+      try {
+        const last = localStorage.getItem("aura_current");
+        const flows = useStore.getState().flows;
+        if (last && flows.includes(last) && last !== useStore.getState().agentName) {
+          await useStore.getState().doLoad(last);
+        }
+      } catch {}
+    })();
     try { if (!localStorage.getItem("aura_tour_seen")) set({ tourOpen: true }); } catch {}
   }, []);
   useEffect(() => {

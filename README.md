@@ -18,7 +18,7 @@
   <img alt="CI" src="https://github.com/munshi007/Aura-State/actions/workflows/ci.yml/badge.svg">
   <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-3d3aa8.svg">
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
-  <img alt="tests" src="https://img.shields.io/badge/tests-216%20passing-1c8a5b.svg">
+  <img alt="tests" src="https://img.shields.io/badge/tests-217%20passing-1c8a5b.svg">
 </p>
 
 <p align="center">
@@ -144,7 +144,7 @@ pip install "aura-state[ui]" && aura-state ui     # opens http://127.0.0.1:8155
 # or zero-install:  uvx --from "aura-state[ui]" aura-state ui
 ```
 
-A full agent IDE — **design an agent, prove it, run it, watch it execute, and hand it off to code** — all in one local console. Not a sandbox you type into: every check is the actual framework verifier.
+A full agent IDE — **design an agent, prove it, run it, watch it execute, and hand it off to code** — all in one local console. Not a sandbox you type into: every check is the actual framework verifier. **Zero setup: it opens on a built-in `demo` provider that simulates the LLM steps, so you can hit Run and watch the agent execute end-to-end with no key and no Ollama.** Paste an OpenAI / Gemini / DeepSeek key (or point at a local Ollama) — right by the Run button — for a real run.
 
 An agent is a typed graph of **four node kinds** — you name them anything:
 
@@ -511,7 +511,7 @@ Python 3.10+ required. Dependencies: `pydantic`, `instructor`, `openai`, `networ
 
 ```bash
 python -m pytest tests/ -v
-# 216 tests passing
+# 217 tests passing
 ```
 
 ## Works with any LLM provider
