@@ -2,6 +2,11 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.8.13]
+
+### Fixed
+- **A provider 503/rate-limit no longer hangs the Run ~80s.** The run's LLM client now uses a 25s timeout and one HTTP retry, so an overloaded/rate-limited provider fails fast instead of grinding through long exponential backoff. The toast also explains it clearly ("<provider> is rate-limited / overloaded — retry, switch the model, or use a paid key") instead of dumping the raw 503.
+
 ## [0.8.12]
 
 ### Added

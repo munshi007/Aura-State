@@ -612,8 +612,10 @@ def create_app() -> "FastAPI":
         cfg = _PROVIDERS.get(provider) or _PROVIDERS["ollama"]
         if cfg["env"] and not os.environ.get(cfg["env"]):
             raise RuntimeError(f"set {cfg['env']} to use {provider}")
+        # Cap retries/timeout so a provider 503 (overload / rate-limit) fails fast
+        # with a clear message instead of hanging ~80s on exponential backoff.
         client = OpenAI(api_key=os.environ.get(cfg["env"], "ollama") if cfg["env"] else "ollama",
-                        base_url=cfg["base_url"])
+                        base_url=cfg["base_url"], timeout=25.0, max_retries=1)
         return instructor.from_openai(client, mode=getattr(instructor.Mode, cfg["mode"])), cfg["model"]
 
     def _build_engine(spec: Dict[str, Any]):

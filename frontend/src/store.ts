@@ -501,6 +501,8 @@ export const useStore = create<State>((setState, getState) => ({
       let errMsg = res.error || (stepErr ? `${stepErr.node}: ${stepErr.error}` : null);
       if (errMsg && /connection error|connect|refused|11434/i.test(errMsg) && s.provider === "ollama") {
         errMsg = "Can't reach Ollama (localhost:11434). Start Ollama, or pick a provider with a key in Settings → Providers.";
+      } else if (errMsg && /(^|[^0-9])(429|503)|high demand|overload|rate.?limit|quota|exhausted/i.test(errMsg)) {
+        errMsg = `${s.provider} is rate-limited / overloaded (try again in a moment). Free-tier limits are low — retry, switch the model (e.g. gemini-flash-latest), or use a paid key.`;
       }
       const showOnCanvas = !res.error && Array.isArray(trace) && trace.length > 0 && trace.some((t: any) => t.node !== "—");
       setState({ runTrace: trace, runHealth: res.health || null, running: false, toast: errMsg,
