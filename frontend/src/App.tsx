@@ -33,11 +33,11 @@ function useTheme() {
 
 function TopBar() {
   const { agentName, selectedId, verifying, running, agentMenuOpen, runVerify, runFlow, doSave, theme, set,
-          provider, providersList } = useStore();
+          provider, providersList, setProvider } = useStore();
   const cycleTheme = () => set({ theme: theme === "dark" ? "light" : "dark" });
   const pickProvider = (name: string) => {
     const p = providersList.find((x: any) => x.name === name);
-    set({ provider: name });
+    setProvider(name);   // also points node models at the provider's default
     if (p && !p.available) set({ toast: `${name} needs a key — add it in Settings → Providers`, module: "settings" });
   };
   return (

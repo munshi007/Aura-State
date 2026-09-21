@@ -617,8 +617,8 @@ export function Settings() {
         <div className="two">
           <div className="fg"><span className="lbl">Name</span><input className="field mono" value={agentName} onChange={(e) => set({ agentName: e.target.value })} /></div>
           <div className="fg"><span className="lbl">Provider</span>
-            <select className="field" value={provider} onChange={(e) => set({ provider: e.target.value })}>
-              {providersList.map((p: any) => <option key={p.name} value={p.name}>{p.name} · {p.model}{p.available ? "" : " (set " + p.needs + ")"}</option>)}
+            <select className="field" value={provider} onChange={(e) => useStore.getState().setProvider(e.target.value)}>
+              {providersList.map((p: any) => <option key={p.name} value={p.name}>{p.name} · {p.model}{p.available ? "" : " (no key)"}</option>)}
             </select></div>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

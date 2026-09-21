@@ -42,7 +42,7 @@ _STATIC = os.path.join(os.path.dirname(__file__), "static")
 _PROVIDERS = {
     "ollama":   {"env": None,               "base_url": "http://localhost:11434/v1",                                   "model": "qwen2.5:0.5b",   "mode": "JSON"},
     "openai":   {"env": "OPENAI_API_KEY",   "base_url": None,                                                          "model": "gpt-4o-mini",    "mode": "TOOLS"},
-    "gemini":   {"env": "GOOGLE_API_KEY",   "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",    "model": "gemini-2.0-flash","mode": "JSON"},
+    "gemini":   {"env": "GOOGLE_API_KEY",   "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",    "model": "gemini-3.6-flash","mode": "JSON"},
     "deepseek": {"env": "DEEPSEEK_API_KEY", "base_url": "https://api.deepseek.com",                                    "model": "deepseek-chat",  "mode": "TOOLS"},
 }
 
@@ -635,14 +635,12 @@ def create_app() -> "FastAPI":
         for n in spec["nodes"]:
             if n.get("type") != "extract":
                 continue
-            explicit = n.get("provider")
-            prov = explicit or default_provider
+            prov = n.get("provider") or default_provider
             client, dmodel = _get(prov)
-            # A node that inherits the agent's provider inherits its DEFAULT model
-            # too — otherwise a baked-in local model (e.g. qwen2.5:0.5b) would be
-            # sent to a cloud provider that doesn't have it. An explicit provider
-            # keeps the node's chosen model.
-            model = (n.get("model") if explicit else None) or dmodel
+            # Respect the node's chosen model (editable per node); fall back to the
+            # provider default. The studio keeps node models in sync when you switch
+            # provider, so this is the exact model shown in the inspector.
+            model = n.get("model") or dmodel
             node_models[n["id"]] = model
             engine.provider.register_client(model, client)
             if first_client is None:

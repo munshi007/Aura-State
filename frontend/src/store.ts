@@ -150,6 +150,7 @@ interface State {
   importAgent: (flow: any) => void;
   importMcp: (text: string) => Promise<void>;
   importCode: (source: string) => Promise<void>;
+  setProvider: (name: string) => void;
   newBlank: () => void;
   duplicateAgent: () => Promise<void>;
   renameAgent: (name: string) => Promise<void>;
@@ -293,6 +294,16 @@ export const useStore = create<State>((setState, getState) => ({
     catch { setState({ toast: "Couldn't reach the code importer — is the local server running?" }); return; }
     _applyImportedFlow(flow, "code-agent", "Couldn't import that agent code.", { codeOpen: false });
   },
+  setProvider: (name) =>
+    setState((s) => {
+      // Point LLM (extract) nodes at the chosen provider's default model, so a
+      // baked-in local model (qwen…) doesn't get sent to a cloud API. Still fully
+      // editable per node afterwards (Inspector → Model).
+      const p = s.providersList.find((x: any) => x.name === name);
+      const model = p?.model;
+      const nodes = model ? s.nodes.map((n) => (n.kind === "extract" ? { ...n, model } : n)) : s.nodes;
+      return { provider: name, nodes };
+    }),
   newBlank: () => setState({
     agentName: "untitled-agent", provider: "ollama", nodes: [], edges: [], entry: "", invariants: [],
     selectedId: null, verify: null, statusByNode: {}, runTrace: null, runHealth: null, diffOverlay: {},

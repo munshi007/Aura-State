@@ -2,6 +2,12 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.8.10]
+
+### Fixed
+- **The per-node model is honored (customizable again).** The run now uses each node's Model field (editable in the inspector), not a forced provider default. Switching provider updates the LLM nodes' model to that provider's default for you, and you can still change it per node.
+- **Refreshed the Gemini default model** `gemini-2.0-flash` → `gemini-3.6-flash` (Google retired the old one). Any model name works — type your own in a node's Model field.
+
 ## [0.8.9]
 
 ### Added
