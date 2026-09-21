@@ -2,6 +2,11 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.8.12]
+
+### Added
+- **Taint violations show inline in the Design Proof panel.** When "Taint dataflow" reads *violated*, each offending path (`source → sink — no sanitizer`) is listed right under it and is clickable to jump to the sink — the same treatment the lethal-trifecta row already had. (Detail was previously only on the node/graph inspector.)
+
 ## [0.8.11]
 
 ### Fixed

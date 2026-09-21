@@ -87,6 +87,13 @@ export default function Tree() {
         <div className="row"><span className="k">Z3 obligations</span><span className="mono">{verify ? `${z3ok}/${z3.length}` : "—"}</span></div>
         <div className="row"><span className="k">CTL reachability</span><span className="mono">{verify ? `${ctlok}/${ctl.length}` : "—"}</span></div>
         <div className="row"><span className="k">Taint dataflow</span><span className="mono" style={{ color: taint === "PROVEN" ? "var(--proven)" : taint === "VIOLATED" ? "var(--violated)" : "" }}>{taint ? taint.toLowerCase() : "—"}</span></div>
+        {taint === "VIOLATED" && (verify?.taint?.violations || []).slice(0, 4).map((v: any, i: number) => (
+          <div key={i} className="hint" style={{ padding: "3px 0", color: "var(--violated)", cursor: "pointer" }}
+            title="Untrusted data reaches this sink with no sanitizer between. Click to inspect the sink; add a Sanitizer to clear it."
+            onClick={() => select(v.sink)}>
+            {v.source} → {v.sink}{v.field && v.field !== "*" ? ` · ${v.field}` : ""} — no sanitizer
+          </div>
+        ))}
         <div className="row" title={triF ? triF.detail : "private data + untrusted content + external comms on one reachable path"}>
           <span className="k">Lethal trifecta</span>
           <span className="mono" style={{ color: tri === "PROVEN" ? "var(--proven)" : tri === "CLOSED" ? "var(--violated)" : "" }}>
