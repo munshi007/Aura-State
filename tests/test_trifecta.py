@@ -186,3 +186,14 @@ def test_import_with_no_tools_is_not_reported_green():
     r = check_flow({"source": "code", "entry": "Agent",
                     "nodes": [{"id": "Agent", "kind": "extract", "capability": "plain"}], "edges": []})
     assert any(f.check == "structure" for f in r.findings)
+
+
+def test_name_only_fetch_stays_untrusted_no_body_to_disambiguate():
+    # The name-only path (MCP/CrewAI tools) has no body, so a tool literally named
+    # `fetch` MUST stay untrusted — it is the canonical web-fetch source in the
+    # lethal-trifecta example. (The body-aware graph importer drops the bare token
+    # precisely because it can see requests.get vs db.execute; this path cannot,
+    # so it fails CLOSED. Regression guard for that deliberate asymmetry.)
+    roles, _ = classify_roles({"kind": "tool", "tool_name": "fetch",
+                               "description": "fetch a URL"})
+    assert "untrusted" in roles

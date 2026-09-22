@@ -25,10 +25,15 @@ _EXFIL = re.compile(
     r"|slack|discord|telegram|\bsms\b|twilio|sendgrid|\bses\b|\bsns\b|\bsqs\b|notify"
     r"|tweet|create_issue|add_\w*comment|create_pull|\.push\b", re.I)
 _UNTRUSTED = re.compile(
+    # NB: no bare `fetch` — it is direction-neutral (a DB/cache fetch is *private*,
+    # only a web fetch is untrusted). Real web ingestion is caught method-aware
+    # below (requests.get / urlopen / read_url / scrape / crawl), so classifying
+    # every `fetch_*` node untrusted was a false-positive factory on real agents
+    # (e.g. LangGraph `fetch_order_details` reading the orders DB).
     r"(requests|httpx|session|client|urllib|http)\.(get|head)\b|urlopen"
-    r"|\bfetch\w*|scrape\w*|crawl\w*|browse\w*|download\w*|tavily|serper|brave"
+    r"|scrape\w*|crawl\w*|browse\w*|download\w*|tavily|serper|brave"
     r"|bing|google\w*search|read_website|read_url|get_issue|list_issues|feedparser"
-    r"|\bimap\b|\binbox\b|websearch|web_search", re.I)
+    r"|\bimap\b|\binbox\b|websearch|web_search|fetch_url|fetch_page|fetch_web", re.I)
 _PRIVATE = re.compile(
     r"\bopen\s*\(|\.read\w*\(|\.load\w*\(|\.query\w*\(|\.execute\w*\(|fetchall|fetchone"
     r"|cursor|getenv|environ|secret|vault|boto3|\bs3\b|get_object|read_file"
@@ -116,8 +121,12 @@ def langgraph_flow(source: str, name: str = "code-agent") -> Optional[Dict[str, 
             fn = None
             if isinstance(node.args[0], ast.Constant):
                 nm = node.args[0].value
-                if len(node.args) >= 2 and isinstance(node.args[1], ast.Name):
-                    fn = node.args[1].id
+                if len(node.args) >= 2:
+                    a1 = node.args[1]
+                    if isinstance(a1, ast.Name):           # add_node("x", fn)
+                        fn = a1.id
+                    elif isinstance(a1, ast.Attribute):    # add_node("x", nodes.fn) — real multi-file agents
+                        fn = a1.attr
             elif isinstance(node.args[0], ast.Name):     # add_node(func) -> name = func name
                 nm = fn = node.args[0].id
             if nm:

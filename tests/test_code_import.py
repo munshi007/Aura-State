@@ -146,3 +146,91 @@ def test_crewai_trifecta_only_via_real_handoff():
     tri = [f for f in r.findings if f.check == "trifecta" and f.severity == "critical"]
     # untrusted (researcher scrape) -> exfil (analyst code interp), via the R->A hand-off
     assert tri and any("analyst:" in (f.node or "") for f in tri)
+
+
+# --- real-repo shape: StateGraph built inside a function, node fns referenced as
+# `module.fn` attributes with bodies in the same parse (mirrors the manishmahara23
+# langgraph-customer-support layout). Found on a live import that these two cases
+# broke: attribute-referenced node fns lost their body, and `fetch_*` DB reads were
+# mislabelled untrusted. ---
+REAL_LANGGRAPH = '''
+import database
+from langgraph.graph import StateGraph, START, END
+
+def fetch_order_details(state):
+    """Read the order from the internal orders DB."""
+    return {"order": database.get_order(state["order_id"])}
+
+def notify_customer(state):
+    """Email the customer the outcome."""
+    import smtplib
+    smtplib.SMTP("mail.internal").sendmail("a@x.co", state["to"], state["msg"])
+
+def build_graph():
+    g = StateGraph(dict)
+    g.add_node("fetch_order_details", fetch_order_details)   # via attribute in real code
+    g.add_node("notify", notify_customer)
+    g.add_edge(START, "fetch_order_details")
+    g.add_edge("fetch_order_details", "notify")
+    g.add_edge("notify", END)
+    return g.compile()
+'''
+
+
+def test_langgraph_node_fn_referenced_as_attribute_is_classified_by_body():
+    # A node function whose body lives in the same file must be classified by what
+    # its CODE does, not by name alone — even when add_node takes a bare local fn.
+    from aura_state.loaders.code import flow_from_code
+    flow = flow_from_code(REAL_LANGGRAPH, "cs")
+    roles = {n["id"]: set(n.get("roles", [])) for n in flow["nodes"]}
+    assert "exfil" in roles["notify"]                       # smtplib.sendmail body
+
+
+def test_fetch_from_db_is_not_untrusted():
+    # `fetch_order_details` reads the internal DB — that is *private*, never
+    # untrusted. Bare `fetch` used to false-positive as an injection source.
+    from aura_state.loaders.code import flow_from_code
+    flow = flow_from_code(REAL_LANGGRAPH, "cs")
+    roles = {n["id"]: set(n.get("roles", [])) for n in flow["nodes"]}
+    assert "untrusted" not in roles["fetch_order_details"]
+
+
+# --- AutoGen / AgentChat: a single assistant whose tools are plain function
+# references (tools=[fn]) — not @tool-decorated, not Tool() classes. Real AutoGen
+# apps import as "no tools" before this path; each ref is now resolved and
+# classified by its BODY (same engine as the LangGraph importer). ---
+AUTOGEN = '''
+import requests, smtplib
+from autogen_agentchat.agents import AssistantAgent
+
+def read_web(url: str) -> str:
+    """Fetch a web page."""
+    return requests.get(url).text
+
+def read_db(uid: str) -> str:
+    """Read the customer record."""
+    return db.execute("select * from customers where id=?", uid)
+
+def email_out(to: str, body: str) -> str:
+    """Email the summary out."""
+    smtplib.SMTP("mail").sendmail("a@x.co", to, body)
+
+agent = AssistantAgent(name="assistant", tools=[read_web, read_db, email_out],
+                       model_client=mc, system_message="help")
+'''
+
+
+def test_autogen_function_ref_tools_are_captured_and_body_classified():
+    from aura_state.loaders.code import flow_from_code
+    flow = flow_from_code(AUTOGEN, "autogen")
+    roles = {n["id"]: set(n.get("roles", [])) for n in flow["nodes"]}
+    assert "untrusted" in roles["read_web"]     # requests.get
+    assert "private" in roles["read_db"]        # db.execute / customers
+    assert "exfil" in roles["email_out"]        # smtplib.sendmail
+
+
+def test_autogen_single_agent_trifecta_detected():
+    r = check_flow(flow_from_code(AUTOGEN, "autogen"))
+    assert r.verified is False
+    tri = [f for f in r.findings if f.check == "trifecta" and f.severity == "critical"]
+    assert tri and any(f.node == "email_out" for f in tri)

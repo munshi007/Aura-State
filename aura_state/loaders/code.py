@@ -188,12 +188,66 @@ def _crewai_flow(source: str, name: str) -> Optional[Dict[str, Any]]:
             "nodes": nodes, "edges": edges, "source": "code"}
 
 
+def _agent_tools_flow(source: str, name: str) -> Optional[Dict[str, Any]]:
+    """AutoGen / AgentChat: `AssistantAgent(name=..., tools=[fn, fn2])` where the
+    tools are plain FUNCTION REFERENCES (not @tool-decorated, not Tool() classes).
+
+    The tool-hub importer only sees @tool/Tool()/`*Tool` classes, so a real
+    single-agent AutoGen app imported as "no tools found". Here we resolve each
+    referenced function to its body and classify it by WHAT THE CODE DOES — the
+    same body-aware engine the LangGraph importer uses (requests.get → untrusted,
+    db/read → private, send/post → exfil) — instead of dropping it. Static only.
+    """
+    from .graph_extract import _role_signals, _fn_text
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return None
+    funcs = {n.name: n for n in ast.walk(tree)
+             if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    ctors = ("AssistantAgent", "ConversableAgent", "Agent")
+    tool_refs: List[str] = []
+    seen: set = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and _callee_name(node) in ctors:
+            for kw in node.keywords:
+                if kw.arg == "tools" and isinstance(kw.value, ast.List):
+                    for e in kw.value.elts:
+                        nm = _tool_name_of(e)
+                        if nm and nm not in seen:
+                            seen.add(nm)
+                            tool_refs.append(nm)
+    # Only claim this shape if at least one tool is a resolvable local function —
+    # otherwise fall through to the tool-hub importer (which handles Tool() etc.).
+    if not any(t in funcs for t in tool_refs):
+        return None
+
+    AGENT = "Agent"
+    nodes: List[Dict[str, Any]] = [
+        {"id": AGENT, "kind": "extract", "capability": "plain",
+         "description": "LLM assistant — may call any tool in any order"}]
+    edges: List[List[str]] = []
+    for t in tool_refs:
+        fn = funcs.get(t)
+        doc = ast.get_docstring(fn) if fn else ""
+        roles = _role_signals(t + " " + (_fn_text(fn) if fn else ""))
+        tnode: Dict[str, Any] = {"id": t, "kind": "tool", "tool_name": t,
+                                 "description": doc or ""}
+        if roles:
+            tnode["roles"] = sorted(roles)
+        nodes.append(tnode)
+        edges.append([AGENT, t])   # planner may call it
+        edges.append([t, AGENT])   # its result feeds the next decision
+    return {"name": name, "entry": AGENT, "nodes": nodes, "edges": edges, "source": "code"}
+
+
 def flow_from_code(source: str, name: str = "code-agent") -> Dict[str, Any]:
     """Build a flow from agent source code (a single module's text).
 
     Prefers a FAITHFUL model: a LangGraph StateGraph (real nodes/edges + role per
-    node from what the code does), then a scoped multi-agent crew, then the
-    worst-case tool-surface hub.
+    node from what the code does), then a scoped multi-agent crew, then a single
+    AutoGen/AgentChat assistant with function-reference tools, then the worst-case
+    tool-surface hub.
     """
     from .graph_extract import langgraph_flow
     g = langgraph_flow(source, name)
@@ -202,6 +256,9 @@ def flow_from_code(source: str, name: str = "code-agent") -> Dict[str, Any]:
     crew = _crewai_flow(source, name)
     if crew and len(crew["nodes"]) >= 2:
         return crew
+    ag = _agent_tools_flow(source, name)
+    if ag and len(ag["nodes"]) >= 2:
+        return ag
     return flow_from_code_tools(_extract_tools(source), name)
 
 

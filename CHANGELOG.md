@@ -2,6 +2,17 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.11.2]
+
+Found by pointing the importer at real, public agents on GitHub (CrewAI's official `stock_analysis`, a LangGraph customer-support agent, Microsoft's AutoGen samples) — static import only, their code is never run.
+
+### Fixed
+- **Code-based classification no longer silently degrades to name-only on real multi-file LangGraph agents.** Real repos build the graph in a function and wire nodes as `add_node("x", nodes.fn)` — an attribute reference the importer only handled as a bare `ast.Name`, so it dropped the function body and classified by node *name* alone (the 0.10 "classify by what the code does" never fired). It now resolves attribute-referenced node functions, so classification runs on the real body.
+- **A `fetch_*` node that reads a database is no longer mislabelled `untrusted`.** The graph importer treated the bare token `fetch` as a web-injection signal, so `fetch_order_details` (an internal DB read → *private*) came out `untrusted`, inviting false trifectas. Removed the bare token from the body-aware path; real web fetches are still caught method-aware (`requests.get`, `urlopen`, `scrape`, …). The name-only path (MCP/CrewAI tools, no body to inspect) deliberately keeps `fetch` conservative — removing it there would fail-open on the canonical `fetch` MCP server.
+
+### Added
+- **AutoGen single-agent import.** A real AutoGen app — `AssistantAgent(name=..., tools=[fn, fn2])` whose tools are plain function references (not `@tool`, not `Tool()`) — used to import as "no tools found". Each reference is now resolved to its function and classified by what its body does (same body-aware engine as the LangGraph importer), so a single-agent AutoGen assistant's lethal trifecta is caught. `aura_state.loaders.code._agent_tools_flow`.
+
 ## [0.11.1]
 
 ### Fixed

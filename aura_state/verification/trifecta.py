@@ -48,6 +48,14 @@ def _norm(s: str) -> str:
     s = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", s)   # camelCase -> "camel Case"
     return re.sub(r"[^a-zA-Z0-9]+", " ", s).lower()  # snake/punct -> spaces, lower
 
+# NOTE on `fetch`: this name-only path (MCP / CrewAI tools) has no function body to
+# inspect, so it stays deliberately conservative — a tool named `fetch` is the
+# canonical web-fetch source in the lethal-trifecta example, and over-flagging a
+# DB-read tool that happens to be named `fetch_order` is fail-CLOSED (an annoying
+# false "risky", never a hidden leg). The body-aware graph importer
+# (`graph_extract`) drops the bare token precisely because it CAN see the code and
+# decide `requests.get` vs `db.execute`. Keep the two in step deliberately, not by
+# reflex: removing `fetch` here would fail-open on the literal `fetch` MCP server.
 _UNTRUSTED_RX = re.compile(
     r"\b("
     r"https?|url|web|website|browse|scrape|crawl|fetch|download|"  # the open web
