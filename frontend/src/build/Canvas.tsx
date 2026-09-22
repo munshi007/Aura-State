@@ -162,7 +162,7 @@ function TraceBar({ trace }: { trace: any[] }) {
             {candidates.map((c) => (
               <span key={c} className={"tb-branch" + (c === s.next ? " taken" : "")}>{c === s.next ? "→ " : ""}{c}</span>
             ))}
-            <span className="mono" style={{ fontSize: 10, color: "var(--ink-3)" }}>Thompson bandit · CTL-feasible</span>
+            <span className="mono" style={{ fontSize: 10, color: "var(--ink-3)" }}>rule-routed · CTL-feasible</span>
           </div>
         )}
         {s?.extracted && Object.keys(s.extracted).length > 0 && <pre style={{ marginTop: 8 }}>{JSON.stringify(s.extracted)}</pre>}

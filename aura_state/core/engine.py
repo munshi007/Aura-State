@@ -354,6 +354,8 @@ class AuraEngine:
                         response_model=node.extracts,
                         messages=msgs,
                         node_name=current_state,
+                        temperature=getattr(node, "temperature", None),
+                        max_tokens=getattr(node, "max_tokens", None),
                     ))
                 consensus_runs.clear()
                 consensus_runs.extend(runs)
@@ -361,6 +363,11 @@ class AuraEngine:
                     return AutoConsensus.resolve(runs, strategy=node.consensus_strategy)
                 return runs[0]
 
+            # Per-node retry cap: the inspector's "max retries on verification
+            # failure" bounds the counterexample-guided reflection loop for this node.
+            _node_retry = getattr(node, "retry", None)
+            if isinstance(_node_retry, int) and _node_retry > 0:
+                self.verification_loop.max_iterations = _node_retry
             extracted_data, iterations, verified = self.verification_loop.run(
                 node_name=current_state,
                 user_text=user_text,

@@ -426,6 +426,7 @@ export const useStore = create<State>((setState, getState) => ({
         id: n.id, type: n.kind, capability: cap,
         system_prompt: n.system_prompt, model: n.model, provider: n.provider,
         obligations: n.obligations, consensus: n.consensus, confidence: n.confidence,
+        temperature: n.temperature, max_tokens: n.max_tokens, retry: n.retry,
         fields: n.fields, sandbox_rule: n.sandbox_rule,
         tool_name: n.tool_name, side_effect: n.side_effect, mock_return: n.mock_return,
       };

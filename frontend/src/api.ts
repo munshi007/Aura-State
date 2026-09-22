@@ -20,7 +20,6 @@ async function postText(path: string, body: any): Promise<string> {
   const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   return r.text();
 }
-export { postText };
 
 export type Field = { name: string; type: string; description?: string };
 export type Capability = "plain" | "untrusted" | "sink" | "sanitizer";

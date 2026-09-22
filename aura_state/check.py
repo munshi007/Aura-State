@@ -218,7 +218,11 @@ def check_flow(flow: Dict[str, Any]) -> CheckReport:
     verified = len(blocking) == 0
     summary = {
         "taint": "violated" if any(f.check == "taint" for f in findings) else "proven",
-        "trifecta": "closed" if not tri.verified else "broken",
+        # Same vocabulary as /api/verify's trifecta verdict: "closed" = a lethal
+        # trifecta is closed (vulnerable), "proven" = proven trifecta-free. (Was
+        # "broken" for the safe case, which reads as vulnerable and disagreed with
+        # the /api/verify surface for the same graph.)
+        "trifecta": "closed" if not tri.verified else "proven",
         "reachability": "violated" if any(f.check == "reachability" for f in findings) else "proven",
         "obligations": "violated" if any(f.check == "obligation" for f in findings) else "proven",
         "policy": f"{sum(1 for f in findings if f.check == 'policy')} flagged",

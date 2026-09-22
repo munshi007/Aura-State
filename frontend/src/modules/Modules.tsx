@@ -95,7 +95,7 @@ export function Run() {
                     <span className="mono" style={{ fontSize: 10.5, color: "var(--ink-3)" }}>{h.total_executions}× · {h.avg_latency_ms}ms · fail {(h.fail_rate * 100).toFixed(0)}%</span></div>
                 </div>
               ))}
-              <div className="hint">When a node has multiple valid next steps, the engine routes with a Thompson-sampling bandit over these signals — restricted to CTL-feasible transitions.<Info k="routing" /></div>
+              <div className="hint">A Decision node routes by its verified sandbox rule (evaluated in a whitelisted interpreter, never <code>eval</code>); if a handler ever returns an invalid edge, the bandit fallback picks a CTL-feasible transition.<Info k="routing" /></div>
             </div>
           )}
           {runTrace && runTrace.map((s: any, i: number) => (
@@ -134,7 +134,9 @@ export function Prove() {
   const [busy, setBusy] = useState(false);
   const run = async () => {
     setBusy(true);
-    let d: any = {}; try { d = JSON.parse(data); } catch {}
+    let d: any;
+    try { d = JSON.parse(data); }
+    catch (e: any) { setRes({ error: `invalid JSON: ${e.message}` }); setBusy(false); return; }
     setRes(await api.proveData(d, obl.split("\n").map((s) => s.trim()).filter(Boolean))); setBusy(false);
   };
   return (
@@ -150,7 +152,8 @@ export function Prove() {
         </div>
         <div className="out">
           {!res && <div className="empty" style={{ marginTop: 60 }}>Prove any record against Z3 obligations.<br />Fail-closed: unprovable ⇒ not verified.</div>}
-          {res && (
+          {res?.error && <div className="obl-item bad"><div className="lbl" style={{ color: "var(--violated)", marginBottom: 6 }}>Input error</div><div className="cx">{res.error}</div></div>}
+          {res && !res.error && (
             <>
               <div className="metric"><div className="k">Verdict</div>
                 <div className="big" style={{ color: res.verified ? "var(--proven)" : "var(--violated)" }}>{res.verified ? "PROVEN" : "NOT PROVEN"}</div></div>
@@ -177,7 +180,9 @@ export function Data() {
   const [busy, setBusy] = useState(false);
   const run = async () => {
     setBusy(true);
-    let r: any[] = []; try { const p = JSON.parse(recs); r = Array.isArray(p) ? p : [p]; } catch {}
+    let r: any[];
+    try { const p = JSON.parse(recs); r = Array.isArray(p) ? p : [p]; }
+    catch (e: any) { setRes({ error: `invalid JSON: ${e.message}` }); setBusy(false); return; }
     setRes(await api.verifyDataset(r, obl.split("\n").map((s) => s.trim()).filter(Boolean))); setBusy(false);
   };
   return (
@@ -193,13 +198,14 @@ export function Data() {
         </div>
         <div className="out">
           {!res && <div className="empty" style={{ marginTop: 60 }}>Paste rows from a real dataset.<br />Every row is proved on your machine.</div>}
-          {res && (
+          {res?.error && <div className="obl-item bad"><div className="lbl" style={{ color: "var(--violated)", marginBottom: 6 }}>Input error</div><div className="cx">{res.error}</div></div>}
+          {res && !res.error && (
             <>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div className="metric"><div className="k">Passed</div><div className="big" style={{ color: "var(--proven)" }}>{res.passed}</div></div>
                 <div className="metric"><div className="k">Failed</div><div className="big" style={{ color: res.failed ? "var(--violated)" : "" }}>{res.failed}</div></div>
               </div>
-              <div className="hint">{res.total} rows · {res.obligations} obligations · ~{res.rate} rows/s</div>
+              <div className="hint">{res.total} rows · {res.obligations} obligations</div>
               {res.violations?.length > 0 && res.violations.map((v: any, i: number) => (
                 <div key={i} className="obl-item bad">
                   <div className="top"><span className="expr">row {v.row}</span><span className="chip vi">✕ {(v.failed || []).length} failed</span></div>
@@ -336,8 +342,8 @@ function Conformal() {
         {!res && <div className="empty" style={{ marginTop: 60 }}>Split-conformal interval with a<br />finite-sample coverage guarantee.</div>}
         {res && (
           <>
-            <div className="metric"><div className="k">{res.mode === "pasc" ? "PASC q̂" : "Interval"}</div>
-              <div className="big">{res.mode === "pasc" ? (res.q_hat ?? "—") : `[${res.lower ?? "−∞"}, ${res.upper ?? "∞"}]`}</div></div>
+            <div className="metric"><div className="k">Interval</div>
+              <div className="big">{`[${res.lower ?? "−∞"}, ${res.upper ?? "∞"}]`}</div></div>
             <div className="metric"><div className="k">Calibrated</div>
               <div className="big" style={{ fontSize: 20, color: res.calibrated ? "var(--proven)" : "var(--pending)" }}>{res.calibrated ? "YES" : "UNCALIBRATED"}</div>
               <div className="hint">{res.calibrated ? `n = ${res.n} ≥ floor` : `need more samples at this confidence (n = ${res.n})`}</div></div>

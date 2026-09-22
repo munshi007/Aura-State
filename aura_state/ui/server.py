@@ -331,6 +331,18 @@ def create_app() -> "FastAPI":
             return JSONResponse({"error": f"unknown provider '{req.provider}'"}, status_code=400)
         if cfg["env"] and not os.environ.get(cfg["env"]):
             return {"error": f"set {cfg['env']} in the environment to use {req.provider}"}
+        if req.provider == "demo":
+            # No LLM: fill the declared fields with placeholders (same as the run
+            # engine's _MockProvider) and still run the real Z3 proof. instructor has
+            # no Mode.DEMO, so this route must short-circuit before that path.
+            _samp = {"str": "sample", "int": 42, "float": 42.0, "bool": True}
+            data = {f["name"]: _samp.get(f.get("type", "str"), "sample")
+                    for f in req.fields if f.get("name")} or {"result": "sample"}
+            proof = prove_extraction(data, req.obligations) if req.obligations else None
+            return {"extracted": data, "provider": "demo", "model": "(simulated)",
+                    "verified": (proof.verified if proof else None),
+                    "failed": (proof.failed_obligations if proof else []),
+                    "counterexample": (proof.counterexample if proof else None)}
         import instructor
         from openai import OpenAI
         from pydantic import create_model
@@ -684,13 +696,32 @@ def create_app() -> "FastAPI":
             edgemap.setdefault(a, []).append(b)
         typemap = {"str": str, "int": int, "float": float, "bool": bool}
 
-        def make_handle(target, mock=None):
+        from ..execution.sandbox import SandboxedInterpreter
+        _router = SandboxedInterpreter()
+
+        def make_handle(node, nxt, mock=None):
+            kind = node.get("type") or node.get("kind")
+            rule = (node.get("sandbox_rule") or "").strip()
+
             def handle(self, user_text, extracted_data=None, memory=None):
                 data = extracted_data.model_dump() if extracted_data is not None else dict(memory or {})
                 # Tool nodes are NOT executed here (that's aura-runtime). A mock
                 # return is merged so downstream nodes can be tested design-time.
                 if mock:
                     data = {**data, **mock}
+                target = nxt[0] if nxt else "END"
+                # Decision nodes ROUTE by their verified rule (whitelisted evaluator,
+                # never eval): the rule sets `result`; truthy -> first outgoing edge,
+                # falsy -> second. This makes multi-branch agents actually branch at
+                # run time instead of always taking the first edge.
+                if kind == "decision" and rule and len(nxt) >= 2:
+                    try:
+                        res = _router.safe_exec(rule, dict(data))
+                        target = nxt[0] if res else nxt[1]
+                        data = {**data, "_decision": bool(res)}
+                    except Exception as e:
+                        # Fail loud in the trace rather than silently mis-routing.
+                        data = {**data, "_decision_error": str(e)[:120]}
                 return target, data
             return handle
 
@@ -709,7 +740,13 @@ def create_app() -> "FastAPI":
                 "obligations": list(n.get("obligations", [])),
                 "consensus": int(n.get("consensus", 1) or 1),
                 "confidence": float(n.get("confidence", 0.9) or 0.9),
-                "handle": make_handle(nxt[0] if nxt else "END", mock),
+                # per-node controls from the inspector (real on a live run + export):
+                # temperature/max_tokens drive the LLM call; retry caps the
+                # counterexample-guided verification loop for this node.
+                "temperature": float(n.get("temperature", 0.0) or 0.0),
+                "max_tokens": int(n.get("max_tokens", 512) or 512),
+                "retry": int(n.get("retry", 3) or 3),
+                "handle": make_handle(n, nxt, mock),
             }
             cap = n.get("capability", "plain")
             if cap == "untrusted": attrs["untrusted_source"] = True
@@ -748,6 +785,7 @@ def create_app() -> "FastAPI":
         except Exception as e:
             return {"error": str(e)[:220]}
         import time
+        import datetime as _dt
         entry = req.entry or spec["nodes"][0]["id"]
         node_by_id = {n["id"]: n for n in spec["nodes"]}
         state, memory, trace = entry, dict(req.memory or {}), []
@@ -777,6 +815,14 @@ def create_app() -> "FastAPI":
                                      "lower": _clean(getattr(conf, "lower", None)),
                                      "upper": _clean(getattr(conf, "upper", None))}
             trace.append(step)
+            # Stream each step to the Monitor feed so an in-studio run also shows up
+            # there (previously only the external SDK's Monitor.ingest fed it).
+            feed.append({"node": state, "source": req.name,
+                         "data": step["extracted"],
+                         "obligations": list(node_by_id.get(state, {}).get("obligations", [])),
+                         "verified": step["verified"], "failed": [],
+                         "ts": _dt.datetime.now().strftime("%H:%M:%S")})
+            del feed[:-300]
             memory = payload if isinstance(payload, dict) else memory
             if nxt == "END" or nxt not in engine._nodes:
                 break
@@ -839,7 +885,9 @@ def create_app() -> "FastAPI":
 
     @app.get("/api/runs/{fid}")
     def get_run(fid: str):
-        safe = "".join(c for c in fid if c.isalnum() or c in "-_").strip()
+        # Match _save_run's sanitizer exactly (it keeps spaces) — stripping the
+        # space here made runs of any space-named agent un-openable (404).
+        safe = "".join(c for c in fid if c.isalnum() or c in "-_ ").strip()
         path = os.path.join(_RUN_DIR, safe + ".json")
         if not os.path.isfile(path):
             return JSONResponse({"error": "not found"}, status_code=404)
@@ -1219,6 +1267,12 @@ def create_app() -> "FastAPI":
                 if int(n.get("consensus", 1) or 1) > 1:
                     L.append(f"    consensus = {int(n['consensus'])}")
                     L.append(f"    confidence = {float(n.get('confidence', 0.9))}")
+                if float(n.get("temperature", 0.0) or 0.0) != 0.0:
+                    L.append(f"    temperature = {float(n['temperature'])}")
+                if int(n.get("max_tokens", 512) or 512) != 512:
+                    L.append(f"    max_tokens = {int(n['max_tokens'])}")
+                if int(n.get("retry", 3) or 3) != 3:
+                    L.append(f"    retry = {int(n['retry'])}")
             if n.get("obligations"):
                 L.append(f"    obligations = {list(n['obligations'])!r}")
             if n.get("sandbox_rule"):

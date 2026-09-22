@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useRef, useEffect } from "react";
 import { useStore, Module, TEMPLATES } from "./store";
 import { Icon } from "./ui";
+import * as api from "./api";
 
 type Cmd = { label: string; hint?: string; icon?: string; run: () => void };
 
@@ -67,7 +68,7 @@ export default function Palette() {
 
 async function exportCert(s: any) {
   const spec = s.toSpec();
-  const cert = await (await fetch("/api/certificate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: s.agentName, nodes: spec.nodes, edges: spec.edges, entry: spec.entry, invariants: s.invariants }) })).json();
+  const cert = await api.certificate(s.agentName, spec.nodes, spec.edges, spec.entry, s.invariants);
   const blob = new Blob([JSON.stringify(cert, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

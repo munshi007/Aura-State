@@ -270,3 +270,59 @@ def test_verify_honors_analysis_roles(client):
     assert r["trifecta"]["verdict"] == "CLOSED"
     f = r["trifecta"]["findings"][0]
     assert f["exfil"] == "send" and f["untrusted"] == "fetch"
+
+
+# --- decision routing: a Decision node must evaluate its sandbox rule and BRANCH
+# at run time (previously the run always took the first edge, so multi-branch
+# agents never routed by their logic). ---
+_ROUTE = {
+    "entry": "Gate",
+    "edges": [["Gate", "Auto"], ["Gate", "Escalate"]],
+    "nodes": [
+        {"id": "Gate", "type": "decision", "sandbox_rule": "result = amount <= 100"},
+        {"id": "Auto", "type": "tool", "tool_name": "db.write", "side_effect": "write"},
+        {"id": "Escalate", "type": "tool", "tool_name": "notify"},
+    ],
+    "input": "x", "provider": "demo", "name": "routetest",
+}
+
+
+def _run_path(client, amount):
+    body = dict(_ROUTE, memory={"amount": amount})
+    trace = client.post("/api/run", json=body).json()["trace"]
+    return [s["node"] for s in trace]
+
+
+def test_decision_node_routes_true_branch_when_rule_holds(client):
+    assert _run_path(client, 50) == ["Gate", "Auto"]
+
+
+def test_decision_node_routes_false_branch_when_rule_fails(client):
+    assert _run_path(client, 5000) == ["Gate", "Escalate"]
+
+
+def test_agent_demo_provider_does_not_500(client):
+    # /api/agent used to raise on demo (instructor has no Mode.DEMO). It must now
+    # return a simulated extraction + a real Z3 proof.
+    r = client.post("/api/agent", json={"provider": "demo", "prompt": "hi",
+                                        "fields": [{"name": "amount", "type": "int"}],
+                                        "obligations": ["amount >= 0"]}).json()
+    assert "error" not in r and r["verified"] is True and r["model"] == "(simulated)"
+
+
+def test_studio_run_feeds_the_monitor(client):
+    client.post("/api/feed/clear")
+    client.post("/api/run", json=dict(_ROUTE, memory={"amount": 50}))
+    feed = client.get("/api/feed").json()
+    assert feed and any(ev["source"] == "routetest" for ev in feed)
+
+
+def test_check_and_verify_agree_on_trifecta_vocabulary(client):
+    # Same safe graph (untrusted -> sink, no private): /api/verify says PROVEN,
+    # /api/check must not label it with a word that reads as vulnerable.
+    safe = {"entry": "A", "edges": [["A", "B"]],
+            "nodes": [{"id": "A", "type": "tool", "tool_name": "web.fetch", "side_effect": "read", "capability": "untrusted"},
+                      {"id": "B", "type": "tool", "tool_name": "db.write", "side_effect": "write", "capability": "sink"}]}
+    v = client.post("/api/verify", json=safe).json()["trifecta"]["verdict"]
+    c = client.post("/api/check", json=safe).json()["summary"]["trifecta"]
+    assert v == "PROVEN" and c == "proven"

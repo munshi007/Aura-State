@@ -231,6 +231,8 @@ class LLMProvider:
         messages: List[Dict[str, str]],
         node_name: str = "unknown",
         max_retries: int = 3,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
     ):
         """
         Perform LLM extraction with automatic failover.
@@ -253,6 +255,12 @@ class LLMProvider:
                 # Prefer create_with_completion so we can read real token usage
                 # off the raw response; fall back to create() for clients that
                 # don't expose it.
+                # Only forward sampling controls when set, so defaults are untouched.
+                _opts: Dict[str, Any] = {}
+                if temperature is not None:
+                    _opts["temperature"] = temperature
+                if max_tokens is not None:
+                    _opts["max_tokens"] = max_tokens
                 raw = None
                 if hasattr(client.chat.completions, "create_with_completion"):
                     result, raw = client.chat.completions.create_with_completion(
@@ -260,6 +268,7 @@ class LLMProvider:
                         response_model=response_model,
                         messages=messages,
                         max_retries=max_retries,
+                        **_opts,
                     )
                 else:
                     result = client.chat.completions.create(
@@ -267,6 +276,7 @@ class LLMProvider:
                         response_model=response_model,
                         messages=messages,
                         max_retries=max_retries,
+                        **_opts,
                     )
                     # instructor attaches the raw completion here — read real
                     # usage off it instead of recording the call as 0 tokens.

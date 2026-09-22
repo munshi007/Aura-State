@@ -102,8 +102,15 @@ export function Evals() {
               <textarea className="field" style={{ minHeight: 44, marginBottom: 6 }} value={c.input} placeholder="input message" onChange={(e) => setCase(i, { input: e.target.value })} />
               <input className="field mono" style={{ marginBottom: 6 }} value={c.obligations.join(", ")} placeholder="obligations: amount >= 0, amount <= 500"
                 onChange={(e) => setCase(i, { obligations: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} />
-              <input className="field mono" value={JSON.stringify(c.expect || {})} placeholder='expect: {"category":"billing"}'
-                onChange={(e) => { try { setCase(i, { expect: JSON.parse(e.target.value) }); } catch {} }} />
+              <input className={"field mono" + ((c as any).expectBad ? " bad" : "")}
+                value={(c as any).expectText ?? JSON.stringify(c.expect || {})} placeholder='expect: {"category":"billing"}'
+                onChange={(e) => {
+                  const t = e.target.value;
+                  // Keep the raw text so typing isn't clobbered mid-edit; parse
+                  // best-effort and flag invalid instead of silently dropping it.
+                  try { setCase(i, { expect: JSON.parse(t), expectText: t, expectBad: false } as any); }
+                  catch { setCase(i, { expectText: t, expectBad: true } as any); }
+                }} />
             </div>
           ))}
           <button className="addf" onClick={() => set({ evalCases: [...evalCases, { input: "", expect: {}, obligations: [] }] })}>+ add case</button>
@@ -214,6 +221,7 @@ const ACTION_META: Record<string, { icon: string; label: string }> = {
   verify: { icon: "prove", label: "Verify" }, run: { icon: "play", label: "Run" },
   repair: { icon: "spark", label: "Repair" }, save: { icon: "save", label: "Save" },
   certificate: { icon: "download", label: "Certify" }, eval: { icon: "evals", label: "Eval" },
+  baseline: { icon: "prove", label: "Baseline" },
 };
 
 const _fkey = (f: any) => `${f.check}|${f.node || ""}|${f.severity}|${f.key || ""}`;
@@ -234,7 +242,11 @@ function RegressionGate() {
   const enriched = () => nodes.map((n) => ({
     id: n.id, kind: n.kind, capability: n.capability, obligations: n.obligations,
     tool_name: n.tool_name, side_effect: n.side_effect,
-    data_class: (n as any).data_class, exfil: (n as any).exfil, description: n.system_prompt,
+    // Use the real tool description only (from an import), NOT the free-text system
+    // prompt — matching store.runVerify. A prompt's prose ("send", "external", …)
+    // would falsely trip trifecta role words and make the gate report phantom
+    // findings the canvas Verify never shows.
+    data_class: (n as any).data_class, exfil: (n as any).exfil, description: (n as any).description || "",
   }));
   const runCheck = async () => {
     setBusy(true);

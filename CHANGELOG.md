@@ -2,6 +2,25 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.11.3]
+
+A full front-to-back audit of the studio — every one of the 14 modules traced UI → API → verifier — to remove anything decorative or half-wired. Every module was already backed by real verifiers; this release makes the controls and routing that *render* also *run*, and fixes the correctness/UX gaps the audit surfaced.
+
+### Fixed
+- **Decision nodes now actually route.** The studio run always took the first outgoing edge — a Decision node's `sandbox_rule` was never evaluated, so multi-branch agents (e.g. the Refund template) never branched. The run now evaluates the rule in the whitelisted interpreter (never `eval`) and routes: truthy → first edge, falsy → second. Verified: `amount ≤ 100` → auto-refund, else → escalate.
+- **Trifecta verdict now agrees across surfaces.** `/api/check` labelled a proven-safe graph `"broken"` while `/api/verify` said `PROVEN` for the same input. `check.py` now uses the same `proven`/`closed` vocabulary.
+- **Audit regression gate matches canvas Verify.** The gate fed each node's LLM prompt prose into the trifecta classifier (canvas Verify deliberately doesn't), so prompt words like "send"/"customer" produced phantom "new findings". It now uses the real tool description only.
+- **`/api/agent` no longer 500s on the demo provider** (`instructor` has no `Mode.DEMO`); it short-circuits to a simulated extraction + real Z3 proof, like the run engine.
+- **Runs saved under an agent name containing a space are openable again** (the save/read filename sanitizers disagreed → 404).
+- **Invalid JSON surfaces an error** in Prove / Dataset / Evals instead of being silently swallowed and proved against `{}` / `[]` (per the repo's "let errors surface" rule).
+
+### Added / wired
+- **Per-node LLM controls are real.** Temperature and max-tokens now flow through the engine into the LLM call, and the "max retries on verification failure" slider bounds the counterexample-guided verification loop for that node. All three are emitted in `export/python` too. Previously they were inert inputs.
+- **In-studio runs stream to the Monitor.** A run now posts each step to the live feed, so the Monitor tab populates from the studio itself (not only the external SDK's `Monitor.ingest`).
+
+### Removed (was decorative)
+- The unreachable PASC branch in Calibrate (the UI never sent `predictions`/`truths`), the meaningless Dataset "rows/s" micro-benchmark, and a dead `postText` client export. Routing captions that claimed a "Thompson bandit" on a path where it never fired now describe the real rule-based routing.
+
 ## [0.11.2]
 
 Found by pointing the importer at real, public agents on GitHub (CrewAI's official `stock_analysis`, a LangGraph customer-support agent, Microsoft's AutoGen samples) — static import only, their code is never run.
