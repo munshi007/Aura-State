@@ -7,7 +7,7 @@ import { CollapseBtn } from "./Resizer";
 const ADD: { kind: NodeKind; label: string; desc: string }[] = [
   { kind: "extract", label: "Extract", desc: "LLM step → structured output" },
   { kind: "decision", label: "Decision", desc: "Verified branch / rule" },
-  { kind: "tool", label: "Tool", desc: "Any external call — db, http, email…" },
+  { kind: "tool", label: "Tool", desc: "Declared external call — verified, never run" },
   { kind: "sanitizer", label: "Sanitizer", desc: "Clears taint before a sink" },
 ];
 
@@ -57,7 +57,7 @@ export default function Tree() {
             </div>
           );
         })}
-        {nodes.length === 0 && <div className="hint" style={{ padding: "6px 8px" }}>No nodes yet — add one below, or load a template.</div>}
+        {nodes.length === 0 && <div className="hint" style={{ padding: "6px 8px", lineHeight: 1.5 }}>No nodes yet. The real workflow: <b>Import from code</b> (agent menu) to verify an existing LangGraph / CrewAI / AutoGen / MCP agent — or add nodes below to model one. Then <b>Verify design</b> proves it (and <code>aura-state check</code> gates it in CI).</div>}
       </div>
 
       <div className="addhd lbl">Add a node <span style={{ color: "var(--ink-4)", textTransform: "none", letterSpacing: 0 }}>· 4 kinds, name them anything</span></div>
@@ -72,7 +72,11 @@ export default function Tree() {
       </div>
       {toolMenu && (
         <div className="toolmenu">
-          <div className="lbl" style={{ padding: "2px 4px 6px" }}>Common tools · all are Tool nodes</div>
+          <div className="lbl" style={{ padding: "2px 4px 2px" }}>Common tools · all are Tool nodes</div>
+          <div className="hint" style={{ padding: "0 4px 7px", fontSize: 11, lineHeight: 1.45 }}>
+            Declarations, not integrations. Aura <b>proves</b> the design (taint, lethal
+            trifecta) — it never calls these. A mock return stands in during Run.
+          </div>
           {TOOL_PRESETS.map((t) => (
             <button key={t.name} onClick={() => { addTool(t.name, t.effect, t.label); setToolMenu(false); }}>
               <span>{t.label}</span>
@@ -83,7 +87,8 @@ export default function Tree() {
       )}
 
       <div className="stat">
-        <div className="lbl" style={{ marginBottom: 9 }}>Design proof</div>
+        <div className="lbl" style={{ marginBottom: 3 }}>Design proof</div>
+        <div className="hint" style={{ margin: "0 0 9px", fontSize: 11 }}>Static proofs over the design — nothing is executed.</div>
         <div className="row"><span className="k">Z3 obligations</span><span className="mono">{verify ? `${z3ok}/${z3.length}` : "—"}</span></div>
         <div className="row"><span className="k">CTL reachability</span><span className="mono">{verify ? `${ctlok}/${ctl.length}` : "—"}</span></div>
         <div className="row"><span className="k">Taint dataflow</span><span className="mono" style={{ color: taint === "PROVEN" ? "var(--proven)" : taint === "VIOLATED" ? "var(--violated)" : "" }}>{taint ? taint.toLowerCase() : "—"}</span></div>
