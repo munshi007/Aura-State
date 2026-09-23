@@ -61,10 +61,25 @@ class _MockProvider:
     def extract(self, model=None, response_model=None, messages=None, node_name=None, **kw):
         if response_model is None:
             return {}
-        vals = {}
+        # Pull real values out of the run input so a demo run REFLECTS its input
+        # (e.g. numbers drive a Decision node's rule → the agent actually branches).
+        # Falls back to a typed placeholder when the input has nothing to offer.
+        import re
+        text = ""
+        for m in (messages or []):
+            if isinstance(m, dict) and m.get("role") == "user":
+                text = str(m.get("content", ""))
+        nums = re.findall(r"-?\d+(?:\.\d+)?", text)
+        vals, ni = {}, 0
         for name, f in response_model.model_fields.items():
             ann = getattr(f, "annotation", str)
-            vals[name] = self._SAMPLE.get(ann, "sample")
+            if ann in (int, float) and ni < len(nums):
+                v = nums[ni]; ni += 1
+                vals[name] = int(float(v)) if ann is int else float(v)
+            elif ann is str and text:
+                vals[name] = text[:80]
+            else:
+                vals[name] = self._SAMPLE.get(ann, "sample")
         return response_model(**vals)
 
 
