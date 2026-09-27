@@ -83,7 +83,7 @@ multiple design-time checks, shipped. Phase 1 **adopts** the published SOTA meth
 ### Phase 0 — perfect & launch the usable product (now)
 | ID | Title | Type | Priority |
 |----|-------|------|----------|
-| [0016](backlog/0016-cli-wow-demo-command.md) | CLI time-to-wow — `aura-state demo` + screenshot-worthy `check` | feature | now |
+| [0016](done/0016-cli-wow-demo-command.md) | CLI time-to-wow — `aura-state demo` + screenshot-worthy `check` | feature | ✅ done |
 | [0017](backlog/0017-launch-hardening-install-failclosed.md) | Launch hardening — clean-install matrix + fail-closed re-sweep | infra | now |
 | [0018](backlog/0018-studio-front-door-proof-badge.md) | Studio front door + shareable proof badge | feature | now |
 | [0019](backlog/0019-honest-readme-positioning-launch.md) | Honest README rewrite + positioning + launch assets | docs | now |

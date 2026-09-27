@@ -85,32 +85,31 @@ def _load_baseline(path):
     return base
 
 
-def _cmd_check(args):
+def _badge(report, c):
+    """One honest line: exactly which checks ran and each verdict — the proof
+    badge people screenshot. Only shows what `check_flow` actually reports."""
+    s = report.summary or {}
+    parts = []
+    for key, label in (("trifecta", "trifecta"), ("taint", "taint"),
+                       ("reachability", "reachability"), ("obligations", "obligations")):
+        v = s.get(key)
+        if not v:
+            continue
+        parts.append(f"{label} {c('32' if v == 'proven' else '31', v)}")
+    if s.get("policy"):
+        parts.append(f"policy {s['policy']}")
+    if parts:
+        print("  " + c("2", "checked: ") + c("2", " · ").join(parts))
+
+
+def _render(reports, args, baseline=None):
+    """Print the report(s) and return the process exit code. Shared by `check`
+    (paths) and `demo` (the bundled agent)."""
     import json
-    import logging
-    logging.getLogger("aura_state").setLevel(logging.ERROR)   # clean CLI output
-    from .check import check_flow
 
     def c(code, s):
         return s if args.no_color or not sys.stdout.isatty() else f"\033[{code}m{s}\033[0m"
     marks = {"critical": c("31", "✗"), "high": c("31", "✗"), "medium": c("33", "▲"), "low": c("33", "▲")}
-
-    baseline = None
-    if args.baseline:
-        try:
-            baseline = _load_baseline(args.baseline)
-        except Exception as e:
-            print(f"aura-state check: could not read baseline {args.baseline}: {e}", file=sys.stderr)
-            return 2
-
-    reports = []
-    for path in args.paths:
-        try:
-            report = check_flow(_load_flow(path))
-        except Exception as e:
-            print(f"aura-state check: could not load {path}: {e}", file=sys.stderr)
-            return 2
-        reports.append((path, report))
 
     if args.json:
         agents = []
@@ -180,10 +179,58 @@ def _cmd_check(args):
             ok = len(reports) - failed
             print(f"  {c('32', str(ok)+' proven')}, {c('31', str(failed)+' failed')} of {len(reports)} agents.\n")
     else:
+        if baseline is None:
+            _badge(reports[0][1], c)
         print()
     if baseline is not None:
         return 1 if regressed else 0
     return 1 if failed else 0
+
+
+def _cmd_check(args):
+    import logging
+    logging.getLogger("aura_state").setLevel(logging.ERROR)   # clean CLI output
+    from .check import check_flow
+
+    baseline = None
+    if args.baseline:
+        try:
+            baseline = _load_baseline(args.baseline)
+        except Exception as e:
+            print(f"aura-state check: could not read baseline {args.baseline}: {e}", file=sys.stderr)
+            return 2
+
+    reports = []
+    for path in args.paths:
+        try:
+            report = check_flow(_load_flow(path))
+        except Exception as e:
+            print(f"aura-state check: could not load {path}: {e}", file=sys.stderr)
+            return 2
+        reports.append((path, report))
+    return _render(reports, args, baseline)
+
+
+def _cmd_demo(args):
+    """Zero-setup showcase: check the bundled agent and show a real finding + fix."""
+    import logging
+    logging.getLogger("aura_state").setLevel(logging.ERROR)
+    from .check import check_flow
+    from .demo import demo_flow
+
+    # demo is a single-agent showcase: no baseline, honor --json/--no-color if given.
+    args.baseline = None
+    args.json = getattr(args, "json", False)
+    args.no_color = getattr(args, "no_color", False)
+    if not args.json:
+        print("\n  aura-state demo — a realistic LangGraph support-ticket agent,")
+        print("  checked statically (no LLM, no keys, no network — parsed with ast, never run).")
+    report = check_flow(demo_flow())
+    code = _render([("demo", report)], args, None)
+    if not args.json:
+        print("  " + ("Try it on your own agent:  " if code else "")
+              + "aura-state check your_agent.py   ·   aura-state ui\n")
+    return code
 
 
 def _cmd_version(args):
@@ -208,6 +255,11 @@ def main(argv=None):
     p_c.add_argument("--baseline", metavar="FILE", help="a prior `check --json` output; fail only on NEW blocking findings (regression gate for PRs)")
     p_c.add_argument("--no-color", action="store_true", help="disable ANSI colors")
     p_c.set_defaults(func=_cmd_check)
+
+    p_d = sub.add_parser("demo", help="check a bundled example agent — zero setup, shows a real finding")
+    p_d.add_argument("--json", action="store_true", help="machine-readable JSON output")
+    p_d.add_argument("--no-color", action="store_true", help="disable ANSI colors")
+    p_d.set_defaults(func=_cmd_demo)
 
     p_v = sub.add_parser("version", help="print the installed version")
     p_v.set_defaults(func=_cmd_version)
