@@ -1,6 +1,6 @@
 # 0019: Honest README rewrite + positioning + launch assets
 
-**Status:** backlog
+**Status:** done (2026-09-27) — GIF pending (needs 0018 + screen capture)
 **Type:** docs
 **Tags:** `[launch]` `[positioning]` `[research]`
 **Priority:** now (Phase 0 — launch)
@@ -31,14 +31,17 @@ The README is the #1 conversion surface and it must be **HN-proof**: no "first/o
 
 ## Acceptance criteria
 
-- [ ] README leads with the 5 checks + the import/verdict/fix/certificate story
-- [ ] honest competitive framing with citations (AgentProof/AgentFlow/FIDES/2605.23951/survey)
-- [ ] no "first/only/unowned-technique" claims; moat stated as product + import + breadth
-- [ ] real scan receipts included; stats attributed, not asserted
-- [ ] demo GIF + HN/PH/LinkedIn copy drafted
+- [x] README leads with the 5 checks + the import/verdict/fix/certificate story (`aura-state demo` output → 5-proofs table → "point at your own agent")
+- [x] honest competitive framing with citations — comparison table linking AgentProof / AgentFlow / FIDES + the survey; states our edge as import + breadth
+- [x] no "first/only/unowned-technique" claims; moat stated as product + import + breadth + sound/fail-closed
+- [x] real scan receipts included (the existing 5/6 lethal-trifecta audit); stats attributed (Cyera 2026 in launch copy)
+- [~] HN/PH/LinkedIn copy drafted (`docs/LAUNCH.md`); **demo GIF pending** — needs a screen recording of the studio, blocked on 0018 (front door)
 
 ## Notes
 
 _record: final positioning line; the citation list; which stats are attributed vs dropped._
 **Hard rule (why):** a WebFetch on a binary PDF fabricated a "FIDES is static + imports LangChain" answer that the real PDF refuted. No claim ships without a parseable primary read.
 Relates to [[0016]] (demo), [[0023]] (benchmark backs the story later).
+
+## Completion (2026-09-27)
+Rewrote the README hero: tagline broadened from "can't be prompt-injected" to "injection-safe, in-spec, and won't act out of bounds — a design-time proof over the agent you already wrote, not a runtime guardrail." New sections: **One command, zero setup** (`aura-state demo` output), **Five things it proves** (Safe/Correct/Live/Calibrated/Governed table — "prompt injection is only one of them"), **Point it at your own agent**, and **How this is different (and honest)** — a comparison table crediting AgentProof (topology only) / AgentFlow (dataflow via DSL) / FIDES (runtime), linking the survey, stating our edge as *shipped + imports your real agent + breadth + sound/fail-closed*, explicitly not claiming to have invented the methods. Fixed the stale routing bullet (now rule-based, per 0.11.3) and test count (238). Launch copy drafted in `docs/LAUNCH.md` (HN Show HN, Product Hunt, LinkedIn) — attribution-honest (Cyera 2026 cited, not asserted). GIF deferred to after 0018.

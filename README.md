@@ -7,10 +7,10 @@
 
 <h1 align="center">Aura-State</h1>
 
-<p align="center"><b>Prove your AI agent can't be prompt-injected — before you ship it.</b></p>
+<p align="center"><b>Prove your AI agent is injection-safe, in-spec, and won't act out of bounds — before you ship it.</b></p>
 
 <p align="center">
-  A type-checker for LLM agents. Static analysis + formal proofs — Z3, CTL model checking, taint dataflow, conformal risk — over your agent's design. Catches injection paths, unsafe tool calls, hallucinated outputs, and leaked secrets. Runs locally, in CI, no API key.
+  A design-time verifier for LLM agents — <b>not a runtime guardrail</b>. Import your <b>LangGraph / CrewAI / AutoGen / MCP</b> agent and Aura proves five things about the agent you already wrote, then hands you the exact counterexample or a certificate. Z3 · CTL model checking · information-flow/taint · conformal calibration. Runs locally, in CI, no API key.
 </p>
 
 <p align="center">
@@ -18,7 +18,7 @@
   <img alt="CI" src="https://github.com/munshi007/Aura-State/actions/workflows/ci.yml/badge.svg">
   <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-3d3aa8.svg">
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
-  <img alt="tests" src="https://img.shields.io/badge/tests-235%20passing-1c8a5b.svg">
+  <img alt="tests" src="https://img.shields.io/badge/tests-238%20passing-1c8a5b.svg">
 </p>
 
 <p align="center">
@@ -30,26 +30,55 @@
 pip install aura-state          # or:  uv pip install aura-state  ·  uv add aura-state
 ```
 
-## Catch a prompt-injection in one command
-
-Point it at your agent design. It fails the build if an untrusted input can reach a real tool call unsanitized:
+## One command, zero setup
 
 ```console
-$ aura-state check my_agent.json
+$ aura-state demo          # no keys, no config, no agent of your own needed
 
-  aura-state check · sql-agent (naive) · 3 nodes
+  aura-state check · support-ticket-agent · 4 nodes
 
-  ✗ taint [Execute]: untrusted data from 'Ask' can reach sink 'Execute' with no sanitizer — injection path
-  ✗ obligation [GenSQL]: 'read_only' not proven — the generated SQL may not be read-only
+  ✗ trifecta [send]: lethal trifecta closed — prompt injection at 'fetch' (untrusted)
+    can reach external sink 'send' unsanitized while 'draft' brings private data into
+    scope. Path: fetch → lookup → draft → send. Break it with a sanitizer between
+    'fetch' and 'send', or remove one of the three capabilities.
 
-  ✗ NOT PROVEN — 2 blocking findings          # exit code 1 → CI fails
+  ✗ NOT PROVEN — 1 blocking finding(s)          # exit 1 → CI fails
+  checked: trifecta closed · taint proven · reachability proven · obligations proven · policy 0 flagged
 ```
 
-Zero install — run it straight from PyPI with [uv](https://docs.astral.sh/uv/):
+## Five things it proves about your agent
+
+Prompt injection is only one of them.
+
+| | Property | In plain words |
+|---|---|---|
+| 🔒 | **Safe** — taint + lethal trifecta | can't be tricked into leaking data |
+| ✅ | **Correct** — Z3/SMT obligations | outputs obey your rules (`amount ≤ limit`) |
+| ♻️ | **Live** — CTL model checking | terminates, every step reachable, no dead ends |
+| 📊 | **Calibrated** — split-conformal intervals | knows how confident it actually is |
+| 🛑 | **Governed** — risk-controlled abstention | refuses to act when it's unsure |
+
+## Point it at your own agent
 
 ```bash
-uvx aura-state check agents/*.json          # no venv, no install — perfect for CI
+aura-state check my_agent.json      # a studio export
+aura-state check your_agent.py      # a LangGraph / CrewAI / AutoGen source file — parsed, never executed
+aura-state check ./my-agent-repo/   # a whole directory
+uvx aura-state check agents/*.json  # zero-install via uv — perfect for CI
 ```
+
+## How this is different (and honest)
+
+Pre-execution agent verifiers exist — but each does *one* thing and makes you **rewrite your agent** into their formalism. Aura's edge is being the **shipped tool that ingests the agent you already wrote** and runs the whole set:
+
+| | Static (before it runs)? | Security dataflow? | Imports your real agent? |
+|---|:--:|:--:|:--:|
+| [AgentProof](https://arxiv.org/abs/2603.20356) | ✅ | ❌ topology only | ✅ |
+| [AgentFlow](https://arxiv.org/abs/2608.22868) | ✅ | ✅ | ❌ its own policy DSL |
+| [FIDES](https://arxiv.org/abs/2505.23643) (Microsoft) | ❌ runtime | ✅ | ❌ build-with-it planner |
+| **Aura-State** | ✅ | ✅ | ✅ **LangGraph / CrewAI / AutoGen / MCP** |
+
+We didn't invent these methods — the [research is rich](https://arxiv.org/abs/2608.14590) and some of it is more rigorous than ours. We're the one you can **`pip install` and point at your existing agent today**. And it's **sound / fail-closed**: an unknown capability is surfaced as an advisory, never silently passed.
 
 Drop it into CI and every PR is checked:
 
@@ -219,7 +248,7 @@ The key difference is what happens between nodes:
 - **Math** runs in a no-`exec` sandboxed interpreter, never hallucinated
 - **Uncertainty** uses split-conformal / jackknife+ calibration (with the honest worst-case coverage); repeated same-input runs are reported as *dispersion*, not a coverage guarantee
 - **Workflows** are model-checked (CTL) for reachability/completion/ordering *before* they run
-- **Routing** (when a node returns an ambiguous edge) is a Thompson-sampling bandit, not an LLM guess
+- **Routing** at a decision node runs its verified rule in a whitelisted interpreter (never `eval`) — the agent branches on real state, not an LLM guess (an ambiguous/invalid edge falls back to a CTL-feasible bandit choice)
 
 ## Scope & honest limits
 
@@ -511,7 +540,7 @@ Python 3.10+ required. Dependencies: `pydantic`, `instructor`, `openai`, `networ
 
 ```bash
 python -m pytest tests/ -v
-# 225 tests passing
+# 238 tests passing
 ```
 
 ## Works with any LLM provider
