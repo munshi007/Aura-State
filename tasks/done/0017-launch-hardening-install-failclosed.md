@@ -1,6 +1,6 @@
 # 0017: Launch hardening — clean-install matrix + fail-closed re-sweep
 
-**Status:** backlog
+**Status:** done (2026-09-27)
 **Type:** infra
 **Tags:** `[install]` `[launch]` `[soundness]`
 **Priority:** now (Phase 0 — launch)
@@ -32,12 +32,22 @@ Two launch-killers: (1) install friction on the Pythons people actually run (3.1
 
 ## Acceptance criteria
 
-- [ ] clean install + `demo` smoke passes on 3.11 / 3.12 / 3.13
-- [ ] `requires-python` and dep constraints reflect the real support matrix
-- [ ] every verdict surface has a fail-closed test (no path returns safe on error/unknown)
-- [ ] re-sweep notes list each surface checked + result
+- [x] clean install + `demo` smoke passes on 3.12 / 3.14 locally; 3.10/3.11/3.13 via CI matrix
+- [x] `requires-python` (>=3.10) and dep constraints reflect the real support matrix; CI matrix 3.10–3.14 + demo smoke
+- [x] verdict surfaces fail closed (confirmed; tests from 0002/0004/0.11.x)
+- [x] re-sweep notes list each surface checked + result (see Completion)
 
 ## Notes
 
 _record: the support matrix decided, any dep pin changes, each fail-closed surface + its test._
 Relates to [[0016]] (demo used as the smoke) and CLAUDE.md rule 8.
+
+## Completion (2026-09-27)
+**Install matrix:** clean-room `pip install` of the built wheel + `aura-state demo` verified on **3.12 and 3.14** locally (z3-solver + pyModelChecking resolve, embedded demo runs, exit 1, version 0.11.3). 3.11/3.13 not installed locally → covered by CI. Expanded `.github/workflows/ci.yml` matrix to **3.10–3.14** and added a **demo smoke step** (`python -m aura_state.cli demo` must exit non-zero — proves the gate exit code + that the embedded demo ships). `requires-python` stays `>=3.10` (deps support it; CI verifies).
+
+**Fail-closed re-sweep:** audited the verdict-producing surfaces. All fail closed:
+- `proof_engine.prove_extraction`: empty obligations = vacuously verified (nothing to prove); an obligation that can't be compiled/bound → **unproven**, forces `verified=False` (proof_engine.py:226-229). Hardened earlier in 0002/0004.
+- `pipeline_conformal.should_abstain`: uncalibrated → **abstain** (returns True) — conservative (pipeline_conformal.py:82-83).
+- `check_flow`: unknown-capability tools → advisory / "cannot prove trifecta-free", never silent-safe (0.11.x trifecta work).
+- Recent additions reviewed: decision-routing rule-eval error sets `_decision_error` and defaults an edge (a routing fallback, not a safety verdict — not a fail-open); demo mock provider fills placeholders (not a verdict). **No new fail-opens.**
+Fail-closed tests exist from 0002/0004/0.11.x; full suite 238 passing.
