@@ -69,6 +69,39 @@ strategy`, `Acceptance criteria` (checkboxes), `Notes`.
 | [0013](backlog/0013-counterexample-guided-replanning.md) | Counterexample-guided replanning (PAT-Agent / VERIMAP) | feature | later |
 | [0014](backlog/0014-capability-typed-dataflow.md) | Capability-typed dataflow / taint (prompt-injection proof) | feature | later |
 
+## Launch & moat (2026-09-27 strategy)
+
+Source: a competitive verification pass reading primaries (AgentProof, AgentFlow
+arXiv:2608.22868, FIDES arXiv:2505.23643, capability-containment arXiv:2605.23951,
+survey arXiv:2608.14590). Finding: **no technique is unowned** — the methods live
+in research prototypes, each doing one property, each requiring a rewrite into
+their DSL/planner/formalism. The honest, defensible moat is **productization +
+import + breadth**: aura-state ingests the agent you already wrote and runs
+multiple design-time checks, shipped. Phase 1 **adopts** the published SOTA methods
+(cited) *usably on imported agents* rather than claiming novelty.
+
+### Phase 0 — perfect & launch the usable product (now)
+| ID | Title | Type | Priority |
+|----|-------|------|----------|
+| [0016](backlog/0016-cli-wow-demo-command.md) | CLI time-to-wow — `aura-state demo` + screenshot-worthy `check` | feature | now |
+| [0017](backlog/0017-launch-hardening-install-failclosed.md) | Launch hardening — clean-install matrix + fail-closed re-sweep | infra | now |
+| [0018](backlog/0018-studio-front-door-proof-badge.md) | Studio front door + shareable proof badge | feature | now |
+| [0019](backlog/0019-honest-readme-positioning-launch.md) | Honest README rewrite + positioning + launch assets | docs | now |
+
+### Phase 1 — adopt the best published methods, usably, on imports (later)
+| ID | Title | Type | Priority |
+|----|-------|------|----------|
+| [0020](backlog/0020-taint-to-ifc-label-lattice.md) | Taint → IFC label lattice (non-interference) | feature | later |
+| [0021](backlog/0021-capability-containment-least-privilege.md) | Capability-containment / least-privilege proof | feature | later |
+| [0022](backlog/0022-mcp-tool-poisoning-static-check.md) | MCP tool-poisoning static check | feature | later |
+| [0023](backlog/0023-import-coverage-benchmark.md) | Import-coverage benchmark — `aura-state bench` | feature | later |
+| [0024](backlog/0024-compliance-verifiable-certificate.md) | Compliance-grade verifiable certificate | feature | later |
+
+### Phase 2 — frontier (optional, after traction)
+| ID | Title | Type | Priority |
+|----|-------|------|----------|
+| [0025](backlog/0025-frontier-probabilistic-symbolic-refinement.md) | Probabilistic bounds, symbolic CTL scale, quantified Z3 (umbrella) | feature | later |
+
 ## Dependency order
 
 ```
