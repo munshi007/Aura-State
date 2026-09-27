@@ -21,7 +21,7 @@ const TOOL_PRESETS: { label: string; name: string; effect: "read" | "write" | "e
 ];
 
 export default function Tree() {
-  const { nodes, selectedId, statusByNode, entry, verify, addNode, addTool, select, treeCollapsed } = useStore();
+  const { nodes, selectedId, statusByNode, entry, verify, addNode, addTool, select, treeCollapsed, set } = useStore();
   const [toolMenu, setToolMenu] = useState(false);
   const z3 = verify?.obligations || [];
   const z3ok = z3.filter((o: any) => o.consistent).length;
@@ -112,6 +112,11 @@ export default function Tree() {
         )}
         <div className="row"><span className="k">Contract</span><span className="mono">{hash || "—"}</span></div>
         <div className="bar"><i style={{ width: `${(proven / total) * 100}%` }} /></div>
+        {verify && (
+          <button className="btn sm" style={{ width: "100%", marginTop: 9 }} onClick={() => set({ badgeOpen: true })}>
+            <Icon name="download" size={13} /> Share proof
+          </button>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 # 0018: Studio front door + shareable proof badge
 
-**Status:** backlog
+**Status:** done (2026-09-27)
 **Type:** feature
 **Tags:** `[platform]` `[launch]` `[dx]` `[virality]`
 **Priority:** now (Phase 0 — launch)
@@ -33,12 +33,15 @@ The one move that sells: **import your agent → instant verdict + the finding o
 
 ## Acceptance criteria
 
-- [ ] first-run studio leads with import→verdict; deeper tabs revealed progressively
-- [ ] shareable proof badge (PNG/SVG + embed snippet) generated from a real verify result
-- [ ] badge is honest — only proven properties; a vulnerable agent gets no "verified" badge
-- [ ] browser E2E: import → verdict → badge
+- [x] first-run studio leads with import→verdict; deeper tabs revealed progressively (first visit lands empty → FrontDoor)
+- [x] shareable proof badge (SVG + copy Markdown/HTML embed) generated from a real verify result
+- [x] badge is honest — verified: refund-agent (real taint violation) shows "1 finding" red, not green
+- [x] browser E2E: front door shown + 3 cards; load sample → Verify → Share proof → badge SVG + download
 
 ## Notes
 
 _record: badge design + fields, where it's generated, the embed format._
 Relates to [[0024]] (compliance certificate is the same artifact, formalized) and the "feels rigid" feedback.
+
+## Completion (2026-09-27)
+Added `frontend/src/badge.ts` (honest SVG proof-card from a verify result — `proofSummary` + `badgeSvg` + `badgeEmbed`; renders VERIFIED only when no violation) and `frontend/src/FrontDoor.tsx` (`FrontDoor` welcome/import screen + `ProofBadge` modal with preview / Download SVG / Copy Markdown / Copy HTML). Wired in `App.tsx`: a truly-first visit calls `newBlank()` → empty canvas → the front door renders full-width (grid `wide`); `<ProofBadge/>` mounted; `badgeOpen` added to the store. `Tree.tsx` Design-proof panel gets a "Share proof" button (when a verify exists). Front-door CSS in `styles.css`. Browser-verified: front door + 3 cards render; load-sample → Verify → Share proof shows the honest badge ("1 finding" red for the refund-agent's real taint violation, not a fake green). Frontend rebuilt; Python suite 238 green. GIF for 0019 can now be recorded from this front door.

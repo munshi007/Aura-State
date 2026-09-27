@@ -8,6 +8,7 @@ import Palette from "./Palette";
 import Tour from "./Tour";
 import { AgentMenu, NewAgentModal, McpModal, CodeModal } from "./AgentMenu";
 import { Resizer } from "./build/Resizer";
+import { FrontDoor, ProofBadge } from "./FrontDoor";
 
 const RAIL: { id: Module; icon: string; label: string }[] = [
   { id: "build", icon: "build", label: "Build" },
@@ -123,12 +124,13 @@ function StatusBar() {
 
 export default function App() {
   useTheme();
-  const { module, paletteOpen, tourOpen, set, refreshProviders, refreshFlows,
-          treeW, inspW, treeCollapsed, inspCollapsed, togglePanel } = useStore();
+  const { module, paletteOpen, tourOpen, set, refreshProviders, refreshFlows, newBlank,
+          nodes, treeW, inspW, treeCollapsed, inspCollapsed, togglePanel } = useStore();
   useEffect(() => {
     refreshProviders();
     // Reload the agent you last saved/opened, so a refresh doesn't look like it
-    // lost your work (the bundled default only shows on a truly first visit).
+    // lost your work. A truly first-time visitor lands on the front door (empty
+    // canvas → import your agent → verdict) instead of a pre-loaded demo.
     (async () => {
       await refreshFlows();
       try {
@@ -136,8 +138,11 @@ export default function App() {
         const flows = useStore.getState().flows;
         if (last && flows.includes(last) && last !== useStore.getState().agentName) {
           await useStore.getState().doLoad(last);
+        } else if (!last && !localStorage.getItem("aura_seen")) {
+          newBlank();   // first-ever visit → front door
         }
       } catch {}
+      try { localStorage.setItem("aura_seen", "1"); } catch {}
     })();
     try { if (!localStorage.getItem("aura_tour_seen")) set({ tourOpen: true }); } catch {}
   }, []);
@@ -163,6 +168,8 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
   const isBuild = module === "build";
+  const frontDoor = isBuild && nodes.length === 0;   // empty canvas → welcome/import
+  const gridBuild = isBuild && !frontDoor;
   const panel: Record<string, React.ReactNode> = {
     run: <Run />, runs: <Runs />, evals: <Evals />, prove: <Prove />, data: <Data />,
     monitor: <Monitor />, calibrate: <Calibrate />, memory: <Memory />, versions: <Versions />, audit: <Audit />, sdk: <Sdk />, settings: <Settings />,
@@ -170,11 +177,11 @@ export default function App() {
   return (
     <div className="app">
       <TopBar />
-      <div className={"main" + (isBuild ? "" : " wide")}
-        style={isBuild ? { gridTemplateColumns: `52px ${treeCollapsed ? 0 : treeW}px 1fr ${inspCollapsed ? 0 : inspW}px` } : undefined}>
+      <div className={"main" + (gridBuild ? "" : " wide")}
+        style={gridBuild ? { gridTemplateColumns: `52px ${treeCollapsed ? 0 : treeW}px 1fr ${inspCollapsed ? 0 : inspW}px` } : undefined}>
         <Rail />
-        {isBuild ? <Build /> : panel[module]}
-        {isBuild && <><Resizer side="tree" /><Resizer side="insp" /></>}
+        {frontDoor ? <FrontDoor /> : gridBuild ? <Build /> : panel[module]}
+        {gridBuild && <><Resizer side="tree" /><Resizer side="insp" /></>}
       </div>
       {isBuild && treeCollapsed && (
         <button className="reopen reopen-l" onClick={() => togglePanel("tree")} title="Show nodes panel" aria-label="Show nodes panel">›</button>
@@ -188,6 +195,7 @@ export default function App() {
       <NewAgentModal />
       <McpModal />
       <CodeModal />
+      <ProofBadge />
       <Toast />
     </div>
   );

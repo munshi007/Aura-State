@@ -307,3 +307,21 @@ pre{margin:0;padding:12px;background:var(--sink);border:1px solid var(--line);bo
   .cols{grid-template-columns:1fr!important}
   .crumbs{display:none}
 }
+
+/* ── Front door (empty-canvas welcome / import) ── */
+.frontdoor{grid-column:2 / -1;display:flex;align-items:center;justify-content:center;overflow:auto;padding:40px 24px}
+.fd-inner{max-width:720px;width:100%;text-align:center}
+.fd-mark{font-weight:700;font-size:15px;letter-spacing:.2px;margin-bottom:22px;color:var(--ink-1)}
+.fd-h1{font-size:30px;line-height:1.15;margin:0 0 12px;font-weight:700;color:var(--ink-1)}
+.fd-sub{font-size:14.5px;line-height:1.6;color:var(--ink-3);margin:0 auto 30px;max-width:560px}
+.fd-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:26px}
+.fd-card{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:7px;padding:18px 16px;border:1px solid var(--line);border-radius:12px;background:var(--panel);cursor:pointer;transition:border-color .12s,transform .12s}
+.fd-card:hover{border-color:var(--proven);transform:translateY(-2px)}
+.fd-card-ic{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--proven) 12%,transparent);color:var(--proven)}
+.fd-card-t{font-weight:650;font-size:14px;color:var(--ink-1)}
+.fd-card-s{font-size:12px;line-height:1.5;color:var(--ink-3)}
+.fd-foot{font-size:12.5px;color:var(--ink-4);line-height:1.9}
+.fd-foot code{font-family:var(--mono,monospace);font-size:11.5px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 7px;color:var(--ink-2)}
+.fd-link{background:none;border:none;color:var(--proven);cursor:pointer;font-size:12.5px;padding:0;font-weight:600}
+.fd-or{color:var(--ink-4)}
+@media (max-width:720px){.fd-cards{grid-template-columns:1fr}.fd-h1{font-size:24px}}

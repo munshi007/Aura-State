@@ -135,6 +135,7 @@ interface State {
   newAgentOpen: boolean;
   mcpOpen: boolean;
   codeOpen: boolean;
+  badgeOpen: boolean;
   serverVersion: string;
   treeW: number;
   inspW: number;
@@ -214,6 +215,7 @@ export const useStore = create<State>((setState, getState) => ({
   newAgentOpen: false,
   mcpOpen: false,
   codeOpen: false,
+  badgeOpen: false,
   serverVersion: "",
   treeW: _lsNum("aura_treeW", 236),
   inspW: _lsNum("aura_inspW", 384),
