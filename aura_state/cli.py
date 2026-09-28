@@ -285,6 +285,58 @@ def _cmd_bench(args):
     return 1 if res["metrics"]["silent_misses"] else 0
 
 
+def _cmd_certify(args):
+    import json
+    import datetime
+    import logging
+    from importlib.metadata import version
+    logging.getLogger("aura_state").setLevel(logging.ERROR)
+    from .certificate import make_certificate
+    try:
+        flow = _load_flow(args.path)
+    except Exception as e:
+        print(f"aura-state certify: could not load {args.path}: {e}", file=sys.stderr)
+        return 2
+    cert = make_certificate(flow, version=version("aura-state"),
+                            timestamp=datetime.datetime.now().isoformat(timespec="seconds"))
+    text = json.dumps(cert, indent=2)
+    if args.out:
+        with open(args.out, "w") as f:
+            f.write(text)
+        v = cert["verdict"]["verified"]
+        print(f"  wrote {args.out}  ·  {'✓ verified' if v else '✗ not proven'}  ·  "
+              f"design {cert['design_hash'][:8]}  ·  verify with: aura-state verify-cert {args.out}")
+    else:
+        print(text)
+    return 0
+
+
+def _cmd_verify_cert(args):
+    import json
+    import logging
+    logging.getLogger("aura_state").setLevel(logging.ERROR)
+    from .certificate import verify_certificate
+
+    def c(code, s):
+        return s if args.no_color or not sys.stdout.isatty() else f"\033[{code}m{s}\033[0m"
+    try:
+        with open(args.file) as f:
+            cert = json.load(f)
+    except Exception as e:
+        print(f"aura-state verify-cert: could not read {args.file}: {e}", file=sys.stderr)
+        return 2
+    res = verify_certificate(cert)
+    if res["valid"]:
+        v = (res["recomputed"] or {}).get("verified")
+        print("  " + c("32", "✓ certificate VALID") +
+              f" — independently re-verified; the design {'is proven' if v else 'is NOT proven'} as claimed.")
+        return 0
+    print("  " + c("31", "✗ certificate INVALID"))
+    for p in res["problems"]:
+        print("    - " + p)
+    return 1
+
+
 def _cmd_version(args):
     from importlib.metadata import version
     print(version("aura-state"))
@@ -317,6 +369,16 @@ def main(argv=None):
     p_b.add_argument("--md", metavar="FILE", help="also write a RESULTS.md leaderboard to FILE")
     p_b.add_argument("--no-color", action="store_true", help="disable ANSI colors")
     p_b.set_defaults(func=_cmd_bench)
+
+    p_ct = sub.add_parser("certify", help="emit a verifiable proof certificate for an agent design")
+    p_ct.add_argument("path", help="a flow .json / .py / directory")
+    p_ct.add_argument("--out", metavar="FILE", help="write the certificate to FILE (else stdout)")
+    p_ct.set_defaults(func=_cmd_certify)
+
+    p_vc = sub.add_parser("verify-cert", help="independently re-verify a certificate (tamper-evident, trustless)")
+    p_vc.add_argument("file", help="a certificate .json emitted by `aura-state certify`")
+    p_vc.add_argument("--no-color", action="store_true", help="disable ANSI colors")
+    p_vc.set_defaults(func=_cmd_verify_cert)
 
     p_v = sub.add_parser("version", help="print the installed version")
     p_v.set_defaults(func=_cmd_version)
