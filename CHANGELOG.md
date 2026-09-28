@@ -2,6 +2,15 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.11.5]
+
+Phase-1 depth — three new design-time checks, all on the agent you already import, all opt-in or advisory so they don't add noise.
+
+### Added
+- **Least-privilege / capability containment.** Declare a `manifest` (allowlists over `side_effects` / `tools` / `data_classes`) and `check` proves every *reachable* effect stays inside it — catching the no-attacker over-reach class (an over-permissioned agent that can take an unintended consequential action). Summary: `not declared` / `contained` / `exceeded`. Refs: capability-containment (arXiv:2605.23951), Progent, MiniScope.
+- **MCP tool-poisoning detection.** Each tool's `description` is scanned for injected directives hidden in the help text (the MCP tool-poisoning class): injected-instruction / exfil-directive / hidden-system-instruction block, softer directive-to-model / credential-solicitation advise. Static — never connects to a server.
+- **Verifiable proof certificate.** `aura-state certify <agent>` emits a content-hashed certificate of the design + verdict; `aura-state verify-cert <file>` re-checks it **without trusting the issuer** — recomputing the hashes and re-running the verifier on the recorded design — so a doctored "verified" claim is caught. Maps to EU AI Act Art. 12 / ISO 42001. Refs: Proof-Carrying Agent Actions (arXiv:2606.04104).
+
 ## [0.11.4]
 
 A soundness release. A new benchmark caught a fail-open, and fixing it unified the two dataflow passes.
