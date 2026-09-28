@@ -63,12 +63,24 @@ _POLICY_RULES = [
 
 
 def _cap(n: Dict[str, Any]) -> str:
-    """Effective taint capability — tool side-effect overrides for tool nodes."""
+    """Effective taint capability for the dataflow pass.
+
+    An explicit untrusted marking makes ANY node a taint SOURCE — including a
+    tool (e.g. an imported `web.fetch` with `data_class: untrusted` or
+    `roles: [untrusted]`). Previously a tool's capability came *only* from its
+    side-effect, so an untrusted read-tool collapsed to "plain" and the taint
+    pass silently passed an untrusted-source→sink path — a fail-open the
+    trifecta pass (which honours these fields) did not have. Keeps the two
+    passes consistent.
+    """
     kind = n.get("kind") or n.get("type") or "extract"
-    if kind == "tool":
-        return "plain" if n.get("side_effect") == "read" else "sink"
     if kind == "sanitizer":
         return "sanitizer"
+    if n.get("capability") == "untrusted" or n.get("data_class") == "untrusted" \
+            or "untrusted" in (n.get("roles") or []):
+        return "untrusted"
+    if kind == "tool":
+        return "plain" if n.get("side_effect") == "read" else "sink"
     return n.get("capability", "plain")
 
 

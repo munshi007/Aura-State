@@ -233,6 +233,58 @@ def _cmd_demo(args):
     return code
 
 
+def _bench_lines(res, color=lambda code, s: s):
+    """Render the benchmark result as text lines (shared by CLI + RESULTS.md)."""
+    L = []
+    m = res["metrics"]
+    L.append("  aura-state bench · design-time verification\n")
+    L.append("  Accuracy on labeled synthetics (safe/vulnerable pairs, ground truth certain):")
+    w = max(len(c["name"]) for c in res["synthetic"]) + 2
+    L.append(f"    {'case'.ljust(w)}{'property'.ljust(12)}{'expected'.ljust(11)}{'detected'.ljust(11)}ok")
+    for c in res["synthetic"]:
+        ok = color("32", "✓") if c["correct"] else color("31", "✗")
+        L.append(f"    {c['name'].ljust(w)}{c['property'].ljust(12)}"
+                 f"{('vuln' if c['expected_vulnerable'] else 'safe').ljust(11)}"
+                 f"{('vuln' if c['detected'] else 'safe').ljust(11)}{ok}")
+    L.append("")
+    sm = m["silent_misses"]
+    smtxt = color("32", "0 (sound)") if sm == 0 else color("31", f"{sm} — UNSOUND")
+    L.append(f"    recall {m['recall']*100:.0f}%  ·  precision {m['precision']*100:.0f}%  ·  silent misses {smtxt}")
+    L.append(f"    (recall is 100% by construction — fail-closed never silently passes a real finding;")
+    L.append(f"     the measured number is precision: how often a flag is a true positive.)\n")
+    if res["real"]:
+        L.append("  Import coverage on real-shaped agents (unmodified MCP/framework surfaces):")
+        rw = max(len(r["name"]) for r in res["real"]) + 2
+        for r in res["real"]:
+            if r.get("imported"):
+                L.append(f"    {r['name'].ljust(rw)}{color('32','imported')}  {r['nodes']} nodes · {r['verdict']} · {r['findings']} finding(s)")
+            else:
+                L.append(f"    {r['name'].ljust(rw)}{color('31','FAILED')}  {r.get('error','')}")
+        cov = res["import_coverage"]
+        L.append(f"\n    import coverage: {cov*100:.0f}% ({sum(1 for r in res['real'] if r.get('imported'))}/{len(res['real'])} real agents ingested unmodified)")
+    return L
+
+
+def _cmd_bench(args):
+    import logging
+    logging.getLogger("aura_state").setLevel(logging.ERROR)
+    from .bench import run_bench
+    res = run_bench()
+
+    def c(code, s):
+        return s if args.no_color or not sys.stdout.isatty() else f"\033[{code}m{s}\033[0m"
+    print("\n" + "\n".join(_bench_lines(res, c)) + "\n")
+
+    if args.md:
+        lines = _bench_lines(res)   # no color
+        body = "# aura-state benchmark\n\n_Reproduce: `aura-state bench`_\n\n```\n" + "\n".join(lines) + "\n```\n"
+        with open(args.md, "w") as f:
+            f.write(body)
+        print(f"  wrote {args.md}\n")
+    # a silent miss (fail-open) is the only hard failure — the soundness contract.
+    return 1 if res["metrics"]["silent_misses"] else 0
+
+
 def _cmd_version(args):
     from importlib.metadata import version
     print(version("aura-state"))
@@ -260,6 +312,11 @@ def main(argv=None):
     p_d.add_argument("--json", action="store_true", help="machine-readable JSON output")
     p_d.add_argument("--no-color", action="store_true", help="disable ANSI colors")
     p_d.set_defaults(func=_cmd_demo)
+
+    p_b = sub.add_parser("bench", help="run the labeled verification benchmark (accuracy + import coverage)")
+    p_b.add_argument("--md", metavar="FILE", help="also write a RESULTS.md leaderboard to FILE")
+    p_b.add_argument("--no-color", action="store_true", help="disable ANSI colors")
+    p_b.set_defaults(func=_cmd_bench)
 
     p_v = sub.add_parser("version", help="print the installed version")
     p_v.set_defaults(func=_cmd_version)

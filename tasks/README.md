@@ -94,7 +94,7 @@ multiple design-time checks, shipped. Phase 1 **adopts** the published SOTA meth
 | [0020](backlog/0020-taint-to-ifc-label-lattice.md) | Taint → IFC label lattice (non-interference) | feature | later |
 | [0021](backlog/0021-capability-containment-least-privilege.md) | Capability-containment / least-privilege proof | feature | later |
 | [0022](backlog/0022-mcp-tool-poisoning-static-check.md) | MCP tool-poisoning static check | feature | later |
-| [0023](backlog/0023-import-coverage-benchmark.md) | Import-coverage benchmark — `aura-state bench` | feature | later |
+| [0023](done/0023-import-coverage-benchmark.md) | Import-coverage benchmark — `aura-state bench` | feature | ✅ done |
 | [0024](backlog/0024-compliance-verifiable-certificate.md) | Compliance-grade verifiable certificate | feature | later |
 
 ### Phase 2 — frontier (optional, after traction)

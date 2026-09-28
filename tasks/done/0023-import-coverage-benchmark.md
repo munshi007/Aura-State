@@ -1,6 +1,6 @@
 # 0023: Import-coverage benchmark — `aura-state bench`
 
-**Status:** backlog
+**Status:** done (2026-09-28)
 **Type:** feature
 **Tags:** `[research]` `[benchmark]` `[launch]`
 **Priority:** later (Phase 1 — depth)
@@ -34,13 +34,24 @@ We must NOT claim higher detection accuracy than the prototypes (unverified, con
 
 ## Acceptance criteria
 
-- [ ] `benchmarks/` corpus (real + labeled synthetic) + `aura-state bench`
-- [ ] `RESULTS.md` table: import success, findings, time; recall/precision on synthetics with soundness caveat
-- [ ] honest framing — import coverage on unmodified agents is the headline, not accuracy-vs-others
-- [ ] reproducible; CI regression on the synthetic split
-- [ ] tests `test_bench_*_fixes_0023`
+- [x] labeled corpus bundled in `aura_state/bench.py` (synthetic safe/vuln pairs) + real-shaped agents from `examples/audit/`; `aura-state bench` command
+- [x] `benchmarks/RESULTS.md` (generated): accuracy table + recall/precision + soundness caveat + import-coverage table
+- [x] honest framing — import coverage (100%, 6/6) is the headline; accuracy only on labeled synthetics
+- [x] reproducible (`aura-state bench`); CI regression via `test_benchmark_is_sound_*` (silent_misses must be 0)
+- [x] tests `tests/test_bench_fixes_0023.py` (4)
 
 ## Notes
 
 _record: corpus contents + labels, exact metrics reported, the soundness caveat text._
 Relates to [[0019]] (backs the launch story), [[0020]], [[0021]].
+
+## Completion (2026-09-28)
+Built the benchmark AND it immediately caught a real soundness bug on its first run.
+
+**Soundness fix (the benchmark's first catch):** `check._cap` derived a tool node's taint capability *only* from its side-effect, ignoring an explicit `capability/data_class: untrusted` (or imported `roles: [untrusted]`). So an untrusted **tool** source (e.g. `web.fetch`) collapsed to "plain" and the taint pass **silently passed** an untrusted-source→sink path — a fail-open the trifecta pass did not share. Fixed: an explicit untrusted marking makes any node a taint source; the two passes are now consistent. Regression tests in `test_bench_fixes_0023.py`.
+
+**Deliverables:** `aura_state/bench.py` (bundled labeled corpus: safe/vuln pairs across trifecta/taint/obligation + clean; `run_bench()`), `aura-state bench` CLI (`--md` writes RESULTS.md), `benchmarks/RESULTS.md`. Real-shaped import coverage over `examples/audit/*.json`.
+
+**Results:** synthetics 8/8 correct — recall 100% · precision 100% · **0 silent misses (sound)**; import coverage **100% (6/6)** real agents ingested unmodified. Full suite 242 passing.
+
+Honest note: recall is 100% *by construction* (fail-closed); the measured number is precision. The headline is import coverage on unmodified agents, not an accuracy-vs-competitors claim.
