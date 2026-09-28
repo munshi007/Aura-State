@@ -28,6 +28,7 @@ from .verification.proof_engine import prove_obligations_satisfiable
 from .verification.trifecta import analyze_trifecta
 from .verification.ifc import analyze_ifc
 from .verification.capability_containment import analyze_containment
+from .verification.tool_poisoning import scan_description
 
 
 SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
@@ -245,6 +246,16 @@ def check_flow(flow: Dict[str, Any]) -> CheckReport:
                     findings.append(Finding("policy", sev, n["id"], f"{desc} in {n['id']}.{where}"))
                     break
 
+    # 6b. MCP tool-poisoning — injected instructions hidden in a tool's description.
+    for n in nodes:
+        if (n.get("kind") or n.get("type")) != "tool":
+            continue
+        for label, sev in scan_description(n.get("description", "")):
+            findings.append(Finding(
+                "tool-poisoning", sev, n["id"],
+                f"tool '{n['id']}' description contains a possible injected directive "
+                f"({label}) — MCP tool-poisoning; review the tool source before trusting it"))
+
     findings.sort(key=lambda f: SEVERITY_ORDER.get(f.severity, 9))
     blocking = [f for f in findings if f.severity in ("critical", "high")]
     verified = len(blocking) == 0
@@ -259,6 +270,7 @@ def check_flow(flow: Dict[str, Any]) -> CheckReport:
         "obligations": "violated" if any(f.check == "obligation" for f in findings) else "proven",
         "least_privilege": ("not declared" if not containment.declared
                             else ("exceeded" if any(f.check == "least-privilege" for f in findings) else "contained")),
+        "tool_poisoning": f"{sum(1 for f in findings if f.check == 'tool-poisoning')} flagged",
         "policy": f"{sum(1 for f in findings if f.check == 'policy')} flagged",
     }
     return CheckReport(agent=name, nodes=len(nodes), verified=verified, findings=findings, summary=summary)
