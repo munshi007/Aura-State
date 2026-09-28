@@ -344,7 +344,11 @@ def _cmd_version(args):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(prog="aura-state", description="Build LLM agents you can prove things about.")
+    parser = argparse.ArgumentParser(
+        prog="aura-state",
+        description="Prove your LLM agent is injection-safe, in-spec, and won't act out of "
+                    "bounds — before you ship. Import a LangGraph/CrewAI/AutoGen/MCP agent; "
+                    "verify with Z3, CTL, information-flow, and conformal. Local, no API key.")
     sub = parser.add_subparsers(dest="command")
 
     p_ui = sub.add_parser("ui", help="launch the local Aura Studio in your browser")

@@ -91,10 +91,19 @@ def _build_engine(nodes: List[Dict[str, Any]], edges: List[List[str]]) -> AuraEn
 
 
 def check_flow(flow: Dict[str, Any]) -> CheckReport:
-    nodes = flow.get("nodes", [])
-    edges = [list(e) for e in flow.get("edges", [])]
     name = flow.get("name", "agent")
     findings: List[Finding] = []
+
+    # Top-level shape — fail closed with a clear message, not a traceback.
+    nodes = flow.get("nodes", [])
+    if not isinstance(nodes, list):
+        return CheckReport(agent=name, nodes=0, verified=False,
+                           findings=[Finding("structure", "high", None, "'nodes' must be a list")])
+    raw_edges = flow.get("edges", [])
+    if not isinstance(raw_edges, list) or not all(isinstance(e, (list, tuple)) and len(e) == 2 for e in raw_edges):
+        return CheckReport(agent=name, nodes=len(nodes), verified=False,
+                           findings=[Finding("structure", "high", None, "'edges' must be a list of [from, to] pairs")])
+    edges = [list(e) for e in raw_edges]
 
     if not nodes:
         return CheckReport(agent=name, nodes=0, verified=False,
