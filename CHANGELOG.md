@@ -2,6 +2,17 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.11.4]
+
+A soundness release. A new benchmark caught a fail-open, and fixing it unified the two dataflow passes.
+
+### Fixed (soundness — the verifier is the product)
+- **Closed a taint fail-open.** The injection/taint pass used a capability-only model while the lethal-trifecta pass used richer role classification (name / `data_class` / `roles`). So a tool that was untrusted by name — e.g. an imported `web_fetch` with no explicit `capability` — was **not** treated as a taint source, and an untrusted→sink path could verify "safe." Both passes now share one role model, so the CLI `check` and the studio `/api/verify` decide injection-safety identically and consistently with the trifecta.
+
+### Added
+- **`aura-state bench`** — a bundled, labeled verification benchmark. Reports accuracy on safe/vulnerable synthetic pairs (recall 100% by construction — fail-closed never silently passes — so the measured number is precision) and **import coverage** on real-shaped MCP/framework agents ingested unmodified. `--md` writes a `RESULTS.md`. Reproducible from any install. This benchmark is what caught the fail-open above.
+- **`aura_state.verification.ifc`** — the integrity half of information-flow control (untrusted low-integrity data must not reach a consequential sink without a sanitizer/declassifier), on the trifecta's role model. Static, import-time, sound/fail-closed. Refs: AgentFlow (arXiv:2608.22868), FIDES (arXiv:2505.23643).
+
 ## [0.11.3]
 
 A full front-to-back audit of the studio — every one of the 14 modules traced UI → API → verifier — to remove anything decorative or half-wired. Every module was already backed by real verifiers; this release makes the controls and routing that *render* also *run*, and fixes the correctness/UX gaps the audit surfaced.
