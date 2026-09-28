@@ -2,6 +2,20 @@
 
 All notable changes to Aura-State. Format loosely follows Keep a Changelog.
 
+## [0.11.6]
+
+A soundness/hardening release from a pre-launch adversarial audit.
+
+### Fixed (soundness — the verifier is the product)
+- **Closed an IFC self-channel fail-open.** A single tool that is *both* an untrusted source and a consequential sink (one tool that fetches untrusted web content **and** posts/writes) was never flagged. It is now — this is the integrity property IFC exists to decide, and the only pass covering it without a private-data leg.
+- **Least-privilege escapes closed.** An `exfil`-classified tool with no `side_effect` escaped a read-only manifest; a manifest mixing `allow: {}` with flat keys silently dropped the allowlist. Both fixed.
+- **Certificate forgery closed.** `verify-cert` now re-verifies the *findings* (the evidence), so a certificate whose hashes match but whose findings were rewritten is caught. And the studio `/api/certificate`'s embedded contract taint no longer uses the pre-IFC model, so a certificate can't contradict itself.
+
+### Changed
+- **Tool-poisoning scanner** catches the known misses (ignore-safety-guidelines, ignore-above-and-instead, read-a-file-and-pass-it-out, `api key` with a space) and drops the false positives (`instead of`, `you must provide`, `access token`).
+- **Quieter logs** — the CTL "violating states" diagnostic dropped from WARNING to DEBUG (it fired on every check and leaked into SDK/library logs).
+- Dead-code cleanup: removed a dead frontend export, dead taint attributes in the CLI's structural engine, and unused imports.
+
 ## [0.11.5]
 
 Phase-1 depth — three new design-time checks, all on the agent you already import, all opt-in or advisory so they don't add noise.

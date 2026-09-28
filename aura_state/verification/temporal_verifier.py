@@ -319,6 +319,8 @@ def verify_engine(
         status = "PROVEN" if vr.result == PropertyResult.PROVEN else "VIOLATED"
         logger.info(f"[Verify] {status}: {vr.property_text} (init={init})")
         if vr.violating_states:
-            logger.warning(f"  Violating (reachable) states: {vr.violating_states}")
+            # diagnostic detail, populated during normal analysis — DEBUG, not
+            # WARNING (it fired on every check and leaked into SDK/library logs).
+            logger.debug(f"  Violating (reachable) states: {vr.violating_states}")
 
     return results
