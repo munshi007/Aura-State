@@ -1,6 +1,6 @@
 # 0019: Honest README rewrite + positioning + launch assets
 
-**Status:** done (2026-09-27) — GIF pending (needs 0018 + screen capture)
+**Status:** done (2026-09-28)
 **Type:** docs
 **Tags:** `[launch]` `[positioning]` `[research]`
 **Priority:** now (Phase 0 — launch)
@@ -35,7 +35,7 @@ The README is the #1 conversion surface and it must be **HN-proof**: no "first/o
 - [x] honest competitive framing with citations — comparison table linking AgentProof / AgentFlow / FIDES + the survey; states our edge as import + breadth
 - [x] no "first/only/unowned-technique" claims; moat stated as product + import + breadth + sound/fail-closed
 - [x] real scan receipts included (the existing 5/6 lethal-trifecta audit); stats attributed (Cyera 2026 in launch copy)
-- [~] HN/PH/LinkedIn copy drafted (`docs/LAUNCH.md`); **demo GIF pending** — needs a screen recording of the studio, blocked on 0018 (front door)
+- [x] HN/PH/LinkedIn copy drafted (`docs/LAUNCH.md`); **demo GIF** recorded (`assets/demo.gif`) — Playwright walkthrough of the front door → import → finding → shareable proof, assembled with PIL (5-frame slideshow; no ffmpeg for smooth video — re-record with screen capture later if wanted)
 
 ## Notes
 

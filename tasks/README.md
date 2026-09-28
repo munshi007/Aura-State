@@ -86,7 +86,7 @@ multiple design-time checks, shipped. Phase 1 **adopts** the published SOTA meth
 | [0016](done/0016-cli-wow-demo-command.md) | CLI time-to-wow — `aura-state demo` + screenshot-worthy `check` | feature | ✅ done |
 | [0017](done/0017-launch-hardening-install-failclosed.md) | Launch hardening — clean-install matrix + fail-closed re-sweep | infra | ✅ done |
 | [0018](done/0018-studio-front-door-proof-badge.md) | Studio front door + shareable proof badge | feature | ✅ done |
-| [0019](done/0019-honest-readme-positioning-launch.md) | Honest README rewrite + positioning + launch assets | docs | ✅ done (GIF pending) |
+| [0019](done/0019-honest-readme-positioning-launch.md) | Honest README rewrite + positioning + launch assets | docs | ✅ done |
 
 ### Phase 1 — adopt the best published methods, usably, on imports (later)
 | ID | Title | Type | Priority |
