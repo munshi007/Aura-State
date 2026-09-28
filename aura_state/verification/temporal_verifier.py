@@ -29,7 +29,7 @@ from enum import Enum
 from typing import Dict, Iterable, List, Optional, Set
 
 from pyModelChecking import Kripke
-from pyModelChecking.CTL import modelcheck, A, E, G, F, X, U, Not, And, Or, Imply
+from pyModelChecking.CTL import modelcheck, A, E, G, F, U, Not, And, Or
 
 logger = logging.getLogger("aura_state.verification")
 

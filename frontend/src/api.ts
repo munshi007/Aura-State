@@ -68,7 +68,6 @@ export const checkFlow = (nodes: any[], edges: string[][], entry?: string) =>
   post("/api/check", { nodes, edges, entry });
 export const apiVersion = () => get("/api/version");
 
-export const callAgent = (body: any) => post("/api/agent", body);
 export const proveData = (data: any, obligations: string[]) => post("/api/prove", { data, obligations });
 export const conformal = (body: any) => post("/api/conformal", body);
 export const risk = (body: any) => post("/api/risk", body);

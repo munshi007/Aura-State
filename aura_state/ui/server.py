@@ -1054,6 +1054,12 @@ def create_app() -> "FastAPI":
         inv = {"obligations": req.invariants,
                "consistent": prove_obligations_satisfiable(req.invariants).satisfiable if req.invariants else None}
         contract = engine.compile_contract(properties=props).model_dump()
+        # The compiled contract's taint comes from the engine's capability model;
+        # override it with the unified IFC verdict so the certificate is internally
+        # consistent (top-level taint == embedded contract.taint).
+        contract["taint"] = {"verdict": "PROVEN" if _taint.verified else "VIOLATED",
+                             "violations": [{"source": fl.source, "sink": fl.sink,
+                                             "path": fl.path, "field": None} for fl in _taint.flows]}
         taint_ok = _taint.verified
         ctl_ok = all(c["verdict"] == "PROVEN" for c in ctl_out)
         inv_ok = inv["consistent"] is not False

@@ -6,8 +6,8 @@ If verification fails, generates a structured critique and retries with
 the failure context injected as a negative example.
 """
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Type
-from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass
 from pydantic import BaseModel
 
 logger = logging.getLogger("aura_state")

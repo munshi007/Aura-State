@@ -107,7 +107,11 @@ def analyze_ifc(nodes: List[Dict[str, Any]], edges: List[List[str]],
             if node != src and node in sanitizers:
                 continue                 # taint cleared here
             ext = is_sink(node)
-            if node != src and ext is not None:
+            # A node that is BOTH the untrusted source and a consequential sink is a
+            # self-contained channel — one tool that ingests untrusted input and acts
+            # on it externally / writes. Flag it too (mirrors trifecta's node==src
+            # case); guarding this on `node != src` was a fail-open.
+            if ext is not None:
                 pk = f"{src}->{node}"
                 if pk not in seen_pairs:
                     seen_pairs.add(pk)

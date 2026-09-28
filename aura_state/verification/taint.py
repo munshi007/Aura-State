@@ -20,7 +20,7 @@ the AuraContract alongside the CTL properties.
 """
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Set
 
 
 @dataclass

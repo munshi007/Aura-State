@@ -55,7 +55,10 @@ def analyze_containment(nodes: List[Dict[str, Any]], edges: List[List[str]],
     """
     if not isinstance(manifest, dict):
         return ContainmentResult(verified=True, declared=False)
-    allow = manifest.get("allow") if isinstance(manifest.get("allow"), dict) else manifest
+    _nested = manifest.get("allow")
+    # a non-empty nested `allow` wins; an empty/absent one falls back to flat keys
+    # (mixing `{"allow": {}, "side_effects": [...]}` used to silently drop the allowlist)
+    allow = _nested if (isinstance(_nested, dict) and _nested) else manifest
 
     def _set(key: str) -> Optional[Set[str]]:
         v = allow.get(key)
@@ -78,7 +81,12 @@ def analyze_containment(nodes: List[Dict[str, Any]], edges: List[List[str]],
             continue
         if (n.get("kind") or n.get("type")) != "tool":
             continue
-        se, tn, dc = n.get("side_effect"), n.get("tool_name"), n.get("data_class")
+        se = n.get("side_effect")
+        # an exfil-classified tool (by `exfil` flag or `roles`) IS an external effect,
+        # even if `side_effect` is unset — otherwise it escapes a read-only manifest.
+        if se is None and (n.get("exfil") is True or "exfil" in (n.get("roles") or [])):
+            se = "external"
+        tn, dc = n.get("tool_name"), n.get("data_class")
         if allow_se is not None and se is not None and se not in allow_se:
             violations.append((n["id"], "side_effect", se))
         if allow_tools is not None and tn is not None and tn not in allow_tools:

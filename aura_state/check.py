@@ -69,29 +69,11 @@ _POLICY_RULES = [
 ]
 
 
-def _cap(n: Dict[str, Any]) -> str:
-    """Effective taint capability for the dataflow pass.
-
-    An explicit untrusted marking makes ANY node a taint SOURCE — including a
-    tool (e.g. an imported `web.fetch` with `data_class: untrusted` or
-    `roles: [untrusted]`). Previously a tool's capability came *only* from its
-    side-effect, so an untrusted read-tool collapsed to "plain" and the taint
-    pass silently passed an untrusted-source→sink path — a fail-open the
-    trifecta pass (which honours these fields) did not have. Keeps the two
-    passes consistent.
-    """
-    kind = n.get("kind") or n.get("type") or "extract"
-    if kind == "sanitizer":
-        return "sanitizer"
-    if n.get("capability") == "untrusted" or n.get("data_class") == "untrusted" \
-            or "untrusted" in (n.get("roles") or []):
-        return "untrusted"
-    if kind == "tool":
-        return "plain" if n.get("side_effect") == "read" else "sink"
-    return n.get("capability", "plain")
-
-
 def _build_engine(nodes: List[Dict[str, Any]], edges: List[List[str]]) -> AuraEngine:
+    """A bare structural engine used ONLY for the CTL checks (reachability /
+    completion) — the graph shape. Taint is decided by `analyze_ifc` on the raw
+    node dicts and obligations by `prove_obligations_satisfiable`, so this engine
+    no longer needs capability/taint attrs (they were dead after the IFC move)."""
     engine = AuraEngine()
 
     def _handler(self, user_text, extracted_data=None, memory=None):
@@ -99,17 +81,7 @@ def _build_engine(nodes: List[Dict[str, Any]], edges: List[List[str]]) -> AuraEn
 
     classes = {}
     for n in nodes:
-        attrs: Dict[str, Any] = {"system_prompt": n["id"], "handle": _handler}
-        cap = _cap(n)
-        if cap == "untrusted":
-            attrs["untrusted_source"] = True
-        elif cap == "sink":
-            attrs["dangerous_sink"] = True
-        elif cap == "sanitizer":
-            attrs["sanitizer"] = True
-        if n.get("obligations"):
-            attrs["obligations"] = list(n["obligations"])
-        cls = type(n["id"], (Node,), attrs)
+        cls = type(n["id"], (Node,), {"system_prompt": n["id"], "handle": _handler})
         classes[n["id"]] = cls
         engine.register(cls)
     for a, b in edges:

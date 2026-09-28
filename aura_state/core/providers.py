@@ -7,7 +7,7 @@ when a provider is down.
 import logging
 import time
 from typing import Any, Dict, List, Optional, Tuple
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from collections import defaultdict
 
 logger = logging.getLogger("aura_state")

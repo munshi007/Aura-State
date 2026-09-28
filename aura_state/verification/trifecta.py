@@ -238,7 +238,6 @@ def analyze_trifecta(nodes: List[Dict[str, Any]], edges: List[List[str]],
     content reach an external sink unsanitized while private data is in scope.
     """
     ids = {n["id"] for n in nodes}
-    by_id = {n["id"]: n for n in nodes}
     adj: Dict[str, List[str]] = {i: [] for i in ids}
     radj: Dict[str, List[str]] = {i: [] for i in ids}
     for a, b in edges:

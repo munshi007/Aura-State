@@ -21,15 +21,23 @@ from typing import List, Tuple
 # "medium" = suspicious, advisory.
 _PATTERNS: List[Tuple[str, str, "re.Pattern[str]"]] = [
     ("injected-instruction", "high",
-     re.compile(r"(?i)\b(ignore|disregard|forget|override)\b.{0,40}\b(previous|prior|above|earlier|all|any)\b.{0,25}\b(instruction|prompt|rule|message)s?\b")),
+     re.compile(r"(?i)\b(ignore|disregard|forget|override)\b.{0,40}\b(previous|prior|above|earlier|all|any|the)\b.{0,30}"
+                r"\b(instruction|prompt|rule|message|guideline|guidance|direction|polic(y|ies)|safety|context)s?\b")),
+    ("injected-redirect", "high",   # "ignore the above and instead …"
+     re.compile(r"(?i)\b(ignore|disregard|forget)\b.{0,40}\b(above|previous|prior|earlier)\b.{0,25}\b(and\s+)?(instead|then)\b")),
+    ("file-exfil-directive", "high",  # the canonical MCP attack: read a file, pass it out
+     re.compile(r"(?i)\b(read|open|load|cat|access)\b.{0,45}\b(file|\.env|\.ssh|config|credentials?|mcp\.json|id_rsa|secrets?)\b"
+                r".{0,70}\b(pass|include|attach|send|return|as\s+(a|an)?\s*(parameter|argument|input))\b")),
     ("exfil-directive", "high",
      re.compile(r"(?i)\b(send|forward|email|post|upload|exfiltrate|leak|transmit)\b.{0,50}\b(to\s+\S+@|to\s+https?://|attacker|external|to the address|webhook)\b")),
     ("hidden-system-instruction", "high",
      re.compile(r"(?i)(<\s*/?\s*system\s*>|\[system\]|note to (the )?(assistant|ai|model)|(the )?(assistant|ai|model)\s+(should|must)\s+(always|never|secretly))")),
     ("directive-to-model", "medium",
-     re.compile(r"(?i)\b(you must|you should always|do not (tell|mention|reveal|inform)|instead of|before (calling|using|responding)|without telling|secretly)\b")),
-    ("credential-solicitation", "medium",
-     re.compile(r"(?i)\b(api[_-]?key|password|secret|access token|credential|ssh key|private key|\.env)\b")),
+     re.compile(r"(?i)\b(you must (always|never|call|send|include|read|use the|first)|do not (tell|mention|reveal|inform)"
+                r"|without telling|secretly (send|include|call|read|use))\b")),
+    ("credential-solicitation", "medium",  # requires a solicitation verb, not just the word
+     re.compile(r"(?i)\b(send|provide|paste|include|return|give|reveal)\b.{0,30}"
+                r"\b(api[_ -]?key|password|secret|access token|credential|ssh key|private key|\.env)\b")),
 ]
 
 

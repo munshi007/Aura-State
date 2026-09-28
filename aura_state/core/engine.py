@@ -23,7 +23,6 @@ import logging
 from typing import Callable, Dict, Any, Optional, Type, List
 from pydantic import BaseModel, ConfigDict
 import instructor
-from openai import OpenAI
 
 from ..execution.tracer import AuraTrace
 from ..compiler.dspy_tuner import BootstrapTeleprompter

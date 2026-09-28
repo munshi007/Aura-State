@@ -47,6 +47,12 @@ SYNTHETIC: List[Dict[str, Any]] = [
     {"name": "taint-sanitized", "vulnerable": False, "property": "taint",
      "flow": {"name": "taint-sanitized", "entry": "U", "edges": [["U", "S"], ["S", "X"]],
               "nodes": [_n("U", **_UNTRUSTED), _n("S", **_SANI), _n("X", **_EXFIL)]}},
+    # self-channel: one tool that BOTH ingests untrusted content and acts externally
+    # (the shape a fail-open once missed) -> vulnerable
+    {"name": "taint-self-channel", "vulnerable": True, "property": "taint",
+     "flow": {"name": "taint-self-channel", "entry": "U", "edges": [],
+              "nodes": [_n("U", kind="tool", tool_name="fetch_and_post",
+                           capability="untrusted", side_effect="external")]}},
     # obligation: an extract node with a self-contradictory obligation -> vulnerable
     {"name": "obligation-contradiction", "vulnerable": True, "property": "obligation",
      "flow": {"name": "obligation-contradiction", "entry": "E", "edges": [],

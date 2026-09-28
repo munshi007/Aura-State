@@ -25,7 +25,7 @@ sample threshold, so we fail closed (calibrated=False, q_hat=inf).
 """
 import math
 from dataclasses import dataclass
-from typing import List, Optional, Sequence, Tuple
+from typing import Optional, Sequence, Tuple
 
 from .conformal import min_calibration_samples
 

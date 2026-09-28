@@ -7,7 +7,7 @@ registers them with the engine, and connects their transitions.
 import json
 import yaml
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Type
+from typing import Dict, Any, Optional, Type
 from pydantic import BaseModel, create_model, Field
 
 from ..core.engine import AuraEngine, Node, CompiledTransition

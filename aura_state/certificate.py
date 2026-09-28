@@ -92,12 +92,18 @@ def verify_certificate(cert: Dict[str, Any]) -> Dict[str, Any]:
     #    the recorded verdict. Catches a certificate claiming "verified" for a design
     #    that does not actually verify — without trusting whoever issued it.
     rep = check_flow(design)
-    recomputed = {"verified": rep.verified, "summary": rep.summary}
+    recomputed_findings = [f.__dict__ for f in rep.findings]
+    recomputed = {"verified": rep.verified, "summary": rep.summary, "findings": recomputed_findings}
     claimed = cert.get("verdict") or {}
     if rep.verified != claimed.get("verified"):
         problems.append(f"re-verification disagrees: recomputed verified={rep.verified}, "
                         f"certificate claims {claimed.get('verified')}")
     if rep.summary != claimed.get("summary"):
         problems.append("re-verification disagrees: recomputed summary differs from the certificate")
+    # The findings ARE the evidence — recompute and compare them too, so a cert whose
+    # verdict hashes match but whose evidence was rewritten (hidden/altered finding)
+    # is still caught. check_flow is deterministic, so an honest cert matches exactly.
+    if recomputed_findings != (claimed.get("findings") or []):
+        problems.append("re-verification disagrees: recorded findings do not match the recomputed evidence")
 
     return {"valid": not problems, "problems": problems, "recomputed": recomputed}
