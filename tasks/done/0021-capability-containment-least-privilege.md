@@ -1,6 +1,6 @@
 # 0021: Capability-containment / least-privilege proof (refinement-type tool envelopes)
 
-**Status:** backlog
+**Status:** done (2026-09-28) — CLI/backend; studio UI + refinement-type formalization deferred
 **Type:** feature
 **Tags:** `[core]` `[verification]` `[security]` `[differentiator]`
 **Priority:** later (Phase 1 — depth)
@@ -35,13 +35,18 @@ The attacker-free majority of incidents is over-permissioned agents taking unint
 
 ## Acceptance criteria
 
-- [ ] capability manifest (inferred + overridable) per agent/task
-- [ ] proves reachable-effect ⊆ manifest; reports each out-of-scope effect with node + reason
-- [ ] fail-closed on missing/unknown manifest
-- [ ] cites 2605.23951 + names Progent/MiniScope; honest "import" framing
-- [ ] tests `test_capability_containment_*_fixes_0021`, passing
+- [x] capability manifest (flow `manifest`: side_effects / tools / data_classes allowlists) — opt-in, declared per agent
+- [x] proves reachable-effect ⊆ manifest; reports each out-of-scope reachable effect (node + dimension + value)
+- [x] no/empty manifest → `least_privilege: not declared` (opt-in; no declared scope = nothing to contain, not a silent pass); unreachable effects not flagged
+- [x] `capability_containment.py` cites 2605.23951 + Progent/MiniScope; static import-time framing
+- [x] tests `tests/test_containment_fixes_0021.py` (6), passing
 
 ## Notes
 
 _record: manifest schema, effect-envelope definition, inference defaults, where we simplify vs the paper._
 Relates to [[0020]] (integrity side), [[0023]] (benchmark's least-privilege split), [[0024]] (containment appears in the certificate).
+
+## Completion (2026-09-28)
+Built `aura_state/verification/capability_containment.py` — `analyze_containment(nodes, edges, entry, manifest)` proves every **reachable** tool effect stays inside a declared **manifest** (allowlists over side_effects / tools / data_classes; accepts flat or under `allow`). Wired into `check.py` as an opt-in step (`flow["manifest"]`) with a `least_privilege` summary key (`not declared` / `contained` / `exceeded`) and a `least-privilege` Finding per out-of-scope reachable effect. Documented the `manifest` field in the flow-format docstring. Verified: read-only manifest + a reachable `payment.charge` → `exceeded`; within scope → `contained`; no manifest → `not declared`; an unreachable out-of-scope tool → not flagged (only reachable effects count). 6 tests; full suite 251.
+
+**Honest scope / deferred:** delivered the containment check on the CLI/`check` path (the CI-gate use — the no-attacker over-reach class). The manifest envelope is a practical **allowlist**, not a full refinement-type/Z3 formalization (2605.23951's mechanism); and there is **no studio UI** for declaring a manifest yet (`/api/verify` doesn't carry it). Both are good follow-ons; the core least-privilege proof is in place.

@@ -8,7 +8,11 @@ A flow is the same JSON the studio saves/exports:
     {"name": ..., "entry": ..., "edges": [[a, b], ...],
      "nodes": [{"id", "kind"|"type", "capability", "obligations", "fields",
                 "sandbox_rule", "tool_name", "side_effect"}, ...],
-     "invariants": [...]}
+     "invariants": [...],
+     "manifest": {"side_effects": [...], "tools": [...], "data_classes": [...]}}
+
+The optional `manifest` declares the agent's allowed capabilities; `check` then
+proves every *reachable* effect stays inside it (least-privilege / containment).
 """
 from __future__ import annotations
 
@@ -23,6 +27,7 @@ from .verification.temporal_verifier import (
 from .verification.proof_engine import prove_obligations_satisfiable
 from .verification.trifecta import analyze_trifecta
 from .verification.ifc import analyze_ifc
+from .verification.capability_containment import analyze_containment
 
 
 SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
@@ -219,6 +224,16 @@ def check_flow(flow: Dict[str, Any]) -> CheckReport:
     if inv and not prove_obligations_satisfiable(inv).satisfiable:
         findings.append(Finding("invariant", "high", None, "agent invariants are contradictory"))
 
+    # 5b. Capability containment / least-privilege — reachable effects must stay
+    #     within a declared manifest (the no-attacker over-reach class). Opt-in.
+    containment = analyze_containment(nodes, edges, entry, flow.get("manifest"))
+    for nid, dim, val in containment.violations:
+        findings.append(Finding(
+            "least-privilege", "high", nid,
+            f"'{nid}' can {dim.replace('_', ' ')} '{val}', outside the agent's declared "
+            f"capability manifest — an over-privileged action it should not be able to take",
+            key=f"lp:{nid}:{dim}:{val}"))
+
     # 6. Policy scan — secrets / PII in prompts, rules, obligations.
     for n in nodes:
         spots = {"system_prompt": n.get("system_prompt", ""), "sandbox_rule": n.get("sandbox_rule", "")}
@@ -242,6 +257,8 @@ def check_flow(flow: Dict[str, Any]) -> CheckReport:
         "trifecta": "closed" if not tri.verified else "proven",
         "reachability": "violated" if any(f.check == "reachability" for f in findings) else "proven",
         "obligations": "violated" if any(f.check == "obligation" for f in findings) else "proven",
+        "least_privilege": ("not declared" if not containment.declared
+                            else ("exceeded" if any(f.check == "least-privilege" for f in findings) else "contained")),
         "policy": f"{sum(1 for f in findings if f.check == 'policy')} flagged",
     }
     return CheckReport(agent=name, nodes=len(nodes), verified=verified, findings=findings, summary=summary)
