@@ -51,3 +51,21 @@ def test_cli_check_and_studio_verify_agree_on_injection_fixes_0020():
     studio_bad = v["taint"]["verdict"] == "VIOLATED"
     assert cli_bad and studio_bad
     assert any(fl["source"] == "U" and fl["sink"] == "X" for fl in v["taint"]["violations"])
+
+
+def test_certificate_and_repair_use_the_unified_ifc_fixes_0020():
+    # The studio /api/certificate and /api/repair must agree with verify/check on
+    # the residual-fail-open case (name-only untrusted -> sink) — no surface left
+    # on the pre-IFC capability taint.
+    fastapi = pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+    from aura_state.ui.server import create_app
+    client = TestClient(create_app())
+
+    cert = client.post("/api/certificate", json={
+        "name": "t", "nodes": _NAME_ONLY["nodes"], "edges": _NAME_ONLY["edges"],
+        "entry": "U", "invariants": []}).json()
+    assert cert["taint"]["verdict"] == "violated" and cert["verified"] is False
+
+    rep = client.post("/api/repair", json=_NAME_ONLY).json()
+    assert rep["repaired"] is True and rep["taint_after"] == "proven"   # sanitizer inserted, re-proven

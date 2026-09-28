@@ -625,14 +625,16 @@ def create_app() -> "FastAPI":
     #    sanitizer before the sink, then re-prove the design is clean ──
     @app.post("/api/repair")
     def repair(spec: GraphSpec):
-        engine = _engine_from_spec(spec)
-        taint = engine.analyze_field_taint()
+        # Detect + re-check on the unified IFC integrity pass (same as verify/check).
+        from ..verification.ifc import analyze_ifc
+        nodes_d = [n.model_dump(exclude_none=True) for n in spec.nodes]
+        taint = analyze_ifc(nodes_d, [list(e) for e in spec.edges], spec.entry)
         if taint.verified:
             return {"repaired": False, "reason": "no taint violation to repair", "added": [], "edges": spec.edges}
 
         edges = [list(e) for e in spec.edges]
         node_ids = {n.id for n in spec.nodes}
-        sinks = sorted({v.sink for v in taint.violations})
+        sinks = sorted({fl.sink for fl in taint.flows})
         added = []
         for sink in sinks:
             san = f"San_{sink}"
@@ -644,21 +646,19 @@ def create_app() -> "FastAPI":
             edges = [[a, san] if b == sink else [a, b] for a, b in edges]
             edges.append([san, sink])
 
-        patched = [NodeSpec(id=n.id, capability=n.capability, obligations=n.obligations) for n in spec.nodes]
-        patched += [NodeSpec(id=s, capability="sanitizer", obligations=[]) for s, _ in added]
-        e2 = _engine_from_spec(GraphSpec(nodes=patched, edges=edges, entry=spec.entry))
-        t2 = e2.analyze_field_taint()
+        patched = nodes_d + [{"id": s, "kind": "sanitizer"} for s, _ in added]
+        t2 = analyze_ifc(patched, edges, spec.entry)
         _audit_append("repair", f"counterexample-guided repair inserted {', '.join(s for s, _ in added)}",
                       {"added": [s for s, _ in added], "sinks": sinks,
                        "taint_before": "violated", "taint_after": "proven" if t2.verified else "violated",
-                       "violations": [{"source": v.source, "sink": v.sink} for v in taint.violations]})
+                       "violations": [{"source": fl.source, "sink": fl.sink} for fl in taint.flows]})
         return {
             "repaired": True,
             "added": [{"id": s, "sink": sink} for s, sink in added],
             "edges": edges,
             "taint_before": "violated",
             "taint_after": "proven" if t2.verified else "violated",
-            "violations": [{"source": v.source, "sink": v.sink, "field": v.field} for v in taint.violations],
+            "violations": [{"source": fl.source, "sink": fl.sink, "field": None} for fl in taint.flows],
         }
 
     # ── Build + Run: construct a real engine from a flow and run it end to end ──
@@ -1024,7 +1024,11 @@ def create_app() -> "FastAPI":
             edges=req.edges, entry=req.entry,
         )
         engine = _engine_from_spec(graph)
-        taint = engine.analyze_field_taint()
+        # Injection-safety via the unified IFC integrity pass — same as /api/verify
+        # and the CLI, so the certificate agrees with every other surface (was the
+        # pre-IFC capability taint, the one place still inconsistent after 0020).
+        from ..verification.ifc import analyze_ifc
+        _taint = analyze_ifc(req.nodes, [list(e) for e in req.edges], req.entry)
         props = [{"description": f"{n['id']} reachable", "formula": reachability(n["id"])} for n in req.nodes]
         ctl_out = [{"property": vr.property_text,
                     "verdict": "PROVEN" if vr.result == PropertyResult.PROVEN else "VIOLATED"}
@@ -1050,7 +1054,7 @@ def create_app() -> "FastAPI":
         inv = {"obligations": req.invariants,
                "consistent": prove_obligations_satisfiable(req.invariants).satisfiable if req.invariants else None}
         contract = engine.compile_contract(properties=props).model_dump()
-        taint_ok = taint.verified
+        taint_ok = _taint.verified
         ctl_ok = all(c["verdict"] == "PROVEN" for c in ctl_out)
         inv_ok = inv["consistent"] is not False
         try:
@@ -1063,7 +1067,7 @@ def create_app() -> "FastAPI":
             "engine": {"aura_state": aura_ver, "solver": "z3", "model_checker": "pyModelChecking"},
             "nodes": node_docs, "edges": req.edges, "entry": req.entry or (req.nodes[0]["id"] if req.nodes else None),
             "taint": {"verdict": "proven" if taint_ok else "violated",
-                      "violations": [{"field": v.field, "source": v.source, "sink": v.sink} for v in taint.violations]},
+                      "violations": [{"field": None, "source": fl.source, "sink": fl.sink} for fl in _taint.flows]},
             "ctl": ctl_out, "invariants": inv, "contract": contract,
         }
         digest = hashlib.sha256(json.dumps(body, sort_keys=True, default=str).encode()).hexdigest()
