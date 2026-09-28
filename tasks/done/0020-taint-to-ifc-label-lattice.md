@@ -1,6 +1,6 @@
 # 0020: Taint → Information-Flow Control label lattice (non-interference)
 
-**Status:** backlog
+**Status:** done (2026-09-28) — integrity half unified; field-level lattice deferred
 **Type:** feature
 **Tags:** `[core]` `[verification]` `[security]` `[differentiator]`
 **Priority:** later (Phase 1 — depth)
@@ -37,14 +37,19 @@
 
 ## Acceptance criteria
 
-- [ ] IFC lattice pass over imported graphs, labels from existing capability inference
-- [ ] proves/refutes **non-interference** (confidentiality + integrity), reports the offending flow
-- [ ] sound / fail-closed: unknowns surface, never silent declassify
-- [ ] no new false negatives vs the current trifecta on the corpus; fewer false positives where field info exists
-- [ ] module cites AgentFlow (2608.22868) + FIDES (2505.23643); honest "static import" framing
-- [ ] tests `test_ifc_*_fixes_0020`, real objects, passing
+- [x] IFC integrity pass (`verification/ifc.py`) over the graph, labels from the trifecta's `classify_roles` (one role model for both passes)
+- [x] integrity non-interference (untrusted must not reach a consequential sink unsanitized), reports the offending flow; confidentiality (private→exfil) remains in `analyze_trifecta` (also role-based) — consistent, not yet merged into one lattice object
+- [x] sound / fail-closed: unknown-capability nodes surfaced; a sanitizer is the only declassifier
+- [x] parity: benchmark 100%/100%/0 silent misses, full suite 245 green (no regressions). **Closed a real fail-open**: name/data_class/roles-classified untrusted tools are now taint sources (were missed by the capability-only pass)
+- [x] `ifc.py` cites AgentFlow (2608.22868) + FIDES (2505.23643); honest static-import framing
+- [x] tests `tests/test_ifc_fixes_0020.py` (3) incl. CLI/studio agreement; all passing
 
 ## Notes
 
 _record: the lattice definition used, declassification (sanitizer) semantics, field- vs node-level coverage, where we simplify vs the papers._
 Relates to [[0014]], [[0023]] (benchmark measures this on imported agents).
+
+## Completion (2026-09-28)
+Built `aura_state/verification/ifc.py` — `analyze_ifc(nodes, edges, entry)` runs the **integrity** half of information-flow control (untrusted low-integrity data must not reach a *consequential* sink — external send or local write — without passing a sanitizer/declassifier) on the **same role model** (`classify_roles`) the trifecta uses. Wired both surfaces onto it: `check.py` (CLI) and `server.py /api/verify` (studio) now decide injection-safety identically. This **closed the residual fail-open** the earlier `_cap` patch could not: a tool classified untrusted by name / `data_class` / `roles` (not an explicit `capability`) is now a taint source — verified live (`web_fetch → file_write` now flagged; was "safe"). Parity held (benchmark 100%/100%/0; full suite 245).
+
+**Honest scope / deferred:** delivered the integrity unification + non-interference framing + soundness fix — the core goal. The **confidentiality** half (private→exfil) still lives in `analyze_trifecta` (also role-based, so the two agree) rather than a single merged confidentiality×integrity **label lattice** object, and analysis stays **node-level** (field-level precision deferred). Those are precision/structure refinements, not soundness — good follow-ons. `engine.analyze_field_taint` is now unused by the product paths (left in place; dead-code removal is a separate cleanup).

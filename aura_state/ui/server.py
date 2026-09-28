@@ -154,13 +154,18 @@ def create_app() -> "FastAPI":
     def verify(spec: GraphSpec):
         engine = _engine_from_spec(spec)
 
-        # 1. Injection-safe dataflow (real static taint).
-        taint = engine.analyze_field_taint()
+        # 1. Injection-safe dataflow — information-flow integrity (non-interference)
+        #    on the SAME role model as the trifecta below (verification/ifc.py), so
+        #    the studio and the CLI/`check` agree and there is no capability-only
+        #    fail-open on name/data_class/roles-classified untrusted tools.
+        from ..verification.ifc import analyze_ifc
+        _ifc = analyze_ifc([n.model_dump(exclude_none=True) for n in spec.nodes],
+                           [list(e) for e in spec.edges], spec.entry)
         taint_out = {
-            "verdict": "PROVEN" if taint.verified else "VIOLATED",
+            "verdict": "PROVEN" if _ifc.verified else "VIOLATED",
             "violations": [
-                {"field": v.field, "source": v.source, "sink": v.sink, "path": v.path}
-                for v in taint.violations
+                {"field": None, "source": fl.source, "sink": fl.sink, "path": fl.path}
+                for fl in _ifc.flows
             ],
         }
 

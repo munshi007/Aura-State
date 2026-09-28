@@ -22,6 +22,7 @@ from .verification.temporal_verifier import (
 )
 from .verification.proof_engine import prove_obligations_satisfiable
 from .verification.trifecta import analyze_trifecta
+from .verification.ifc import analyze_ifc
 
 
 SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
@@ -137,15 +138,19 @@ def check_flow(flow: Dict[str, Any]) -> CheckReport:
     leaves = [i for i in ids if i not in outgoing]
     entry = flow.get("entry") or (ids[0] if ids else None)
 
-    # 1. Taint dataflow — untrusted source -> dangerous sink without a sanitizer.
-    taint = engine.analyze_field_taint()
-    if not taint.verified:
-        for v in taint.violations:
-            findings.append(Finding(
-                "taint", "critical", v.sink,
-                f"untrusted data from '{v.source}' can reach sink '{v.sink}'"
-                f"{f' via field {v.field}' if v.field and v.field != '*' else ''} with no sanitizer — injection path",
-                key=f"{v.source}->{v.sink}:{v.field or ''}"))
+    # 1. Information-flow integrity (non-interference) — untrusted data must not
+    #    reach a consequential sink (external send or local write) without a
+    #    sanitizer. Decided on the SAME role model as the trifecta below
+    #    (verification/ifc.py) so the two passes agree; the old capability-only
+    #    taint fail-open'd on a name/`data_class`/`roles`-classified untrusted tool.
+    ifc = analyze_ifc(nodes, edges, entry)
+    for fl in ifc.flows:
+        act = "external send" if fl.external else "local write"
+        findings.append(Finding(
+            "taint", "critical", fl.sink,
+            f"untrusted data from '{fl.source}' can reach the {act} sink '{fl.sink}' "
+            f"with no sanitizer — injection path",
+            key=f"{fl.source}->{fl.sink}:"))
 
     # 2. CTL reachability — every node reachable from the DECLARED entry.
     props = [{"description": f"{i} reachable", "formula": reachability(i)} for i in ids]
